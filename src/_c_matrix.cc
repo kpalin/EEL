@@ -22,6 +22,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.8  2005/03/02 13:36:58  kpalin
+ * Just a little bit of testing. Slow but (again ;) working ;) version.
+ *
  * Revision 1.7  2005/02/28 08:40:12  kpalin
  * Windows porting.
  *
@@ -37,7 +40,7 @@ int py_fileLikeSeek(PyObject *py_file, unsigned long pos);
 
 PyObject *SNPdat::buildPySNP(int refPos)
 {
-  return Py_BuildValue("(cci)",this->ambig,this->allele,refPos-this->pos);
+  return Py_BuildValue("(ccid)",this->ambig,this->allele,refPos-this->pos,this->scoreDif);
 }
 
 PyObject *TFBShit::buildPySNPs()
@@ -47,7 +50,7 @@ PyObject *TFBShit::buildPySNPs()
   PyObject *ret=PyTuple_New(size);
 
   for(unsigned int i=0;i<this->sigGenotype.size();i++) {
-    if(this->sigGenotype[i].allele!='N') {
+    if(this->sigGenotype[i].allele!='N' || this->sigGenotype[i].scoreDif>LARGE_AFFY_DELTA) {
       PyObject *obj=this->sigGenotype[i].buildPySNP(this->mat->length());
 #ifndef NDEBUG
       assert(PyTuple_Check(obj));
@@ -1243,7 +1246,7 @@ TFBShit::TFBShit(TFBSscan* mat,unsigned int seqPos,char strand)
   this->minScore=DBL_MAX;
 }
 
-void TFBShit::addHit(double Score,vector<class SNPdat> genotype)
+void TFBShit::addHit(double Score,vector<class SNPdat> &genotype)
 {
 
   // Be nice and give the maximum score if both alleles are accepted.
@@ -1292,9 +1295,79 @@ void TFBShit::addHit(double Score,vector<class SNPdat> genotype)
 }
 
 
+char *SNPdat::alleles()
+{
+  return getAllels(this->ambig);
+}
 
+double TFBSscan::setSNPscoreDif(SNPdat &snp,int crick)
+{
+
+  char *allels=snp.alleles();
+  int pos=this->length()-snp.pos-1;
+
+  assert(allels);
+  assert(snp.pos>=0);
+
+
+  if(pos>=0) {  // SNPs in the background context does not affect this.
+    assert(pos>=0);
+    assert(pos<this->length());
+
+    snp.scoreDif=this->matItem(pos,allels[0],crick)-this->matItem(pos,allels[1],crick);
+  } else {
+    snp.scoreDif=0.0;
+  }
+
+  return snp.scoreDif;
+
+
+}
+
+double TFBSscan::matItem(int i,char nucl,int crick)
+{
+  int code=TFBSscan::ACGTtoCode(nucl);
+
+  if(crick) {
+    code=3-code;
+    i=this->length()-1-i;
+  }
+
+  assert(i>=0);
+  assert(i<this->length());
+  assert(code<4 && code>=0);
+
+  return this->M[code][i];
+}
+
+int TFBSscan::ACGTtoCode(char nucl)
+{
+  int nucleotide;
+
+  switch(nucl) {
+  case 'A':
+    //nucleotide stores in which line of the matrix is to search
+    nucleotide=0;        
+    break;
+  case 'C':
+    nucleotide=1;
+    break;
+  case 'G':
+    nucleotide=2;
+    break;
+  case 'T':
+    nucleotide=3;
+    break;
+  default:
+    nucleotide=-1;
+  }
+
+
+  // Complement is 3-nucleotide
+  return nucleotide;
+}
  
-vector<SNPdat> TFBShelper::getSNPs(int snpCode,int matInd)
+vector<SNPdat> TFBShelper::getSNPs(int snpCode,int matInd,int crick)
 {
 
   // Get SNPs for the matrix matInd.  This might have less SNP matches 
@@ -1320,8 +1393,12 @@ vector<SNPdat> TFBShelper::getSNPs(int snpCode,int matInd)
       assert(ind[i]<(int)this->allelCount());
       if(matInd<0 || this->SNPs[ind[i]].pos<(int)(this->matricies[matInd]->length()+this->bgOrder())) {
 	// Don't record the SNPs that are not on the matrices region.
-	ret.push_back(this->SNPs[ind[i]]);
-	}
+
+	// Make a copy
+	SNPdat curSnp=this->SNPs[ind[i]];
+	this->matricies[matInd]->setSNPscoreDif(curSnp,crick);
+	ret.push_back(curSnp);
+      }
     }
   }
   
@@ -1360,13 +1437,15 @@ vector<TFBShit*> TFBShelper::getMatches()
 	  watson=new TFBShit(this->matricies[matInd],this->seqPos(),'+');
 	}
 // 	printf("bgprob:%g, watsonscore:%g %d\n",bgProb,WatsonScore,snpCode);
-	watson->addHit(WatsonScore,this->getSNPs(snpCode,matInd));
+	vector<SNPdat> mySNPs=this->getSNPs(snpCode,matInd);
+	watson->addHit(WatsonScore,mySNPs);
       }
       if(CrickScore>scoreBound) {
 	if(!crick) {
 	  crick=new TFBShit(this->matricies[matInd],this->seqPos(),'-');
 	}
-	crick->addHit(CrickScore,this->getSNPs(snpCode,matInd));
+	vector<SNPdat> mySNPs=this->getSNPs(snpCode,matInd,1);
+	crick->addHit(CrickScore,mySNPs);
       }
     }
     if(watson) {

@@ -1,10 +1,17 @@
 //
 // $Log$
+// Revision 1.2  2005/02/25 09:28:35  kpalin
+// Few additions for the less inefficient scanner version.
+//
 // Revision 1.1  2005/02/23 13:40:25  kpalin
 // Initial Clean up.
 //
 // 
 
+
+#ifndef LARGE_AFFY_DELTA
+#define LARGE_AFFY_DELTA 1.0
+#endif
 
 typedef unsigned long int bit32;
 
@@ -39,7 +46,7 @@ typedef struct {
 
 class TFBSscan {
   void nextACGTsingle(char chr,int snpCode);
-  void nextACGT(char chr,int fromCode=0);
+  void nextACGT(char chr,int fromCode=0,int toCode=0);
 public:
   PyObject *py_matrix;  // Pointer to the matrix itself
   double bound;   // Cutoff
@@ -48,9 +55,13 @@ public:
   deque<deque<double> > history;
   deque<deque<double> >  compl_history;
   
-  deque<class SNPdat> SNPs;
+  //deque<class SNPdat> SNPs;
 
   TFBSscan(PyObject *mat,double cutoff);
+  
+  double matItem(int i,char nucl,int crick=0);
+  static int ACGTtoCode(char nucl);
+  double setSNPscoreDif(class SNPdat &snp,int crick=0);
   void nextChar(char chr);
   void halfHistories();
   vector<double> WatsonScore();
@@ -66,10 +77,13 @@ public:
   char ambig;
   char allele;
   int pos;
-  SNPdat(char amb,char all,int p) {ambig=amb;allele=all;pos=p;}
+  double scoreDif;
+
+  SNPdat(char amb,char all,int p) {ambig=amb;allele=all;pos=p;scoreDif=0.0;}
   int operator==(SNPdat &other);
   int diffAllele(SNPdat &other);
   PyObject *buildPySNP(int refPos);
+  char *alleles();
 };
 
 
@@ -86,7 +100,7 @@ public:
   vector<class SNPdat> sigGenotype; // Significant genotype
 
   TFBShit(TFBSscan* mat,unsigned int seqPos,char strand);
-  void addHit(double Score,vector<class SNPdat> genotype);
+  void addHit(double Score,vector<class SNPdat> &genotype);
 
   PyObject *buildPySNPs();
 };
@@ -102,13 +116,14 @@ class TFBShelper {
   unsigned int seqCount;
 
 
-  void nextACGT(char chr,unsigned int startFrom=0);
+  void nextACGT(char chr,unsigned int startFrom=0,unsigned int upTo=0);
   void removeScannerHistories();
 public:
+  unsigned int SNPcount() {return this->SNPs.size()/2; }
   unsigned int bgOrder() { return (this->haveBG?this->bg[0].order:0); }
   deque<class SNPdat> SNPs;
   unsigned int matrixCount() {return this->matricies.size(); }
-  unsigned int allelCount() {return this->probBuffer.size(); }
+  unsigned int allelCount() {return 1<<this->SNPcount(); }
   TFBShelper(matrix_bgObject *bg,vector<TFBSscan*> &matricies);
   void nextChar(char chr);
   double getBGprob(int matInd,int snpCode);
@@ -116,6 +131,7 @@ public:
   unsigned int seqPos() {return seqCount; }
 
   vector<TFBShit*> getMatches();
-  vector<SNPdat> getSNPs(int snpCode,int matInd=-1);
+  vector<SNPdat> getSNPs(int snpCode,int matInd=-1,int crick=0);
+  ~TFBShelper() { for(unsigned int i=0;i<this->matricies.size();i++) delete this->matricies[i];}
 };
 
