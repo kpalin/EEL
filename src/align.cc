@@ -36,6 +36,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.11  2004/07/30 12:07:50  kpalin
+ *  Output changed to use alnColumn objects.
+ *
  *  Revision 1.10  2004/02/26 11:27:36  kpalin
  *  Changed the output from nextBest() function to be new SitePair objects
  *  instead a large tuple of numbers. It's easier to change in the future
@@ -1350,7 +1353,7 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
       cerr<<"Error: too few sequences in data"<<endl;
       #endif
       delete matchlist;
-      return Py_BuildValue("s", "");
+      return Py_BuildValue("s", "Error: too few sequences in data");
     }
 
  if(matchlist->size()==2){
@@ -1630,7 +1633,7 @@ align_aligndata(PyObject *self, PyObject *args)
 
   if (!PyArg_ParseTuple(args, "siddddd", &data,&result_ask,
 			&lambda, &xi, &mu, &nu, &nuc_per_rotation)){
-    return Py_BuildValue("s", "");
+    return 0;
   }
   
   istringstream inData(data);
@@ -1653,9 +1656,9 @@ static PyMethodDef alignMethods[] = {
    "Draws the file"},
   #endif
   {"aligndata",  align_aligndata, METH_VARARGS,
-   "aligns computed sequences"},
+   "aligns computed sequences. Input: data,#results,lambda,xi,mu,nu,nuc_per_rot"},
   {"alignfile",  align_alignfile, METH_VARARGS,
-   "aligns sequences from a gff-file"},
+   "aligns sequences from a gff-file. Input: filename,,#results,lambda,xi,mu,nu,nuc_per_rot"},
   {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
