@@ -22,7 +22,8 @@ spam_editDistance(self, args)
   int const delcost=1,chgcost=1;
   int i,j;
   unsigned int smaxlen,sminlen,arrayLen,editDist,countEnds=1;
-  int *prev,*curr,*tmp;
+  int *prev,*curr,*tmp_i;
+  char *tmp_c;
   char *smin,*smax;
 
   if (!PyArg_ParseTuple(args, "ss|d",&smin,&smax,&countEnds)){
@@ -38,9 +39,9 @@ spam_editDistance(self, args)
     smaxlen=sminlen;
     sminlen=i;
 
-    tmp=smin;
+    tmp_c=smin;
     smin=smax;
-    smax=tmp;
+    smax=tmp_c;
   }
 
   arrayLen=sminlen+1;
@@ -75,9 +76,9 @@ spam_editDistance(self, args)
     }
     editDist=min2(editDist,curr[sminlen]);
     /* Done for one row. Now get a new curr. */
-    tmp=curr;
+    tmp_i=curr;
     curr=prev;
-    prev=tmp;
+    prev=tmp_i;
   }
 
   if(countEnds) {
