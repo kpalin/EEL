@@ -2,6 +2,10 @@
 
 #
 # $Log$
+# Revision 1.9  2004/04/14 07:47:45  kpalin
+# Again somewhat working version. Now Greedy align
+# should return something semi-intelligent.
+#
 # Revision 1.8  2004/04/08 13:03:12  kpalin
 # Output and stupid Greedy multiple alignment works.
 #
@@ -33,7 +37,7 @@
 #
 
 
-import xreadlines,re,traceback,pdb,math
+import re,traceback,pdb,math
 from StringIO import StringIO
 
 class NotComparable(Exception):
@@ -1658,7 +1662,7 @@ class MultipleAlignment:
         currMod=None
         currModId=""
         cisModRows=0
-        for line in xreadlines.xreadlines(fhandle):
+        for line in fhandle:
             line=line.strip()
             if len(line)==0 or line[0]=='#':  ## Skip empty and comment lines.
                 continue
