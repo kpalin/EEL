@@ -12,6 +12,11 @@ import string
 
 
 # $Log$
+# Revision 1.6  2004/02/26 11:59:49  kpalin
+# Added gracefull error handling for mabs. Now it doesn't exit after
+# encountering an error but report it and tells to send the error
+# message to me.
+#
 # Revision 1.5  2004/01/28 08:48:32  kpalin
 # Updated docstrings
 #
@@ -102,7 +107,10 @@ class Commandline(Interface):
                          'addSingleSequence':      (self.addSingleSequence,1),
                          'ass':               (self.addSingleSequence,1),
                          'saveMarkovBackground':  (self.saveMarkovBackground,1),
-                         'more':               (self.moreAlignment,0)}
+                         'more':               (self.moreAlignment,0),
+                         'multipleAlign':      (self.multiAlign,1),
+                         'showMultiAlign':     (self.showMultiAlign,0),
+                         'saveMultiAlign':     (self.saveMultiAlign,1)}
 
     def run(self):
         "waits for std input and executes these commands"
@@ -168,6 +176,8 @@ class Commandline(Interface):
                 else:
                     try:
                         comm(token[1:])
+                    except KeyboardInterrupt:
+                        raise
                     except StandardError,e:
                         print "#"*67
                         print "Software error encountered! Please email this"

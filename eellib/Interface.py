@@ -7,6 +7,7 @@ import Output
 import os,shutil
 from tempfile import mktemp
 import atexit
+from glob import glob
 
 try:
     from gzip import GzipFile
@@ -16,6 +17,9 @@ except ImportError:
 
 #
 # $Log$
+# Revision 1.12  2004/02/23 12:23:52  kpalin
+# Updates for per gene orthologous runs. Maybe litle multiple alignment.
+#
 # Revision 1.11  2004/02/13 09:40:19  kpalin
 # Corrected bugs
 #
@@ -34,6 +38,8 @@ if 0:
     print "NOW IMPORTING ALIGN module"
 
 import align
+import Multialign
+
 import sys,math
 
 
@@ -130,6 +136,50 @@ class Interface:
         self.__comp={}
         self.alignment=None
 
+
+    def multiAlign(self,arglist):
+        """Arguments: pairwiseGFFfiles
+        Join the given pairwise alignment GFF files to multiple alignment."""
+        self.malignment=Multialign.MultipleAlignment()
+
+        for fileGlob in arglist:
+            filenames=glob(fileGlob)
+            if len(filenames)==0:
+                print "Can't find",fileGlob
+            for fileName in filenames:
+                self.malignment.addGFFfile(fileName)
+        print "All %d files added. Doing the alignment"%(len(filenames)),filenames
+        self.malignment.multiAlign()
+        
+    def showMultiAlign(self,arglist):
+        """Arguments: none
+        Outputs the multiple alignment to standard output."""
+        if not hasattr(self,"malignment"):
+            return
+        #for i in [self.malignment[0]]:
+        for i in self.malignment:
+            if len(i)<2:continue
+            if len(self.seq)>0:
+                i.strAln(self.seq)
+            print str(i)
+            print "\n"
+
+
+    def saveMultiAlign(self,arglist):
+        """Arguments: filename
+        Outputs the multiple alignment to file 'filename'."""
+        fname=arglist[0]
+        if not hasattr(self,"malignment"):
+            print "No multiple alignment to save!"
+            return
+        m="w"
+        for i in self.malignment:
+            if len(i)<2:continue
+            if len(self.seq)>0:
+                i.strAln(self.seq)
+            Output.savealign(str(i)+"\n",fname,m)
+            m="a"
+
     def resetMatrices(self):
         "resets the list of matrices"
         self.matlist=[]
@@ -140,7 +190,7 @@ class Interface:
         for f in filenames:
             try:
                 m=Matrix(f)
-                print "adding",f
+                print "adding %s, Info=%2.4g:"%(f,m.InfoContent)
                 self.matlist.append(m)
             except ValueError:
                 print "could not read",f
@@ -152,7 +202,7 @@ class Interface:
     def printMatrices(self):
         "prints matrices to standard out"
         for i in range(len(self.matlist)):
-            print "Matrix No %d  %s"%(i,self.matlist[i].name)
+            print "Matrix No %d (info=%g) %s"%(i,self.matlist[i].InfoContent,self.matlist[i].name)
             self.matlist[i].draw()
 
     def printMatrixWeights(self):
@@ -319,7 +369,7 @@ class Interface:
             if not goodAlign:
                 break
             goodAlign.reverse() # For old times sake
-
+            #               0 1 2     3      4[0]   4[1]   5[0]   5[1]  6
             # goodAlign= [ (x,y,Score,Motif,(startX,endX),(startY,endY),Strand) ]
             self.alignment.bestAlignments.append(goodAlign)
             
