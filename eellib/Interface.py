@@ -30,9 +30,6 @@ if sys.platform!='win32':
 # Revision 1.23  2005/02/21 09:50:41  kpalin
 # Fixed a bug conserning beatifying matrix names with similar filenames.
 #
-# Revision 1.22.2.1  2005/02/25 14:06:36  kpalin
-# Working hard to make a nice package for publication.
-#
 # Revision 1.22  2005/01/13 13:16:42  kpalin
 # Moved the requesting of sequences to be aligned to Python side
 # of stuff. Much better.
@@ -87,6 +84,14 @@ if 0:
 
 from eellib import align
 
+try:
+    # Greedy multiple alignment written in python
+    from eellib import Multialign
+    
+    # Exact multiD multiple alignment written in C
+    from eellib import multiAlign
+except ImportError:
+    pass
 from eellib import _c_matrix
 
 import sys,math
@@ -194,6 +199,113 @@ class Interface:
         print text
             
 
+    def multiAlignGreedy(self,arglist):
+        """Arguments: pairwiseGFFfiles
+        Join the given pairwise alignment GFF files to multiple alignment."""
+        #self.malignment=Multialign.MultipleAlignment()
+
+        for fileGlob in arglist:
+            filenames=glob(fileGlob)
+            if len(filenames)==0:
+                print "Can't find",fileGlob
+            for fileName in filenames:
+                print "Reading",fileName
+                self.malignment.addGFFfile(fileName)
+        print "All %d files added. Doing the alignment"%(len(filenames)),filenames
+        self.malignment.multiAlign()
+
+
+
+    def multiAlign(self,arglist):
+        """Arguments: [filename[,num_of_align,[lambda[,xi[,mu[,nu,[,nuc_per_rotation]]]]]]]
+Computes multiple alignment of the BS or optionally the BS from a gff file
+filename specifies a file in gff format is you want to be aligned
+num_of_align        specifies how many alignments you want. (Default 3)
+lambda   Bonus factor for hit (Default 2)
+xi       Penalty factor for rotation (Default 1.0)
+mu       Penalty factor for average distance between sites (Default 0.5)
+nu       Penalty factor for distance difference between sites (Default 1.0)
+nuc_per_rotation    specifies how many nucletides there are per rotation. (Default 10.4)
+If you want to skip a argument just  write '.' for it.
+If you use '.' as filename the local data are aligned."""
+        try:
+            [filename, num_of_align, Lambda, xi,
+             mu, nu, nuc_per_rotation]=arglist + ['.']*(7-len(arglist))
+            
+            if num_of_align=='.':
+                num_of_align=3
+            if Lambda=='.':
+                Lambda=2.0
+            if xi=='.':
+                xi=1.0
+            if mu=='.':
+                mu=0.5
+            if nu=='.':
+                nu=1.0
+            if nuc_per_rotation=='.':
+                nuc_per_rotation=10.4
+
+
+            data=[x.split() for x in open(filename).readlines() ]
+            self.alignment=multiAlign.MultiAlignment(data,int(num_of_align),
+                                                     float(Lambda), float(xi),
+                                                     float(mu), float(nu),float(nuc_per_rotation))
+            if not self.alignment:
+                print "No multiple alignment for a reason or an other"
+            else:
+                print "Done"
+                self.moreAlignments(1)
+                print len(self.alignment.bestAlignments)
+                for y in [(x.motif,x.score,zip(self.alignment.names,x.beginEnd,x.siteScore,x.siteSeqPos)) for x in self.alignment.bestAlignments[0]]:print y
+#                print "goodAlign=",map(str,self.alignment.nextBest())
+        except ValueError:
+            print "Error: unallowed arguments passed to 'multipleAlign'"
+
+        
+    def showMultiAlign(self,arglist):
+        """Arguments: [minPairs]
+        Outputs the multiple alignment to standard output.
+        If an integer minPairs is given, no sites aligned with less than that
+        number of pairwise alignments, is reported."""
+        if not hasattr(self,"malignment"):
+            return
+        if len(arglist)>0:
+            minPairs=int(arglist[0])
+        else:
+            minPairs=0
+        #for i in [self.malignment[0]]:
+        for i in self.malignment:
+            i.setAlnLimit(minPairs)
+            #if not i or len(i)<2:continue
+            if len([x for x in i.seqs if x in self.seq.getNames()])==len(i.seqs):
+                i.strAln(self.seq)
+            print str(i)
+            print "\n"
+
+
+    def saveMultiAlign(self,arglist):
+        """Arguments: filename [minPairs]
+        Outputs the multiple alignment to file 'filename'.
+        If an integer minPairs is given, no sites aligned with less than that
+        number of pairwise alignments, is reported."""
+        fname=arglist[0]
+        try:
+            minPairs=int(arglist[1])
+        except (IndexError,ValueError):
+            minPairs=0
+            
+        if not hasattr(self,"malignment"):
+            print "No multiple alignment to save!"
+            return
+        m="w"
+        for i in self.malignment:
+            i.setAlnLimit(minPairs)
+            #if len(i)<2:continue
+            if len([x for x in i.seqs if x in self.seq.getNames()])==len(i.seqs):
+                i.strAln(self.seq)
+            Output.savealign(str(i)+"\n",fname,m)
+            m="a"
+
     def resetMatrices(self,arglist=None):
         "Arguments: none\nremoves all matrices"
         self.matlist=[]
@@ -265,10 +377,7 @@ class Interface:
 
     def removeMatrix(self, index):
         "removes matrix given by index"
-        try:
-            self.matlist.pop(index)
-        except IndexError:
-            pass
+        self.matlist.pop(index)
 
     def resetSequences(self, arglist=None):
         "Arguments: none\nremoves all sequences"
