@@ -11,6 +11,9 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.13  2004/12/22 11:14:16  kpalin
+##   Some fixes for better distributability
+##
 ##   Revision 1.12  2004/12/14 13:07:52  kpalin
 ##
 ##   Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun
@@ -122,7 +125,7 @@ setup (name = 'EEL',
        maintainer = "Kimmo Palin",
        maintainer_email = "kimmo.palin@helsinki.fi",
        license = "GPL (see file COPYING)",
-       description = 'c++ extension modules:\na binding site matrix\nan alignment function',
+       description = 'A software tool for locating enhancer elements from genomic sequence',
        ext_modules = ext_modList,
        libraries= compileLibs,
        packages = ["eellib"],
