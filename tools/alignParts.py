@@ -4,6 +4,9 @@
 
 #
 # $Log$
+# Revision 1.3  2005/01/03 11:25:00  kpalin
+# Works flawlessly.
+#
 # Revision 1.2  2004/12/30 11:31:52  kpalin
 # Classified.
 #
@@ -83,7 +86,7 @@ class alignedSite:
 
 
     def __str__(self):
-        s="%6.2f = %5.2f - %5.2f - %5.2f - %5.2f = weight - dist - deltaDist - rot"%(self.score_delta,self.lmbda_p,self.mu_p,self.nu_p,self.xi_p)
+        s="%6.2f = %5.2f - %5.2f(%3.2f) - %5.2f(%d) - %5.2f = weight - dist - deltaDist - rot"%(self.score_delta,self.lmbda_p,self.mu_p,(self.d+self.D)/2.0,self.nu_p,abs(self.d-self.D),self.xi_p)
         return s
     
 def mean(lst):
@@ -210,7 +213,9 @@ class alnScores:
 if __name__=="__main__":
     import sys
     a=alnScores(open(sys.argv[1]).read())
-    
+    for i in a.cisMods[:10]:print i
+    print "\n\n\nHUONOJA\n\n\n"
+    for i in a.cisMods[-10:]:print i
     
 
         
