@@ -8,6 +8,10 @@ from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.8  2005/01/12 13:34:55  kpalin
+# Added Tkinter/Tix Graphical user interface and command -no-gui to
+# avoid it.
+#
 # Revision 1.7  2005/01/07 13:41:25  kpalin
 # Works with py2exe. (windows executables)
 #
@@ -47,6 +51,58 @@ class Matrix:
         self.setBGfreq(0.25,0.25,0.25,0.25)
         #self.draw()
 
+
+
+    def toAhab(self):
+        "Return the matrix as string formatted for ahab"
+        s=StringIO()
+        s.write(">%s Matrix\t%d\n"%(self.name,len(self)))
+        for i in range(len(self)):
+            A,C,G,T=self.LLMatrix[0][i],self.LLMatrix[1][i],self.LLMatrix[2][i],self.LLMatrix[3][i]
+            s.write("%d\t%d\t%d\t%d\n"%(A,C,G,T))
+        A,C,G,T=sum(self.LLMatrix[0]),sum(self.LLMatrix[1]),sum(self.LLMatrix[2]),sum(self.LLMatrix[3])
+        s.write("<\n")
+        return s.getvalue()
+
+    def seqsBetterThan(self,limit):
+        "Return sequences scoring better than limit"
+        if self.backGround:
+            raise ValueError("Can't use markov background")
+        self.initWeights()
+        ret=[] # Found sequences better than limit
+
+        acgtWeights=[zip(x,['A','C','G','T']) for x in zip(*self.M_weight)]
+
+        maxToGo=[]
+        score=0.0
+        acgtWeights.reverse()
+        for i in acgtWeights:
+            i.sort()
+            i.reverse()
+            maxToGo.append(score)
+            score+=i[0][0]
+        acgtWeights.reverse()
+        maxToGo.reverse()
+
+        if score<limit:
+            return []
+        
+        def recurse(i=0,s=[],score=0.0):
+            if i>=len(self):
+                if score>=limit:
+                    print "".join(s)
+                    #ret.append(("".join(s),score))
+                return
+            acgt= acgtWeights[i]
+            for sc,nucl in acgt:
+                if score+sc+maxToGo[i]>limit:
+                    recurse(i+1,s+[nucl],score+sc)
+                else:
+                    return
+                
+        recurse()
+        return ret
+        
 
     def setMarkovBackground(self,bg):
         """Set a markov Background.
