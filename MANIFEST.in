@@ -1,0 +1,8 @@
+include Nmyc.Enhancer*
+include Makefile
+include COPYING
+include mabs
+include *.pfm
+include *.bg
+include readline-0.0.0.withheaders.tgz
+recursive-include JASPAR2 *
