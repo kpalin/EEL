@@ -4,6 +4,11 @@ import string
 import matrix
 import math
 
+
+#
+# $Log$
+#
+
 from cStringIO import StringIO
 
 def log2(x):
@@ -128,27 +133,33 @@ class Matrix:
     def trivialWeights(self):
         """Update weights according to 0-order background"""
 
-        #sum starts at 1 because the BG self.frequencies are added to the matrix
-        #sum=[self.pseudoCount]*len(self.__Matrix[0])
-        #for row in self.__Matrix:
-        #    sum=map(operator.add,sum,row)
+        # Sum of the columns.
         sum=reduce(lambda s,row:map(operator.add,s,row),self.__Matrix,[self.pseudoCount]*len(self.__Matrix[0]))
-        #sum=1.0
-        #for i in range(4):
-        #    sum+=self.__Matrix[i][0]
 
+
+        # Frequencies of a nucleotide
+        freq=[ [ (x+bgFreq*self.pseudoCount)/(tot) for x,tot in zip(matrix,sum) ] \
+               for matrix,bgFreq in zip(self.__Matrix,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
+
+        # Compute information content of the motif
+        InfoContent=[[ f*log2(f/bgF) for f in fLine] for (fLine,bgF) in zip(freq,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
+
+
+        self.InfoContent=reduce(operator.add,reduce(lambda x,y:x+y,InfoContent,[]))
+        # Compute weights.
         self.__M.append(map(lambda x,tot: log2((x+(self.freqA*self.pseudoCount))/
                                                (tot*self.freqA)),
                             self.__Matrix[0],sum))
         self.__M.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/
                                                (tot*self.freqC)),
                             self.__Matrix[1],sum))
-        self.__M.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/
+        self.__M.append(map(lambda x,tot: log2((x+(self.freqG*self.pseudoCount))/
                                                (tot*self.freqG)),
                             self.__Matrix[2],sum))
         self.__M.append(map(lambda x,tot: log2((x+(self.freqT*self.pseudoCount))/
                                                (tot*self.freqT)),
                             self.__Matrix[3],sum))
+
 
         #maxscore is the highest reachable score (which respect to the BG)
         self.maxscore=0.0
