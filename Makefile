@@ -9,7 +9,7 @@ all: src/matrix.cc src/align.cc src/editdist.c
 	@echo 
 	python2.2 setup.py build
 	cp -r build/lib*/* .
-	cp build/scripts*/mabs .
+	#cp build/scripts*/mabs .
 
 
 modules/matrix.so: src/matrix.cc

@@ -21,6 +21,19 @@
 #include <algorithm>
 
 
+
+
+
+
+/*
+ *
+ *  $Log$
+ *
+ */
+
+
+
+
 /* The binding sites have to be less than MAX_BP_DIST apart */
 #ifndef MAX_BP_DIST
 #define MAX_BP_DIST 1000
