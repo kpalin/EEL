@@ -1,5 +1,17 @@
 from time import localtime
 from cStringIO import StringIO
+
+
+
+
+
+#
+# $Log$
+#
+
+
+
+
 try:
     from gzip import GzipFile
 except ImportError:
@@ -124,6 +136,8 @@ def formatalignGFF(alignment):
 
     outStrIO=StringIO()
     GFFformat="%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\tCisModule %d\n"
+    # This format should be OK for gff2aplot 2.0
+    GFFalignFormat='%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\t\tTarget "%s";\tStart %d;\tEnd %d;\tStrand +;\tFrame .;\tCisModule %d;\n'
 
     outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation))
     xname,yname=alignment.x_name,alignment.y_name
@@ -131,8 +145,8 @@ def formatalignGFF(alignment):
     for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
         if len(goodAlign)==0:
             continue
-        outStrIO.write(GFFformat%(xname,"CisModule",goodAlign[0][4][0],goodAlign[-1][4][1],goodAlign[-1][2],".",i))
-        outStrIO.write(GFFformat%(yname,"CisModule",goodAlign[0][5][0],goodAlign[-1][5][1],goodAlign[-1][2],".",i))
+        outStrIO.write(GFFalignFormat%(xname,"CisModule",goodAlign[0][4][0],goodAlign[-1][4][1],goodAlign[-1][2],".",yname,goodAlign[0][5][0],goodAlign[-1][5][1],i))
+        outStrIO.write(GFFalignFormat%(yname,"CisModule",goodAlign[0][5][0],goodAlign[-1][5][1],goodAlign[-1][2],".",xname,goodAlign[0][4][0],goodAlign[-1][4][1],i))
         for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
             outStrIO.write(GFFformat%(xname,motif,xcoord[0],xcoord[1],score,strand,i))
             outStrIO.write(GFFformat%(yname,motif,ycoord[0],ycoord[1],score,strand,i))
