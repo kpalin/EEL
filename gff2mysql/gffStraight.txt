@@ -1,5 +1,8 @@
 --
 --  $Log$
+--  Revision 1.2  2004/05/11 06:11:58  kpalin
+--  Current version of the schema, along with fetchdescription.sh
+--
 --  Revision 1.1  2004/05/07 07:48:35  kpalin
 --  SQL commands for loading approximate gff files to mysql database.
 --
@@ -19,13 +22,16 @@
 
 drop table gffkoe;
 
-create table gffkoe (
+create table gffkoe2 (
 fileName varchar(100),
 species varchar(10),
 enscode varchar(40),
 hugocode varchar(20),
 strand varchar(10),
-slice varchar(100),
+refDB varchar(64),
+chromosome varchar(2),
+sliceStart int,
+sliceEnd int,
 type varchar(30),
 tfsite varchar(100),
 start int, 
@@ -34,6 +40,7 @@ score float,
 sitestrand char(1),
 adot char(1),
 attrib varchar(255),
+mwattrib varchar(255),
 junk1 varchar(10),
 junk2 varchar(10),
 junk3 varchar(10),
@@ -43,12 +50,17 @@ junk6 varchar(10),
 junk7 varchar(10),
 junk8 varchar(10),
 junk9 varchar(10),
+junk10 varchar(10),
+junk11 varchar(10),
+junk12 varchar(10),
+junk13 varchar(10),
+junk14 varchar(10),
 cisAttrib varchar(10),
 KEY (tfsite)
 );
 -- grep -H "" og_*.fasta.align.gff |tr \|: \\\t\\\t >gffkoe.txt
 --load data local infile 'gffkoe.txt' into table gffkoe;
--- mysqlimport -ppalindrome --columns=fileName,species,slice,type,tfsite,start,stop,score,sitestrand,adot,attrib,junk1,junk2,junk3,junk4,junk5,junk6,cisAttrib --local bbu_palin gffkoe.txt
+-- mysqlimport -ppalindrome --columns=fileName,species,slice,type,tfsite,start,stop,score,sitestrand,adot,attrib,mwattrib,junk2,junk3,junk4,junk5,junk6,cisAttrib --local bbu_palin gffkoe.txt
 
 
 drop table if exists sequencekoe;
@@ -117,6 +129,7 @@ CREATE TABLE alnColsKoe (
 CREATE TABLE siteskoe (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	weight FLOAT,
+	affinity FLOAT,
 	pos INT,
 	strand CHAR(1),
 	regID INT NOT NULL,
@@ -145,55 +158,59 @@ CREATE TABLE tfactorkoe (
 	KEY (name)
 );
 
-delete from gffkoe where species='### lambda';
+update gffkoe2 set species="HUMAN" where enscode like "ENSG%";
+update gffkoe2 set species="MOUSE" where enscode like "ENSMUS%";
 
-insert ignore into tfactorkoe (name,width) select distinct tfsite,stop-start from gffkoe where tfsite!='CisModule';
+insert ignore into tfactorkoe (name,width) select distinct tfsite,stop-start from gffkoe2 where tfsite!='CisModule';
 
-insert ignore into sequencekoe (species,name) select distinct species,SUBSTRING(slice,1,LOCATE('.',slice)-1) from gffkoe;
+insert ignore into sequencekoe (species,name,dbname) select distinct species,chromosome,refDB from gffkoe2;
 
 
-insert into slicekoe (seqID,beginPos,endPos,ensCode,seqName,geneName,revComplement,filename) 
+insert into slicekoe (seqID,beginPos,endPos,ensCode,geneName,revComplement,filename) 
 select distinct s.id,
-substring(g.slice,locate('.',g.slice)+1,locate('-',substring_index(g.slice,'.',-1))-1) beginPos,
-substring(g.slice,locate('-',g.slice)+1,9999) endPos,enscode as enscode,
-concat_ws('|',g.species,g.enscode,g.hugocode,g.strand,g.slice) as seqName,
-g.hugocode as hugoName,
+sliceStart,sliceEnd,enscode,hugocode,
 IF(g.strand='Crick',1,0), g.fileName
-from gffkoe g,sequencekoe s where s.species=g.species and s.name=SUBSTRING(g.slice,1,LOCATE('.',g.slice)-1);
+from gffkoe2 g,sequencekoe s where s.species=g.species and s.name=g.chromosome;
 
 
 
 
 
 insert into cismodulekoe (score,tmpID)
-	SELECT DISTINCT score,concat(fileName,substring(cisAttrib,1,LOCATE(';',cisAttrib)-1)) FROM gffkoe where tfsite='CisModule';
+	SELECT DISTINCT score,concat(fileName,substring(cisAttrib,1,LOCATE(';',cisAttrib)-1)) FROM gffkoe2 where tfsite='CisModule';
 
 
 
 
 
 insert into sliceCisLinkKoe (cisID,sliceID) select DISTINCT c.id,s.id
-from cismodulekoe c, slicekoe s,gffkoe g
+from cismodulekoe c, slicekoe s,gffkoe2 g
 where 
 concat(g.fileName,substring(g.cisAttrib,1,LOCATE(';',g.cisAttrib)-1))=c.tmpID
 -- and g.hugocode=s.geneName
 -- and g.enscode = s.enscode
-and concat_ws('|',g.species,g.slice)=s.seqName
+and g.enscode=s.enscode and s.fileName=g.fileName
 and g.tfsite='CisModule';
 
 
 
 insert into regionkoe (beginPos,endPos,cisID,seqID)
-select substring(g.slice,locate('.',g.slice)+1,locate('-',substring_index(g.slice,'.',-1))-1) + start as beginPos,
-substring(g.slice,locate('.',g.slice)+1,locate('-',substring_index(g.slice,'.',-1))-1)+stop as endPos,c.id as cisID,s.id as seqID
-from gffkoe g,sequencekoe s,cismodulekoe c
-where tfsite='CisModule' and s.species=g.species and s.name=SUBSTRING(slice,1,LOCATE('.',slice)-1) and c.score=g.score and concat(g.fileName,substring(g.cisAttrib,1,LOCATE(';',g.cisAttrib)-1))=c.tmpID;
+select g.sliceStart+start as beginPos,
+g.sliceStart+stop as endPos,
+c.id as cisID,s.id as seqID
+from gffkoe2 g,sequencekoe s,cismodulekoe c
+where tfsite='CisModule' 
+and s.name=g.chromosome
+and s.species=g.species 
+and c.score=g.score and 
+concat(g.fileName,substring(g.cisAttrib,1,LOCATE(';',g.cisAttrib)-1))=c.tmpID;
 
 
 drop table if exists siteskoeTmp;
-CREATE TEMPORARY TABLE siteskoeTmp (
+CREATE TABLE siteskoeTmp (
 	id INT,
 	weight FLOAT,
+	affinity FLOAT,
 	pos INT,
 	strand CHAR(1),
 	regID INT NOT NULL,
@@ -211,20 +228,19 @@ CREATE TEMPORARY TABLE siteskoeTmp (
 
 
 
-insert into siteskoeTmp (pos,strand,regID)
-select IF(strand='Crick',
-substring(g.slice,locate('-',g.slice)+1,9999)-g.stop,
-substring(g.slice,locate('.',g.slice)+1,locate('-',substring_index(g.slice,'.',-1))-1)+g.start) as pos ,
+insert into siteskoeTmp (pos,strand,regID,affinity)
+select IF(strand='Crick',g.sliceEnd-g.stop,g.sliceStart+g.start) as pos ,
 IF(strand='Crick',IF(sitestrand='-','+','-'),sitestrand),
-r.id
-from gffkoe g,regionkoe r,cismodulekoe c,sequencekoe s
+r.id,
+SUBSTRING(g.mwattrib FROM 4) as affinity
+from gffkoe2 g,regionkoe r,cismodulekoe c,sequencekoe s
 where r.cisID=c.id  and concat(g.fileName,g.attrib)=c.tmpID  and
-s.id=r.seqID and g.species=s.species
-order by r.beginPos+g.start;
+s.id=r.seqID and g.species=s.species;
+drop table if exists siteskoeTmp;
 
 
 drop table if exists alnColsKoeTmp;
-CREATE temporary TABLE alnColsKoeTmp (
+CREATE  TABLE alnColsKoeTmp (
 	id INT,
 	tfID INT,
 	cisID INT NOT NULL,
@@ -238,18 +254,19 @@ CREATE temporary TABLE alnColsKoeTmp (
 
 insert into alnColsKoeTmp (tfId,scoredelta,cisID)
 select t.id,g.score,c.id
-from tfactorkoe t,cismodulekoe c,gffkoe g
+from tfactorkoe t,cismodulekoe c,gffkoe2 g
 where t.name=g.tfsite and 
  c.tmpID=concat(g.fileName,g.attrib) and g.species='HUMAN' ORDER BY g.start; -- !!!!!!!
 
 insert into alnColsKoe  (tfId,scoredelta,cisID,cisColId)
 select tfId,scoredelta,cisId,cisColId
 from alnColsKoeTmp;
+drop table if exists alnColsKoeTmp;
 
 
 
-insert into siteskoe (weight,pos,strand,regId,colId)
-select s.weight,s.pos,s.strand,s.regId,a.id as colId
+insert into siteskoe (weight,pos,strand,regId,colId,affinity)
+select s.weight,s.pos,s.strand,s.regId,a.id as colId,affinity
 FROM siteskoeTmp s,alnColsKoe a,regionkoe r
 WHERE s.regId=r.id and r.cisID=a.cisID and s.colInReg=a.cisColId;
 
@@ -261,7 +278,7 @@ WHERE s.regId=r.id and r.cisID=a.cisID and s.colInReg=a.cisColId;
 -- insert into sliceCisLink (sliceID,cisID) select s.id,c.id from slice s,slicekoe sk,cismodulekoe ck,cismodule c,sliceCisLinkKoe l
 -- where s.seqName=sk.seqName and c.tmpID=ck.tmpID and l.sliceID=sk.id and l.cisID=ck.id
 
-insert into region (beginPos,endPos,seqID,cisID) select beginPos,endPos,s.id,c.id 
-from regionkoe,sequence s, sequencekoe sk, cismodulekoe ck, cismodule c 
-where seqID=sk.id and sk.name=s.name and sk.species=s.species and
-cisID=ck.id and ck.tmpID=c.tmpID;
+-- insert into region (beginPos,endPos,seqID,cisID) select beginPos,endPos,s.id,c.id 
+-- from regionkoe,sequence s, sequencekoe sk, cismodulekoe ck, cismodule c 
+-- where seqID=sk.id and sk.name=s.name and sk.species=s.species and
+-- cisID=ck.id and ck.tmpID=c.tmpID;
