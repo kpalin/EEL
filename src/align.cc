@@ -34,6 +34,15 @@
 /*
  *
  *  $Log$
+ *  Revision 1.8  2004/02/11 09:39:41  kpalin
+ *  Enabled memory saving features.
+ *  Breaks 'more' command but saves a lot of memory.
+ *
+ *  First find the good matches and find the alignment
+ *  only when asked. Increases the running time but drops
+ *  the memory consuption. SAVE_MEM_LIMIT is threshold
+ *  for memory saving feature.
+ *
  *  Revision 1.7  2004/02/04 10:29:46  kpalin
  *  Corrected memory usage reporting for large inputs.
  *
@@ -807,7 +816,7 @@ void memReport(align_AlignmentObject *self)
 
 int indexYafterOrAtRealY(int sx, int x,struct __CPSTUF *CP,int real_y)
 {
-  int s=0,m,e=CP->matrix[x].size()-1;
+  int s=0,e=CP->matrix[x].size()-1,m=(s+e)>>1;
   int real_m,ret;
 
   if(real_y==0) { //Quick escape
@@ -1243,7 +1252,7 @@ alignMemorySaveObject(align_AlignmentObject *self)
   }
   
 
-  cout<<"best: "<<storingLimit <<" maxs: "<<maxses.size() <<endl;
+  //cout<<"best: "<<storingLimit <<" maxs: "<<maxses.size() <<endl;
 
   // Flip the maximums in other format over to the self.
 //   map<matCoord,pair<matCoord,store> >::iterator iter=maxses.begin();
@@ -1516,6 +1525,7 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
 
 #ifdef SAVE_MEM
   if(ret_self->expectedMemUsage>SAVE_MEM_LIMIT) {
+    cout<<"Saving memory!"<<endl;
     ret_obj=(PyObject*)alignMemorySaveObject(ret_self);
   } else {
     ret_obj=(PyObject*)alignObject(ret_self,0,0,ret_self->CP->seq_x.size(),ret_self->CP->seq_y.size());

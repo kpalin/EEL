@@ -16,6 +16,11 @@ except ImportError:
 
 #
 # $Log$
+# Revision 1.10  2004/02/11 09:38:13  kpalin
+# Enabled memory saving features.
+#
+# Breaks 'more' command but saves a lot of memory.
+#
 # Revision 1.9  2004/02/05 10:31:47  kpalin
 # Added extra garbage collection.
 #
@@ -244,7 +249,7 @@ class Interface:
         if not self.alignment:
             return
         for i in range(num_of_align):
-            if self.alignment.memSaveUsed==1 and self.alginment.askedResults>=len(self.alignment.bestAlignments):
+            if self.alignment.memSaveUsed==1 and self.alignment.askedResults<=len(self.alignment.bestAlignments):
                 print "Can't give more alignments. Don't remember those"
                 break
             goodAlign=self.alignment.nextBest()
@@ -280,7 +285,7 @@ class Interface:
 
         self.moreAlignments(num_of_align)
         if self.alignment:
-            Interface.showalignSTDO(self)
+            #Interface.showalignSTDO(self)
             assert self.alignment.x_name!=self.alignment.y_name
             return 1
         else:

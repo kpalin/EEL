@@ -30,7 +30,7 @@ modMatrix = Extension('matrix',
 #alignCompileArgs = ["-fno-inline","-Wall","-g","-UNDEBUG"]
 #alignCompileArgs = ["-g","-Wall","-O3"]
 alignCompileArgs = []
-alignCompileArgs = ["-DSAVE_MEM"]
+alignCompileArgs = ["-DSAVE_MEM","-DSAVE_MEM_LIMIT=(1024*1024*512)"]
 
 alignLibDirs=[]
 alignLibs=["stdc++"]
@@ -60,7 +60,7 @@ modDist = Extension("editdist",
 
 
 setup (name = 'mabs',
-       version = '1_beta11',
+       version = '1_beta12',
        url = "http://www.cs.helsinki.fi/u/kpalin/",
        author = "Kimmo Palin, Matthias Berg",
        author_email = "kimmo.palin@helsinki.fi",
