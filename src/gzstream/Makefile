@@ -38,6 +38,7 @@ CXX      = g++   # for Linux RedHat 6.1, g++ version 2.95.2
 CPPFLAGS = -I. -O
 LDFLAGS  = -L. -lgzstream -lz
 AR       = ar cr
+RANLIB	= ranlib
 
 # ----------------------------------------------------------------------------
 # plain simple rules to make and cleanup the library:
@@ -70,6 +71,7 @@ test_gunzip.o : test_gunzip.C gzstream.h
 
 libgzstream.a : gzstream.o
 	${AR} libgzstream.a gzstream.o
+	${RANLIB} libgzstream.a
 
 test_gzip : test_gzip.o libgzstream.a
 	${CXX} -o test_gzip test_gzip.o ${LDFLAGS}
