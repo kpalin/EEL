@@ -9,6 +9,9 @@ import sys
 
 
 # $Log$
+# Revision 1.5  2005/01/14 12:51:48  kpalin
+# Fixes for TCL/TIX gui in windows
+#
 # Revision 1.4  2005/01/12 13:34:35  kpalin
 # Added Tkinter/Tix Graphical user interface and command -no-gui to
 # avoid it.
@@ -68,10 +71,10 @@ if len(sys.argv)==1:
         except EOFError:
             pass
 else:
-    commands=''
-    for i in range(1, len(sys.argv)):
-        commands += ' '+sys.argv[i]
-    commands=commands.split(' -')[1:]
+    commands=' '.join(sys.argv[1:])
+    import re
+    commandPat=re.compile(r"\s?-(.+?)(?= -[^0-9.]|$)")
+    commands=commandPat.findall(commands)
 
     error=0
     for c in commands:
