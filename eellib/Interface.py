@@ -127,7 +127,7 @@ class Interface:
                     #self.__gff=Output.get(self.__comp).split('\n')
                 if totalMatches>50000:
                     self.storeTmpGFF()
-                    self.__comp={m:{}}
+                    self.__comp[m]={}
                     totalMatches=0
         if hasattr(self,"tempFileName"):
             self.finalTmpGFF()
@@ -153,6 +153,7 @@ class Interface:
         if len(outData)>0:
             self.tempFile.write(outData)
             self.tempFile.flush()
+        self.__comp={}
 
     def finalTmpGFF(self):
         "Store BS data to temporary file and close it"
