@@ -11,6 +11,9 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.10  2004/03/03 09:26:59  kpalin
+# Few possible bugs corrected.
+#
 # Revision 1.9  2004/02/26 11:28:22  kpalin
 # Changed the output routines to handle the new output from alignment
 # bestAlignments
@@ -129,6 +132,22 @@ def savealign(alignment, filename,mode="w"):
 
 
 
+def moduleData(AlnList):
+    """Returns list of information about the alignment module.
+    Input is a list of alignedCols.alnColumn objects.
+    Output is a list of [sequencecode,begin,end,score] lists"""
+    byCodeMap={}
+    for col in AlnList:
+        for seq,(begin,end) in zip(col.seqID,col.beginEnd):
+            if byCodeMap.has_key(seq):
+                byCodeMap[seq][1]=min(begin,byCodeMap[seq][1])
+                byCodeMap[seq][2]=max(end,byCodeMap[seq][2])
+                byCodeMap[seq][3]=max(col.score,byCodeMap[seq][3])
+            else:
+                byCodeMap[seq]=[seq,begin,end,col.score]
+    outp=byCodeMap.values()
+    outp.sort()
+    return outp
 
 
 def formatalignCHAOS(alignment):
@@ -151,32 +170,61 @@ def formatalignCHAOS(alignment):
     return outStrIO.getvalue()
 
 
-def formatalignGFF(alignment):
-    "Formats the alignment for GFF file"
+def formatMultiAlignGFF(alignment):
+    "Formats the multiple alignemnt for GFF file"
     if not alignment:
         return "No alignment\n"
 
     outStrIO=StringIO()
-    GFFformat="%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\tCM %d\tMW %g\n" # CM= Cis Module, MW = Matrix weight
-    # This format should be OK for gff2aplot 2.0
-    GFFalignFormat='%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\t\tTarget "%s";\tStart %d;\tEnd %d;\tStrand .;\tFrame .;\tCM %d;\n'
+    # CM= Cis Module, MW = Matrix weight, COL = Column code on module
+    GFFformat="%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\tCM %d\tMW %g\tCOL %d\n" 
 
+    # the last %s is for inserting parameters for gff2aplot etc.
+    GFFalignFormat='%s\tmalign\t%s\t%d\t%d\t%4.2f\t.\t.\t%sCM %d\n'
+
+
+    # Header
     outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f time=%g\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation,alignment.secs_to_align))
-    xname,yname=alignment.x_name,alignment.y_name
 
+
+    # For each module
     for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
         if len(goodAlign)==0:
             continue
-        outStrIO.write(GFFalignFormat%(xname,"CisModule",goodAlign[0].beginX,goodAlign[-1].endX,goodAlign[-1].score,".",yname,goodAlign[0].beginY,goodAlign[-1].endY,i))
-        outStrIO.write(GFFalignFormat%(yname,"CisModule",goodAlign[0].beginY,goodAlign[-1].endY,goodAlign[-1].score,".",xname,goodAlign[0].beginX,goodAlign[-1].endX,i))
 
+        # For each sequence participating in the module
+        modData=moduleData(goodAlign)
+        for j in range(len(modData)):
+            seq,begin,end,score=modData[j]
+            if len(modData)==2:
+                targetID=1-abs(j)
+                InsertInfo='\tTarget "%s";\tStart %d;\tEnd %d;\tStrand .;\tFrame .;\t'%(alignment.names[modData[targetID][0]],\
+                                                                                        modData[targetID][1],modData[targetID][2])
+            else:
+                InsertInfo=""
+            outStrIO.write(GFFalignFormat%(alignment.names[seq], \
+                                           "CisModule",\
+                                           begin,end,\
+                                           score,InsertInfo,i))
+
+
+        # For each column on the module.
         prevScore=0.0
-        for as in goodAlign:
+        for as,colCode in zip(goodAlign,range(len(goodAlign))):
             prevScore,score=as.score,as.score-prevScore
-            outStrIO.write(GFFformat%(xname,as.motif,as.beginX,as.endX,score,as.strand,i,as.siteScoreX))
-            outStrIO.write(GFFformat%(yname,as.motif,as.beginY,as.endY,score,as.strand,i,as.siteScoreY))
+            for seq,(begin,end),siteScore in zip(as.seqID,as.beginEnd,as.siteScore):
+                outStrIO.write(GFFformat%(alignment.names[seq], \
+                                          as.motif, \
+                                          begin,end,score,as.strand,\
+                                          i,siteScore,colCode))
 
     return outStrIO.getvalue()
+
+
+def formatalignGFF(alignment):
+    "Formats the alignment for GFF file"
+    return formatMultiAlignGFF(alignment)
+
 
 
 def formatalign(alignment,seq=None):
