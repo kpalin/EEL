@@ -1,3 +1,4 @@
+"""Python interface and logic to TFBS matrix matching"""
 import operator
 import string
 import matrix
@@ -6,6 +7,7 @@ import math
 from cStringIO import StringIO
 
 def log2(x):
+    "Base 2 logarithm"
     #return math.log(x)
     return math.log(x)/math.log(2.0)
 
@@ -28,18 +30,27 @@ class Matrix:
 
 
     def setMarkovBackground(self,bg):
+        """Set a markov Background.
+
+        Markov background of k-order is represented as counts of (k+1)-grams
+        in the background sequence"""
         self.backGround=bg
         self.initWeights()
 
     def setBGfreq(self,a,c,g,t):
+        """Sets 0-order background.
+
+        The parameters are frequences of a,c,g and t in the background sequence"""
         self.backGround=None
         self.freqA,self.freqC,self.freqG,self.freqT=a,c,g,t
         self.initWeights()
 
     def getName(self):
+        """Gives the name of this matrix"""
         return self.name
 
     def __len__(self):
+        """Return the number of columns in this matrix"""
         return len(self.__Matrix[0])
 
     def draw(self):
@@ -57,7 +68,8 @@ class Matrix:
             print
             
 
-    def setBG(self, sequence):
+    def setBG(self, seq):
+        """Sets the 0-order background frequences from and example sequence."""
         countA,countC,countG,countT=seq.count("A")+seq.count("a"),seq.count("C")+seq.count("c"),seq.count("G")+seq.count("g"),seq.count("T")+seq.count("t")
         overall=countA+countC+countG+countT+0.0    # what happens with 'N'?
         self.setBGfreq(countA/overall,countC/overall,countG/overall,countT/overall)
@@ -69,6 +81,7 @@ class Matrix:
         self.initWeights()
 
     def setPseudoCount(self,pcount=1.0):
+        """Sets the amount of pseudocount"""
         if pcount<=0:
             print "Pseudocount must be non negative. Setting to one (1.0)!"
             pcount=1.0
@@ -76,6 +89,7 @@ class Matrix:
         self.initWeights()
 
     def initWeights(self):
+        """Helper to initialize the matrix weights for 0- or higher order background models"""
         self.__M=[]
         if self.backGround:
             self.positiveWeights()
@@ -83,7 +97,9 @@ class Matrix:
             self.trivialWeights()
 
     def positiveWeights(self):
-        """Update weights only for positive probability.
+        """Update weights for higher order markov background.
+
+        Update weights only for positive probability.
         Background is taken care elsewhere"""
 
         sum=reduce(lambda s,row:map(operator.add,s,row),self.__Matrix,[self.pseudoCount]*len(self.__Matrix[0]))
@@ -110,6 +126,7 @@ class Matrix:
         
 
     def trivialWeights(self):
+        """Update weights according to 0-order background"""
 
         #sum starts at 1 because the BG self.frequencies are added to the matrix
         #sum=[self.pseudoCount]*len(self.__Matrix[0])
@@ -144,7 +161,7 @@ class Matrix:
 
 
     def match(self,sequence):
-        "matches matrix on sequence"
+        "matches matrix on sequence DOES NOT CURRENTLY WORK"
         #self.setBG(sequence)
         print "Match does not currently work"
         #return matrix.match(self.__M, sequence)
@@ -172,8 +189,10 @@ class Matrix:
         return ret
 
     def getTFBSbyRatio(self, sequence, minscore_percent=0.1):
-        """returns the hits, which are better then minscore_percent*maxscore
-        these are possible Transcription Factor Binding Sites"""
+        """returns the hits, which are better then log2(minscore_percent*maxprod)
+        
+        These are possible Transcription Factor Binding Sites. The formula is equal
+        to log2(minscore_percent)+maxscore"""
         minscore=log2(minscore_percent)
         #self.setBG(sequence)
         print "Max Score: %f Cutoff: %f"%(self.maxscore,minscore+self.maxscore)

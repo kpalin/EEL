@@ -1,0 +1,529 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+          "http://www.w3.org/TR/html40/loose.dtd">
+
+<html>
+         
+  <head>
+    <title>HappyDoc Generated Documentation</title>
+  </head>
+
+  <body bgcolor="#ffffff">
+        
+        
+        <table border="0" cellpadding="5" cellspacing="0" width="100%">
+        <tr>
+            <th rowspan="2"
+                valign="top"
+                align="left"
+                width="10%"
+                bgcolor="#88bbee"><font color="#000000">HappyDoc Generated Documentation</font>
+            </th>
+            <th bgcolor="#88bbee"
+                width="90%"
+                align="right"><font color="#000000">Class: Matrix</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <!-- breadcrumbs -->
+<p><small>
+/&nbsp;<a href="../../.././index.html">.</a>&nbsp;/&nbsp;<a href="../../mabslib/index.html">mabslib</a>&nbsp;/&nbsp;<a href="../Matrix.html">Matrix.py</a>&nbsp;/&nbsp;Matrix&nbsp;</small></p>
+
+<!-- /breadcrumbs -->
+
+<p>represents a binding site matrix</p>
+<table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="">Methods</a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="drawWeights"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">drawWeights&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+drawWeights ( self )
+</pre>
+
+<p>draws the matrix</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="positiveWeights"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">positiveWeights&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+positiveWeights ( self )
+</pre>
+
+<h4>Update weights for higher order markov background.</h4>
+<p>        Update weights only for positive probability.
+        Background is taken care elsewhere</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="setBG"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">setBG&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+setBG ( self,  seq )
+</pre>
+
+<p>Sets the 0-order background frequences from and example sequence.</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="getName"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">getName&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+getName ( self )
+</pre>
+
+<p>Gives the name of this matrix</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="draw"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">draw&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+draw ( self )
+</pre>
+
+<p>draws the matrix</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="setBGfreq"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">setBGfreq&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+setBGfreq (
+        self,
+        a,
+        c,
+        g,
+        t,
+        )
+</pre>
+
+<h4>Sets 0-order background.</h4>
+<p>        The parameters are frequences of a,c,g and t in the background sequence</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="__init__"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">__init__&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+__init__ ( self,  filename )
+</pre>
+
+<p>reads matrix from file</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="setPseudoCount"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">setPseudoCount&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+setPseudoCount ( self,  pcount=1.0 )
+</pre>
+
+<p>Sets the amount of pseudocount</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="initWeights"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">initWeights&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+initWeights ( self )
+</pre>
+
+<p>Helper to initialize the matrix weights for 0- or higher order background models</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="setMarkovBackground"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">setMarkovBackground&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+setMarkovBackground ( self,  bg )
+</pre>
+
+<h4>Set a markov Background.</h4>
+<p>        Markov background of k-order is represented as counts of (k+1)-grams
+        in the background sequence</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="match"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">match&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+match ( self,  sequence )
+</pre>
+
+<p>matches matrix on sequence DOES NOT CURRENTLY WORK</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="getTFBSbyAbsolute"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">getTFBSbyAbsolute&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+getTFBSbyAbsolute (
+        self,
+        sequence,
+        cutoff,
+        )
+</pre>
+
+<p>Returns the hits that are better than cutoff</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="trivialWeights"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">trivialWeights&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+trivialWeights ( self )
+</pre>
+
+<p>Update weights according to 0-order background</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="__len__"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">__len__&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+__len__ ( self )
+</pre>
+
+<p>Return the number of columns in this matrix</p>
+</td></tr>
+</table><table border="0" cellpadding="5" cellspacing="0" width="100%">
+
+        <tr>
+            <th bgcolor="#99ccff"
+                rowspan="2"
+                valign="top"
+                align="left"
+                width="20%"
+                >
+                <font color="#000000">
+                  <a name="getTFBSbyRatio"></a>&nbsp;
+                </font>
+            </th>
+            <th bgcolor="#99ccff"
+                valign="top"
+                align="left"
+                width="80%"
+                >
+                <font color="#000000">getTFBSbyRatio&nbsp;</font>
+            </th>
+        </tr>
+        <tr>
+        <td>
+        <pre>
+getTFBSbyRatio (
+        self,
+        sequence,
+        minscore_percent=0.1,
+        )
+</pre>
+
+<h4>returns the hits, which are better then log2(minscore_percent*maxprod)</h4>
+<p>        These are possible Transcription Factor Binding Sites. The formula is equal
+        to log2(minscore_percent)+maxscore</p>
+</td></tr>
+</table></td></tr>
+</table>
+        </td>
+        </tr>
+        </table>
+
+    <hr>
+
+    <font size="-2"><i>This document was automatically generated
+    Wed Jan 14 12:00:47 2004 by <a
+    href="http://happydoc.sourceforge.net">HappyDoc</a> version
+    3.0.a1</i></font>
+        
+  </body>
+</html>
+        

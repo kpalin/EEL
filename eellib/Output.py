@@ -1,3 +1,7 @@
+"""Takes care of the output formating.
+
+Also gzip related."""
+
 from time import localtime
 from cStringIO import StringIO
 
@@ -7,6 +11,12 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.5  2004/01/09 10:07:00  kpalin
+# Output in Anchor format.
+# GFF format gives score changes, not increasing sequence of scores.
+#
+# probably much more
+#
 # Revision 1.4  2003/12/30 11:20:45  kpalin
 # In interface.py Reverse the previous changes and allow passing of
 # gziped files to c++ align extension
@@ -211,6 +221,7 @@ def formatalign(alignment,seq=None):
             
         
     def formatAlnSeq(xaln,yaln,xname,yname,xstart,ystart,linelen=60):
+        """Formats the DNA sequence alignment output"""
         outstr="Sequence 1: %s\nSequence 2: %s\n\n"%(xname,yname)
         n=len(xaln)
         xpos,ypos=xstart+1,ystart+1

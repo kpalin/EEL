@@ -1,12 +1,24 @@
+"""Sequence API.
+
+Fasta file input is handled here."""
 import string
 from cStringIO import StringIO
 from xreadlines import xreadlines
 
-from gzip import GzipFile
+try:
+    from gzip import GzipFile
+except ImportError:
+    print "No gzip available."
 
 
 class SingleSequence:
+    """Interface for single sequence files.
+
+    This is useful for very large sequences and interface works more or less like a string."""
     def __init__(self,file):
+        """Initialization.
+
+        Parameter file is an open file like object"""
         self.file=file
 
         self.start=self.file.tell()
@@ -18,6 +30,9 @@ class SingleSequence:
         self.len=self.end-self.start
         
     def __getattr__(self,attr):
+        """Attribute override.
+
+        len() mehod is overriden"""
         if attr=="__len__":
             return self.__len__
         
@@ -52,6 +67,7 @@ class Sequences:
 
 
     def resetSeqPositions(self):
+        "Helper function. Resets the sequence position after every read of the sequence"
         for seq,pos in self.__Seq.values():
             seq.seek(pos)
 
@@ -59,11 +75,10 @@ class Sequences:
         """Adds a single sequence from fasta formated and gziped file.
         Useful for huge sequences, e.g. whole chromosomes"""
         try:
-            File=GzipFile(filename,'r')
-            line="ALUSSA AINA HANKALAA"
             try:
+                File=GzipFile(filename,'r')
                 line=File.readline()
-            except IOError,e:
+            except NameError,IOError:
                 File=open(filename,"r")
                 line=File.readline()
             
@@ -89,7 +104,12 @@ class Sequences:
     def addSequence(self, filename):
         "adds Sequences from file"
         try:
-            File=open(filename,'r')
+            try:
+                File=GzipFile(filename,'r')
+                File.read(1)
+                File.seek(0)
+            except NameError,IOError:
+                File=open(filename,"r")
             name=''
             #for line in string.split(File.read(),"\n"):
             toGetValue={}
@@ -114,6 +134,7 @@ class Sequences:
             print filename,"in not in FASTA format!"
 
     def __str__(self):
+        """returns the names of the sequences"""
         outs=""
         for name in self.__Seq.keys():
             outs+=name+"\n"
@@ -127,17 +148,24 @@ class Sequences:
 
 
     def removeSequence(self, name):
+        "Remove sequence by name"
         if self.__Seq.has_key(name):
             del self.__Seq[name]
         
     def getNames(self):
+        "Return a list of sequence names"
         return self.__Seq.keys()
 
     def has_key(self,key):
+        "True if have sequence called key"
         return self.__Seq.has_key(key)
     
     def __getitem__(self,key):
+        """Returns the DNA sequence of sequence key.
+
+        Returns actually a SigleSequence object"""
         return self.__Seq[key][0]
 
     def sequence(self,name):
-        return self.__Seq[name][0]
+        "Returns the DNA sequence of sequence name"
+        return self[name]

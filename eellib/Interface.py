@@ -1,3 +1,6 @@
+"""Most of the Python functionality and gzip interface"""
+
+
 from Matrix import Matrix
 from Sequence import Sequences
 import Output
@@ -18,7 +21,10 @@ import align
 import sys,math
 
 class Interface:
-    #This class provides the functionality which is used by user interfaces
+    """This class provides most of the functionality.
+
+    Most of the UI commands are related to methods of this class.
+    Especially align and getTFBS functions are important."""
     def __init__(self):
         self.outputted=0
         self.resetMatrices(self)
@@ -154,7 +160,7 @@ class Interface:
         
             
     def savematch(self, filename=''):
-        "Saves the results."
+        "Saves the results. (possibly gziped)"
         # To view the gff file numbered in the same order, use:
         #grep  ENSG tmp.gff |sort --key=5n,5 --key=6n |nl -v0>tmp.sort.ensg.gff
         if hasattr(self,"tempFileName"):
@@ -185,8 +191,9 @@ class Interface:
             Output.showmatch(self.__comp)
 
     def showMoreAlignments(self,count=1):
+        """Gets and shows more alignments on stdout"""
         self.moreAlignments(count)
-        #print Output.formatalign(self.alignment,self.seq),
+        print Output.formatalign(self.alignment,self.seq),
         
 
     def quit(self):
@@ -196,6 +203,7 @@ class Interface:
 
 
     def moreAlignments(self,num_of_align=1):
+        """Fetch more alignments from previously run alignment matrix"""
         if not self.alignment:
             return
         for i in range(num_of_align):

@@ -1,3 +1,8 @@
+"""Support for commandline interface.
+
+This module takes care of the commandline history and parsing.
+"""
+
 from time import localtime
 from glob import glob
 from Interface import Interface
@@ -7,6 +12,11 @@ import string
 
 
 # $Log$
+# Revision 1.3  2004/01/13 07:55:01  kpalin
+# Paljon kaikenlaista.
+#
+# Mahdotonta muistaa kaikkea.
+#
 # Revision 1.2  2003/12/29 12:43:17  kpalin
 # Interface class repaired to enable alignment from gzip:ed temporary files.
 #
@@ -35,7 +45,9 @@ except Exception:
 
 
 class Commandline(Interface):
-    "This is a command line based user interface"
+    """This is a command line based user interface.
+
+    The mabs commands and most of the default values are set here."""
     def __init__(self):
         Interface.__init__(self)
         self.A,self.C,self.G,self.T=0.25,0.25,0.25,0.25
@@ -433,6 +445,7 @@ If you use '.' as filename the local data are aligned."""
 
 
     def getBaseSaveName(self):
+        """Assistant function that returns the default basename for output files"""
         a=localtime()
         filename='mabs_'+str(a.tm_year)+'_'+str(a.tm_mon)+'_'+str(a.tm_mday)+'_'+str(a.tm_hour)+'_'+str(a.tm_min)
         return filename
