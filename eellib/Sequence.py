@@ -78,7 +78,7 @@ class Sequences:
             try:
                 File=GzipFile(filename,'r')
                 line=File.readline()
-            except NameError,IOError:
+            except (NameError,IOError):
                 File=open(filename,"r")
                 line=File.readline()
             
@@ -108,7 +108,7 @@ class Sequences:
                 File=GzipFile(filename,'r')
                 File.read(1)
                 File.seek(0)
-            except NameError,IOError:
+            except (NameError,IOError):
                 File=open(filename,"r")
             name=''
             #for line in string.split(File.read(),"\n"):

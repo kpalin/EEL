@@ -11,6 +11,9 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.6  2004/01/14 10:05:58  kpalin
+# Generated documentation
+#
 # Revision 1.5  2004/01/09 10:07:00  kpalin
 # Output in Anchor format.
 # GFF format gives score changes, not increasing sequence of scores.
@@ -107,7 +110,9 @@ def showmatch(data):
 import types
 
 def get(data):
-    """data must have the following format:
+    """Returns the data as a string formated as GFF.
+
+    data must have the following format:
     dictionary from Matrix to Sequence to Index to Score"""
     #output=''
     def flatten(mlist):
