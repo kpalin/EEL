@@ -11,6 +11,9 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.16  2005/01/14 12:51:48  kpalin
+##   Fixes for TCL/TIX gui in windows
+##
 ##   Revision 1.15  2005/01/07 13:41:25  kpalin
 ##   Works with py2exe. (windows executables)
 ##
@@ -72,11 +75,11 @@ if sys.platform=='win32':
     extra_data=[]
     try:
         import py2exe
+        SDKdir=r"C:\Program Files\Microsoft.NET\SDK\v1.1\Bin"
         extra_data.append((r"tcl\tix8.1",[x for x in glob(r"C:\Python*\tcl\tix8.1\*") if x[-7:] not in ("bitmaps",".1\\pref")]))
         extra_data.append((r"tcl\tix8.1\bitmaps",glob(r"C:\Python*\tcl\tix8.1\bitmaps\*")))
         extra_data.append((r"tcl\tix8.1\pref",glob(r"C:\Python*\tcl\tix8.1\pref\*")))
-        extra_data.append((".",glob(r"C:\Python*\DLLs\tix*.dll")))
-        print extra_data
+        extra_data.append((".",glob(r"C:\Python*\DLLs\tix*.dll")+[SDKdir+r"\msvcr71.dll",SDKdir+r"\msvcp71.dll"]))
     except ImportError:
         pass
     common_compile_args.extend([r"/O2", r"/IC:\Program Files\Microsoft Platform SDK for Windows XP SP2\Include",\
