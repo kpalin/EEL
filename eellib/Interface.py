@@ -20,6 +20,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.23  2005/02/21 09:50:41  kpalin
+# Fixed a bug conserning beatifying matrix names with similar filenames.
+#
 # Revision 1.22  2005/01/13 13:16:42  kpalin
 # Moved the requesting of sequences to be aligned to Python side
 # of stuff. Much better.
@@ -515,6 +518,8 @@ If you use '.' as filename the local data are aligned."""
 
     def moreAlignments(self,num_of_align=1):
         """Fetch more alignments from previously run alignment matrix"""
+        if not hasattr(self,"alignment"):
+            return 
         if not self.alignment or not hasattr(self.alignment,"memSaveUsed"):
             print self.alignment
             return
@@ -581,11 +586,13 @@ If you use '.' as filename the local data are aligned."""
         
     def savealign(self, filename=''):
         "Saves the results"
-        return Output.savealign(Output.formatalign(self.alignment,self.seq), filename)
+        if hasattr(self,"alignment"):
+            return Output.savealign(Output.formatalign(self.alignment,self.seq), filename)
 
     def showalignSTDO(self):
         "Prints the alignment to standart out"
-        print Output.formatalign(self.alignment,self.seq),
+        if hasattr(self,"alignment"):
+            print Output.formatalign(self.alignment,self.seq),
 
     def about(self):
         "Information about the program"
@@ -593,7 +600,7 @@ If you use '.' as filename the local data are aligned."""
 Version $Version$
 Contact: Kimmo Palin (kimmo.palin@helsinki.fi)
 
-Big thanks to Matthias Berg (bergm@web.de) for coding.
+Big thanks to Matthias Berg (bergm@web.de) for initial coding.
 """
 #         Uni 18, Zi. 2220
 #         D-66123 Saarbruecken
