@@ -16,7 +16,7 @@ modules/matrix.so: src/matrix.cc
 
 modules/editdist.so: src/editdist.c
 
-modules/align.so: src/align.cc
+modules/align.so: src/align.cc src/gzstream/libgzstream.a
 
 clean:
 	rm -rf modules/matrix.so modules/align.so modules/*.pyc *.pyc build
