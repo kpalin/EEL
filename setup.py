@@ -11,6 +11,9 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.11  2004/07/30 12:22:10  kpalin
+##   Exact multiple alignment and alignedCols.alnColumn
+##
 ##   Revision 1.10  2004/07/14 12:04:46  kpalin
 ##   New version for genome wide alignments.
 ##
@@ -95,8 +98,8 @@ modMultiAlign = Extension('multiAlign',
 ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
 #ext_modList= [modAlignedCols,modMultiAlign,modAlign]
 
-setup (name = 'mabs',
-       version = '1_beta15',
+setup (name = 'EEL',
+       version = '1.0',
        url = "http://www.cs.helsinki.fi/u/kpalin/",
        author = "Kimmo Palin, Matthias Berg",
        author_email = "kimmo.palin@helsinki.fi",
@@ -105,5 +108,5 @@ setup (name = 'mabs',
        license = "GPL (see file COPYING)",
        description = 'c++ extension modules:\na binding site matrix\nan alignment function',
        ext_modules = ext_modList,
-       packages = ["mabslib"],
-       scripts = [ "mabs"] )
+       packages = ["eellib"],
+       scripts = [ "eel"] )

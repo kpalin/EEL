@@ -2,12 +2,15 @@
 
 """The basic command that starts up the commandline interface"""
 
-from mabslib import Commandline
+from eellib import Commandline
 #from Commandline import Commandline
 import sys
 
 
 # $Log$
+# Revision 1.5  2004/10/21 12:46:31  kpalin
+# Removed reference to a specific version of python (2.2)
+#
 # Revision 1.4  2004/01/14 10:04:19  kpalin
 # Added documentation
 #

@@ -12,6 +12,10 @@ import string
 
 
 # $Log$
+# Revision 1.9  2004/07/30 12:21:08  kpalin
+# Commands for multiple alignment and discouragement of using greedy
+# alignment.
+#
 # Revision 1.8  2004/04/08 13:05:38  kpalin
 # Some cleaning and fixes.
 #
@@ -45,7 +49,7 @@ try:
     # Use historyfile
     import os
     import readline
-    histfile = os.path.join(os.environ["HOME"], ".mabshist")
+    histfile = os.path.join(os.environ["HOME"], ".eelhist")
     try:
         readline.read_history_file(histfile)
     except IOError:
@@ -64,7 +68,7 @@ except Exception:
 class Commandline(Interface):
     """This is a command line based user interface.
 
-    The mabs commands and most of the default values are set here."""
+    The EEL commands and most of the default values are set here."""
     def __init__(self):
         Interface.__init__(self)
         self.A,self.C,self.G,self.T=0.25,0.25,0.25,0.25
@@ -394,8 +398,8 @@ The default value for cutoff is 9.0"""
         """Arguments: [filename]
 saves the results of the matching in gff format
 See http://www.sanger.ac.uk/Software/formats/GFF/
-The default filename is 'mabs_[Date+Time].gff'
-e.g. mabs_2003_8_27_15_48.gff"""
+The default filename is 'eel_[Date+Time].gff'
+e.g. eel_2003_8_27_15_48.gff"""
         filename=''
         if len(arglist):
             filename=arglist[0]
@@ -468,15 +472,15 @@ If you use '.' as filename the local data are aligned."""
     def getBaseSaveName(self):
         """Assistant function that returns the default basename for output files"""
         a=localtime()
-        filename='mabs_'+str(a.tm_year)+'_'+str(a.tm_mon)+'_'+str(a.tm_mday)+'_'+str(a.tm_hour)+'_'+str(a.tm_min)
+        filename='eel_'+str(a.tm_year)+'_'+str(a.tm_mon)+'_'+str(a.tm_mday)+'_'+str(a.tm_hour)+'_'+str(a.tm_min)
         return filename
 
         
     def savealign(self, arglist):
         """Arguments: [filename]
 saves the alignment to disk
-The default filename is 'mabs_[Date+Time].align'
-e.g. mabs_2003_9_16_11_48.align"""
+The default filename is 'eel_[Date+Time].align'
+e.g. eel_2003_9_16_11_48.align"""
         filename=''
         if len(arglist):
             filename=arglist[0]
@@ -490,8 +494,8 @@ e.g. mabs_2003_9_16_11_48.align"""
     def savealignGFF(self, arglist):
         """Arguments: [filename]
 saves the alignment to disk in GFF format
-The default filename is 'mabs_[Date+Time]_align.gff'
-e.g. mabs_2003_9_16_11_48_align.gff"""
+The default filename is 'eel_[Date+Time]_align.gff'
+e.g. eel_2003_9_16_11_48_align.gff"""
         filename=''
         if len(arglist):
             filename=arglist[0]
@@ -506,8 +510,8 @@ e.g. mabs_2003_9_16_11_48_align.gff"""
     def savealignAnchor(self, arglist):
         """Arguments: [filename]
 saves the alignment to disk in Anchor format for DIALIGN
-The default filename is 'mabs_[Date+Time]_align.anc'
-e.g. mabs_2003_9_16_11_48_align.anc"""
+The default filename is 'eel_[Date+Time]_align.anc'
+e.g. eel_2003_9_16_11_48_align.anc"""
         filename=''
         if len(arglist):
             filename=arglist[0]

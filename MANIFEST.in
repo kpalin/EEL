@@ -1,7 +1,7 @@
 include Nmyc.Enhancer*
 include Makefile
 include COPYING
-include mabs
+include EEL
 include *.pfm
 include *.bg
 include gffSequenceChange.py
@@ -14,9 +14,9 @@ include doc/userAndDeveloperGuide.ps
 include src/gzstream/*
 exclude src/gzstream/libgzstream.a
 exclude src/gzstream/gzstream.o
-exclude mabslib/mabsClient.py  
-exclude mabslib/mabsServer.py  
-exclude mabslib/matrixTest.py
+exclude eellib/mabsClient.py  
+exclude eellib/mabsServer.py  
+exclude eellib/matrixTest.py
 include clusterSynteny.sh
 include nextFasta.py
 include mabsCommandServer*.py

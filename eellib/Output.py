@@ -11,6 +11,9 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.12  2004/10/21 12:45:43  kpalin
+# Added possibility to gzip also the alignment files.
+#
 # Revision 1.11  2004/07/30 12:08:54  kpalin
 # Changed the GFF formatting to use alnColumn objects. (Needed
 # for multiple alignment)
@@ -67,7 +70,7 @@ def savematch(data, filename=''):
     #e.g. do not allow '/' in filename.
     if filename=='':
         a=localtime()
-        filename='mabs_'+str(a.tm_year)+'_'+str(a.tm_mon)+'_'+str(a.tm_mday)+'_'+str(a.tm_hour)+'_'+str(a.tm_min)+'.gff'
+        filename='eel_'+str(a.tm_year)+'_'+str(a.tm_mon)+'_'+str(a.tm_mday)+'_'+str(a.tm_hour)+'_'+str(a.tm_min)+'.gff'
     try:
         if filename[-3:]==".gz":
             try:
@@ -80,7 +83,7 @@ def savematch(data, filename=''):
         for Matr in data.keys():
             for Seq in data[Matr].keys():
                 for Pos,Strand in data[Matr][Seq].keys():
-                    F.write("%s\tmabs\t%s\t%d\t%d\t%f\t%s\t.\n"%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand))
+                    F.write("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\n"%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand))
         F.close()
         return filename
         
@@ -94,7 +97,7 @@ def showmatch(data):
     for Matr in data.keys():
         for Seq in data[Matr].keys():
             for Pos,Strand in data[Matr][Seq].keys():
-                print "%s\tmabs\t%s\t%d\t%d\t%f\t%s\t."%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand)
+                print "%s\teel\t%s\t%d\t%d\t%f\t%s\t."%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand)
 
 import types
 
@@ -113,7 +116,7 @@ def get(data):
                 olist.append(i)
         return olist
     output="".join(flatten(map(lambda Mat:map(lambda Seq:map(lambda ((Ind,strand),score):\
-        ("%s\tmabs\t%s\t%d\t%d\t%f\t%s\t.\n"%(Seq,Mat.getName(),Ind,Ind+len(Mat)-1,score,strand)),\
+        ("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\n"%(Seq,Mat.getName(),Ind,Ind+len(Mat)-1,score,strand)),\
         data[Mat][Seq].items()), data[Mat].keys()),data.keys())))
     return output
 
