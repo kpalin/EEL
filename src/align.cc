@@ -12,8 +12,9 @@
 #include <iostream>
 #endif
 
-#include <sys/times.h>
-#include <unistd.h>
+#include <time.h>
+//#include <unistd.h>
+
 
 
 #include <vector>
@@ -23,7 +24,6 @@
 #include <limits>
 
 
-#define HAVE_GZSTREAM 1
 
 #ifdef HAVE_GZSTREAM
 #include <gzstream.h>
@@ -36,6 +36,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.14  2004/12/22 11:14:34  kpalin
+ *  Some fixes for better distributability
+ *
  *  Revision 1.13  2004/12/14 14:07:22  kpalin
  *  *** empty log message ***
  *
@@ -101,6 +104,17 @@
 #ifndef SAVE_MEM_LIMIT
 #define SAVE_MEM_LIMIT 1024*1024*1024  // Memory limit after which we use (slower) memory frugal algorithm.
 #endif
+
+
+#ifdef HAS_NO_TRUNC
+
+double trunc(double x)
+{
+  return (x>0?1:-1)*floor(fabs(x));
+}
+
+#endif
+
 
 #ifdef SAVE_MEM        // Under memory constraints, define SAVE_MEM. Only a tiny speed loss.
 typedef double store;
@@ -1533,11 +1547,10 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
   ret_self->askedresults=result_ask;
   ret_self->secs_to_align=0;
 
-  tms before,after;
-  long ticks_per_sec=sysconf(_SC_CLK_TCK);
-  long ticks_to_align;
+  clock_t before,after;
+  clock_t clocks_to_align;
   // Start timing
-  times(&before);
+  before=clock();
 
   ret_self->mem_usage=0;
 
@@ -1567,11 +1580,10 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
 #endif
 
   // End timing
-  times(&after);
+  after=clock();
 
-  ticks_to_align=((after.tms_utime-before.tms_utime)+
-		 (after.tms_stime-before.tms_stime));
-  ret_self->secs_to_align+=((double)ticks_to_align)/ticks_per_sec;
+  clocks_to_align=after-before;
+  ret_self->secs_to_align+=((double)clocks_to_align)/CLOCKS_PER_SEC;
   
 
 
@@ -1727,20 +1739,18 @@ alignment_nextBest(align_AlignmentObject *self)
 
     clearMatrix(self);
 
-    tms before,after;
-    long ticks_per_sec=sysconf(_SC_CLK_TCK);
-    long ticks_to_align;
+    clock_t before,after;
+    clock_t clocks_to_align;
     // Start timing
-    times(&before);
+    before=clock();
 
     alignObject(self,sx,real_sy,ex+1,real_ey+1);
 
     // End timing
-    times(&after);
+    after=clock();
     
-    ticks_to_align=((after.tms_utime-before.tms_utime)+
-		    (after.tms_stime-before.tms_stime));
-    self->secs_to_align+=((double)ticks_to_align)/ticks_per_sec;
+    clocks_to_align=after-before;
+    self->secs_to_align+=((double)clocks_to_align)/CLOCKS_PER_SEC;
 
 
     pos_x=ex;

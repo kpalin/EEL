@@ -7,7 +7,7 @@
 #include <sstream>
 #include <list>
 #include <deque>
-#include <sys/times.h>
+#include <time.h>
 #include <stdio.h>
 #include <math.h>
 using namespace std;
@@ -751,7 +751,7 @@ bg_giveCounts(matrix_bgObject *self)
 {
   PyObject *ret=PyDict_New();
     
-  char gram[self->qgram+1];
+  char *gram=(char*)malloc(self->qgram+1);
 
 
   gram[self->qgram]=0;
@@ -765,6 +765,8 @@ bg_giveCounts(matrix_bgObject *self)
     bitCodeToStr(gram,self->qgram,i);
     PyMapping_SetItemString(ret,gram,PyInt_FromLong(self->CP->counts[i]));
   }
+
+  free(gram);
 
   return ret;
   
@@ -930,7 +932,7 @@ matrix_computeBG(PyObject *self, PyObject *args)
 
   cout<<"q: "<<qgram<<endl;
   cout<<"grams: "<<counts->size()<<endl;
-  char gram[qgram+1];
+  char *gram=(char*)malloc(qgram+1);
   gram[qgram]=0;
 
   for(unsigned int i=0;i<=shiftMask;i++) {
@@ -958,6 +960,7 @@ matrix_computeBG(PyObject *self, PyObject *args)
 
 #endif
 
+  free(gram);
   delete counts;
 
   Py_INCREF(Py_None);
@@ -1030,11 +1033,10 @@ matrix_getTFBS(PyObject *self, PyObject *args)
 
 
 #ifdef TIME_TFBS
-  tms before,after;
-  long ticks_per_sec=sysconf(_SC_CLK_TCK);
+  clock_t before,after;
 
   // Start timing
-  times(&before);
+  before=clock();
 #endif
 
 
@@ -1289,11 +1291,10 @@ matrix_getTFBS(PyObject *self, PyObject *args)
 
 #ifdef TIME_TFBS
   // End timing
-  times(&after);
+  after=clock();
 
   cout<<"CPU secs: "
-      <<((after.tms_utime-before.tms_utime)+
-	 (after.tms_stime-before.tms_stime))*1.0/ticks_per_sec<<endl;
+      <<((after-before)*1.0/CLOCKS_PER_SEC<<endl;
 
 #endif
 
@@ -1322,11 +1323,10 @@ matrix_getTFBSwithBG(PyObject *self, PyObject *args)
 
 
 #ifdef TIME_TFBS
-  tms before,after;
-  long ticks_per_sec=sysconf(_SC_CLK_TCK);
+  clock_t before,after;
 
   // Start timing
-  times(&before);
+  before=clock();
 #endif
 
 
@@ -1564,11 +1564,10 @@ matrix_getTFBSwithBG(PyObject *self, PyObject *args)
 
 #ifdef TIME_TFBS
   // End timing
-  times(&after);
+  after=clock();
 
   cout<<"CPU secs: "
-      <<((after.tms_utime-before.tms_utime)+
-	 (after.tms_stime-before.tms_stime))*1.0/ticks_per_sec<<endl;
+      <<((after-before)*1.0/CLOCKS_PER_SEC<<endl;
 
 #endif
 
@@ -1665,11 +1664,10 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
 
 
 #ifdef TIME_TFBS
-  tms before,after;
-  long ticks_per_sec=sysconf(_SC_CLK_TCK);
+  clock_t before,after;
 
   // Start timing
-  times(&before);
+  before=clock();
 #endif
 
 
@@ -1918,11 +1916,9 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
 
 #ifdef TIME_TFBS
   // End timing
-  times(&after);
-
+  after=clock();
   cout<<"CPU secs: "
-      <<((after.tms_utime-before.tms_utime)+
-	 (after.tms_stime-before.tms_stime))*1.0/ticks_per_sec<<endl;
+      <<((after-before)*1.0/CLOCKS_PER_SEC<<endl;
 
 #endif
 
