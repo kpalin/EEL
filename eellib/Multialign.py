@@ -2,6 +2,10 @@
 
 #
 # $Log$
+# Revision 1.6  2004/03/29 12:28:41  kpalin
+# Should work for three species but not more. Trying to fix
+# the more multiple stuff.
+#
 # Revision 1.5  2004/03/03 09:16:21  kpalin
 # Functional version with reasonably good integration to mabs interface
 #
@@ -22,7 +26,7 @@
 #
 
 
-import xreadlines,re
+import xreadlines,re,traceback,pdb,math
 from StringIO import StringIO
 
 class NotComparable(Exception):
@@ -68,18 +72,26 @@ class PairModule:
 
         The PairModules are partially ordered along their alphabetically
         first common sequence."""
-        haveCommon=1
+        haveCommon=0
         for common in self.sNames:
             if common in other.sNames:
                 haveCommon=1
                 break
-        try:
-            assert(haveCommon==1)
-        except AssertionError:
-            raise NotComparable(self,other)
-            
-        r=cmp(self.DNApos[common],other.DNApos[common])
-        if r==0:
+        #try:
+        #    assert(haveCommon==1)
+        #except AssertionError:
+        #    raise NotComparable(self,other)
+
+        #try:
+        r=0
+        if haveCommon:
+            r=cmp(self.DNApos[common],other.DNApos[common])
+        #except KeyError:
+        #    print common
+        #    print self.DNApos
+        #    print other.DNApos
+        #    raise
+        if r==0 or not haveCommon:
             r=cmp(self.sNames,other.sNames)
 
         return r
@@ -129,7 +141,116 @@ class PairModule:
             return 0
         return inters
                 
+    def makeTrace(self,other):
+        """Make a trace. That is a new pairModule subset of self where other
+        is projected."""
 
+
+        sname1,sname2=self.sNames
+        trace=None
+        for common in self.sNames:
+            try:
+                # No overlap if self ends before beginning of other
+                # or starts after the end of the other
+                if self.DNApos[common][1]<other.DNApos[common][0] or \
+                   self.DNApos[common][0]>other.DNApos[common][1]:
+                    continue
+            except KeyError:
+                continue
+            if not trace:
+                trace=PairModule(None,None,sname1,0,1,sname2,0,1)
+            i,j=0,0
+            while i<len(self.sites) and j<len(other.sites):
+                if self.sitePos[common][i]<other.sitePos[common][j]:
+                    i+=1
+                elif self.sitePos[common][i]>other.sitePos[common][j]:
+                    j+=1
+                elif self.sites[i].match(other.sites[j]):
+                    trace.sites.append((self.sitePos[sname1][i],self.sites[i]))
+                    trace.sitePos[sname1].append(self.sitePos[sname1][i])
+                    trace.sitePos[sname2].append(self.sitePos[sname2][i])
+                    i+=1
+                    j+=1
+                else:
+                    i+=1
+                    j+=1
+
+        if trace and len(trace.sites)>0:
+            trace.sites.sort()
+            trace.sitePos[sname1].sort()
+            trace.sitePos[sname2].sort()
+            trace.sites=[x[1] for x in trace.sites]
+            trace.DNApos[sname1]=(trace.sitePos[sname1][0],trace.sitePos[sname1][-1]+trace.sites[-1].width)
+            trace.DNApos[sname2]=(trace.sitePos[sname2][0],trace.sitePos[sname2][-1]+trace.sites[-1].width)
+
+            trace.oldPos=self.DNApos
+            trace.score=0.0
+            trace.id="trace"
+        else:
+            trace=None
+            
+        return trace
+            
+            
+    def isSubOrNoCommon(self,other):
+        """Return true if other is subalignment of self or they don't share
+        common sequence"""
+        cc=0
+        fullMatch=0
+        ennen=-1
+        for common in self.sNames:
+            try:
+                # No overlap if self ends before beginning of other
+                # or starts after the end of the other
+                if self.DNApos[common][1]<other.DNApos[common][0] or \
+                   self.DNApos[common][0]>other.DNApos[common][1]:
+                    return 0
+            except KeyError:
+                continue
+            cc+=1
+            i,j=0,0
+            while i<len(self.sites) and j<len(other.sites):
+                if self.sitePos[common][i]<other.sitePos[common][j]:
+                    return 0
+                    i+=1
+                elif self.sitePos[common][i]>other.sitePos[common][j]:
+                    j+=1
+                elif self.sites[i].match(other.sites[j]):
+                    i+=1
+                    j+=1
+                else:
+                    return 0
+            if i==len(self.sites):
+                fullMatch+=1
+
+        if fullMatch>0:
+            return 1
+        else:
+            print self.DNApos.keys(),other.DNApos.keys(),common
+            print "Not full"
+            return 0
+
+    def isSubOrNoCommon2(self,other):
+        """Return true if other is subalignment of self or they don't share
+        common sequence"""
+
+        for common in [x for x in self.sNames if x in other.sNames]:
+            i,j=0,0
+            while i<len(self.sites) and j<len(other.sites):
+                if self.sitePos[common][i]<other.sitePos[common][j]:
+                    return 0
+                elif self.sitePos[common][i]>other.sitePos[common][j]:
+                    j+=1
+                elif self.sites[i].match(other.sites[j]):
+                    i+=1
+                    j+=1
+                else:
+                    return 0
+            if i<len(self.sites):
+                return 0
+        return 1
+
+    
     def appendSite(self,sPos,site):
         """Append a new pair of sites belonging to this cis module.
 
@@ -145,12 +266,13 @@ class PairModule:
         pass
 
     def _finalize(self):
+        assert(None)
         for seq in self.sNames:
             self.sitePos[seq].sort()
 
 
     def __str__(self):
-        self._finalize()
+        #self._finalize()
         
         strbuf=StringIO()
         
@@ -164,7 +286,7 @@ class PairModule:
 
     def toGFF(self):
         """Returns GFF representation of the pairModule."""
-        self._finalize()
+        #self._finalize()
         
         strbuf=StringIO()
         cmFormat='%s\tmalign\tCisModule\t%d\t%d\t%g\t.\t.\tTarget "%s";\tStart %d;\tEnd %d;\tStrand .;\tFrame .;\tCM %s;\n'
@@ -210,7 +332,8 @@ class MultiOutModule:
     def writePosAln(self):
         self.sb.write(" "*26+"  ".join(["%-10s"%(x[:10]) for x in self.seqs]))
         for i in range(self.n):
-            self.sb.write("\n%-20s %s %2d "%(self.sites[i].name[-20:],self.sites[i].strand,self.colCount[i]))
+            alnCount=(1+math.sqrt(1+8*self.colCount[i]))/2
+            self.sb.write("\n%-20s %s %2d "%(self.sites[i].name[-20:],self.sites[i].strand,int(alnCount)))
             self.sb.write("  ".join(["%10d"%(self.align[x][i]) for x in self.seqs]))
         self.sb.write("\n")
 
@@ -302,12 +425,55 @@ class MultiModule:
 
         # Adjacency matrix for overlap graph
         self._overlaps={}
+        self._overlapsM={}
         pass
 
 
+    def uniteButLast(self,other):
+        """Unite self with other, excluding the last pair in other."""
+
+        offset=len(self._pairs)
+        last=len(other._pairs)-1
+
+        self._pairs.extend(other._pairs[:-1])
+        newIndForLast=self._pairs.index(other._pairs[last])
+        for (s,t),v in other._overlaps.items():
+            
+            if s==last:
+                ns=newIndForLast
+            else:
+                ns=s+offset
+            if t==last:
+                nt=newIndForLast
+            else:
+                nt=t+offset
+            if (ns<nt and s>t ) or (ns>nt and s<t):
+                v=other._overlaps[(t,s)]
+                if type(v)==type([]):
+                    v=[(y,x) for (x,y) in v]
+                
+            self._overlaps[(ns,nt)]=v
+            try:
+                if not self._overlapsM.has_key(ns):
+                    self._overlapsM[ns]={}
+                self._overlapsM[ns][nt]=other._overlapsM[s][t]
+            except (KeyError,TypeError):
+                pass
+
+        for name in other._pairsBySeq.keys():
+            if not self._pairsBySeq.has_key(name):
+                self._pairsBySeq[name]=[]
+            self._pairsBySeq[name].extend([(pair,n+offset) for (pair,n) in filter(lambda x:x[1]!=last,other._pairsBySeq[name])])
+        
+            
+        
     def __str__(self):
         return str(self._pairsBySeq.items())
 
+
+        
+
+        
     def addPair(self,pair):
         """Adds a PairModule to this multiple alignment.
 
@@ -319,6 +485,9 @@ class MultiModule:
         n=len(self._pairs)
         # The first pairwise alignment.
         if n>0:
+
+            self._overlapsM[n]={}
+            
             # Do we have a common sequence?
             haveKey=0
             intersects=0
@@ -332,6 +501,11 @@ class MultiModule:
                             intersects=1
                             self._overlaps[(code,n)]=isects
                             self._overlaps[(n,code)]=common
+                            if not self._overlapsM[n].has_key(code):
+                                self._overlapsM[n][code]=[common]
+                            else:
+                                self._overlapsM[n][code].append(common)
+                                
             if not intersects:
                 return 0
 
@@ -342,8 +516,169 @@ class MultiModule:
         self._pairs.append(pair)
         
         return 1                
-        
 
+
+    def _intersectingSitePairs(self,isect1,isect2):
+        """Return the site indexes that can be aligned.
+
+        Input is list of (a,b) and (b,c) where a,b,c are integers.
+        The output is (a,c) such that b:s match."""
+        # Find the intersecting sites.
+        n,m=0,0
+        isect=[]
+        while n<len(isect1) and m<len(isect2):
+            if isect1[n][1]<isect2[m][0]:
+                n+=1
+            elif isect1[n][1]>isect2[m][0]:
+                m+=1
+            else:
+                assert(isect1[n][1]==isect2[m][0])
+                npair=(isect1[n][0],isect2[m][1])
+                isect.append(npair)
+                n,m=n+1,m+1
+
+        #print "i1",isect1
+        #print "i2",isect2
+        #print "i ",isect
+        return isect
+
+    def extendTransitivePath(self,i,j,k):
+        """Extends the transitive path form i to j by k.
+
+        This method is used in the inner most loop of the Floyd--Warshall
+        algorithm in method TransitiveClosure(). The trick is to keep track
+        of the exact mappings between aligned sites. Just tracking
+        overlaps/doesn't overlap is not enough"""
+
+        if i==j:
+            if not self._TC.has_key((i,j)):
+                l=len(self._pairs[i].sites)
+                self._TC[(i,j)]=zip(range(l),range(l))
+            return
+        
+        try:
+            isectIJ=self._TC[(min(i,j),max(i,j))]
+        except KeyError:
+            isectIJ=[]
+        isectIK=self._TC[(min(i,k),max(i,k))]
+        isectKJ=self._TC[(min(j,k),max(j,k))]
+        isect=self._intersectingSitePairs(isectIK,isectKJ)
+        #print isect
+        def _pairsAreSorted(l):
+            r=1
+            for i in range(1,len(l)):
+                r=r and l[i-1][0]<l[i][0] and l[i-1][1]<l[i][1]
+            return r
+
+        def makeUnique(li):
+            m={}
+            for k in li:
+                m[k]=0
+            li=m.keys()
+            li.sort()
+            return li
+
+        ise=makeUnique(isectIJ+isect)
+        if not _pairsAreSorted(ise):
+            print "ise",ise
+        else:
+            print ".",
+        if len(ise)==0:
+            try:
+                del(self._TC[(i,j)])
+                del(self._TC[(j,i)])
+            except KeyError:
+                pass
+        else:
+            self._TC[(i,j)]=ise
+            self._TC[(j,i)]=ise
+        #self._TC[(i,j)]=1
+        #if len(isect)>0:
+        #    print "isect",isect,isectIJ
+
+
+
+    def extendTransitivePath2(self,i,j,k):
+        """Extends the transitive path form i to j by k.
+
+        This method is used in the inner most loop of the Floyd--Warshall
+        algorithm in method TransitiveClosure(). The trick is to keep track
+        of the exact mappings between aligned sites. Just tracking
+        overlaps/doesn't overlap is not enough"""
+
+        # REMOVE THIS:
+        # needed for directed TC graph
+        if i>j:
+            try:
+                self._TC[(i,j)]=self._TC[(j,i)]
+            except KeyError:
+                pass
+        elif i==j:
+            self._TC[(i,j)]=[99999]
+            return
+
+        if i==k or j==k:
+            return 
+        if j>k:
+            self._TC[(j,k)]=self._TC[(k,j)]
+        if i>k:
+            try:
+                self._TC[(i,k)]=self._TC[(k,i)]
+            except KeyError:
+                print self._TC.keys()
+                raise
+            
+
+        try:
+            isectIJ=self._TC[(i,j)]
+        except KeyError:
+            isectIJ=[]
+
+        isectIK=self._TC[(i,k)]
+        isectKJ=self._TC[(k,j)]
+
+        OIS=isectIJ[:]
+
+        # Find the intersecting sites.
+        n,m=0,0
+        while n<len(isectIK) and m<len(isectKJ):
+            if isectIK[n][1]<isectKJ[m][0]:
+                n+=1
+            elif isectIK[n][1]>isectKJ[m][0]:
+                m+=1
+            else:
+                assert(isectIK[n][1]==isectKJ[m][0])
+                npair=(isectIK[n][0],isectKJ[m][1])
+                try:
+                    isectIJ.index(npair)
+                except ValueError:
+                    isectIJ.append((isectIK[n][0],isectKJ[m][1]))
+                n,m=n+1,m+1
+
+        isectIJ.sort()
+
+        def _pairsAreSorted(l):
+            r=1
+            for i in range(1,len(l)):
+                r=r and l[i-1][0]<l[i][0] and l[i-1][1]<l[i][1]
+            return r
+        try:
+            assert(_pairsAreSorted(isectIJ))
+        except AssertionError:
+            pass
+##            print "Inconsistent pair"
+##            print "isectIJ (%d,%d)"%(i,j),OIS
+##            print "isectIK (%d,%d)"%(i,k),isectIK
+##            print "isectKJ (%d,%d)"%(k,j),isectKJ
+##            print "new sorted isectIJ",isectIJ
+
+##            print
+##        if len(isectIJ)>0:
+##            self._TC[(i,j)]=isectIJ
+##            self._TC[(j,i)]=isectIJ
+        self._TC[(i,j)]=isectIJ
+        
+                
 
     def TransitiveClosure(self):
         """Computes the transitive closure of the overlap graph.
@@ -360,12 +695,133 @@ class MultiModule:
         if n<=2:
             return
 
+        #Make non directed (i.e. edges both directions)
+        for i,j in self._TC.keys():
+            i,j=min((i,j)),max((i,j))
+            self._TC[(j,i)]=self._TC[(i,j)]
+        
+        #print "BEFORE",self._TC.keys()
+        def koe():
+            for i,j in self._TC.keys():
+                try:
+                    assert(self._TC[(j,i)]==self._TC[(i,j)])
+                except AssertionError:
+                    print i,j,self._TC[(i,j)]
+            
         for k in range(n):
             for i in range(n):
                 for j in range(n):
                     
                     if self._TC.has_key((i,k)) and self._TC.has_key((k,j)):
-                        self._TC[(i,j)]=1
+                        #print i,j,k
+                        self.extendTransitivePath(i,j,k)
+                        #self._TC[(i,j)]=1
+                        #koe()
+        #print "AFTER",self._TC.keys()
+        koe()
+
+##        for i in range(n):
+##            l=len(self._pairs[i].sites)
+##            self._TC[(i,i)]=zip(range(l),range(l))
+##        print self._TC.keys()
+        for p in self._TC.keys():
+            print p,self._TC[p]
+        #raise "EKA TEHTY"
+
+    def overlapping(self,i,j):
+        """Return true if i and j are overlapping (or same)"""
+        return i==j or self._overlaps.has_key((i,j))
+
+
+    def InconsistencyGraph2(self):
+        """Computes the inconsistency graph for this multi module.
+
+        The algorithm is more or less the same as described in
+        Prohaska et.al."""
+
+        self._inconsist={}
+
+        def _DFSincons(i,trace):
+            """Recursive part of the depth first search.
+
+            Uses the function local variable dontFindOther which is a pair
+            whose sites we should not find on our search.
+
+            found is the list of found incompatible pairs."""
+            if not self._overlapsM.has_key(i): return
+            for j in self._overlapsM[i].keys():
+                nPair=self._pairs[j]
+                ntrace=nPair.makeTrace(trace)
+                if not ntrace:
+                    continue
+                elif ntrace.isSubOrNoCommon2(dontFindOther):
+                    _DFSincons(j,ntrace)
+                else:
+                    found.append(j)
+
+
+        # Let's do the search starting from the end. This way we avoid
+        # looping.
+        for i in range(len(self._pairs)-1,0,-1):
+            dontFindOther=self._pairs[i]
+            found=[]
+            _DFSincons(i,dontFindOther)
+            for j in found:
+                self._inconsist[(i,j)]=1
+                self._inconsist[(j,i)]=1
+
+
+
+    def InconsistencyGraph3(self):
+        """Computes the inconsistency graph for this multi module.
+
+        The algorithm is more or less the same as described in
+        Prohaska et.al. This doesn't try fancy 'half matrix' things."""
+
+        self._inconsist={}
+        used={}
+        def _DFSincons(i,trace):
+            """Recursive part of the depth first search.
+
+            Uses the function local variable dontFindOther which is a pair
+            whose sites we should not find on our search.
+
+            found is the list of found incompatible pairs."""
+            goTo=[ x for (x,y) in self._overlaps.keys() if y==i]
+            goTo=[ x for x in goTo if not used.has_key(x)]
+            #print "goto",goTo
+
+            used[i]=1
+            for j in goTo:
+                #if used.has_key(j): continue
+                nPair=self._pairs[j]
+                ntrace=nPair.makeTrace(trace)
+                #print j,used.keys()
+                #print "\n".join([x[:80] for x in str(ntrace).split("\n")])
+                if ntrace:
+                    if not ntrace.isSubOrNoCommon2(dontFindOther):
+                        if not found.has_key(j):
+                            found[j]=0
+                        found[j]+=1
+                    _DFSincons(j,ntrace)
+                    #print "Found",j,"after",used.keys()
+                    #pdb.set_trace()
+            del(used[i])
+            
+        #print "\nStarting new IC graph"
+        for i in range(len(self._pairs)):
+            dontFindOther=self._pairs[i]
+            found={}
+            #print "Dont find other than:"
+            #print "\n".join([x[:80] for x in str(dontFindOther).split("\n")])
+            print "Looking for inconsistencies for",i
+            superI=i
+            _DFSincons(i,dontFindOther)
+            print "found",found.keys(),used.keys()
+            for j in found.keys():
+                self._inconsist[(i,j)]=1
+                self._inconsist[(j,i)]=1
+
 
     def InconsistencyGraph(self):
         """Computes the inconsistency graph for this multi module.
@@ -380,7 +836,7 @@ class MultiModule:
             for n in self._pairs[i].sNames:
                 if self._pairs[j].DNApos.has_key(n):
                     isect+=1
-            if isect==2 or (isect==1 and not self._overlaps.has_key((i,j))):
+            if isect==2 or (isect==1 and not self.overlapping(i,j)):
                 self._inconsist[(i,j)]=1
 
 
@@ -400,11 +856,11 @@ class MultiModule:
                 strbuf.write('n%dC%d [label="%s-%s CM%s"];\n'%(i,j,self._pairs[i].sNames[0][:6],self._pairs[i].sNames[1][:6],str(self._pairs[i].id[-3:])))
             except AttributeError:
                 pass
-            for k in range(i,N):
+            for k in range(i+1,N):
                 if i!=k and self._overlaps.has_key((i,k)):
                     strbuf.write("n%dC%d -- n%dC%d;\n"%(i,j,k,j))
-                    if not self.connected(i,k):
-                        strbuf.write("n%dC%d -- n%dC%d [color=red];\n"%(i,j,k,j))
+                if not self.connected(i,k):
+                    strbuf.write("n%dC%d -- n%dC%d [color=red];\n"%(i,j,k,j))
         #strbuf.write("}\n")
         return strbuf
 
@@ -563,6 +1019,12 @@ class MultiModule:
 
         N=len(clq)
         alnLen=0
+
+        if clqId==0:
+            print "#Clique 0 members"
+            for c in clq:
+                print str(self._pairs[c])
+        
         for i in range(N):
             for j in range(i+1,N):
                 # Overlaping pairs p1,p2
@@ -582,13 +1044,45 @@ class MultiModule:
                         
                     # Overlapping sites s1 s2
                     p=0
+                    try:
+                        a,b=self._overlaps[(clq[i],clq[j])][0]
+                    except ValueError:
+                        print "Error coming"
+                        print clq
+                        print i,j
+                        print self._overlaps
+                        print self._overlaps[(clq[i],clq[j])]
+                    except IndexError:
+                        pass
+                    goods,fails=0,0
                     for s1,s2 in self._overlaps[(clq[i],clq[j])]:
                         # Scan to correct position
+                        try:
+                            p<alnLen and mult[seq1][p]<p1.sitePos[seq1][s1] and \
+                              mult[seq2][p]<p2.sitePos[seq2][s2] and \
+                              mult[common][p]<p2.sitePos[common][s2]
+                        except IndexError:
+                            print mult
+                            print p
                         while p<alnLen and mult[seq1][p]<p1.sitePos[seq1][s1] and \
                               mult[seq2][p]<p2.sitePos[seq2][s2] and \
                               mult[common][p]<p2.sitePos[common][s2]:
                             p+=1
 
+                        try:
+                            p==alnLen or ( (mult[seq1][p]>p1.sitePos[seq1][s1] or mult[seq1][p]==-1) and \
+                              (mult[seq2][p]>p2.sitePos[seq2][s2] or mult[seq2][p]==-1) and \
+                              (mult[common][p]>p2.sitePos[common][s2] or mult[common][p]==-1))
+                        except IndexError:
+                            traceback.print_exc()
+                            print  "mult",mult
+                            print "p=",p
+                            print "p1",p1.sitePos
+                            print "s1",s1
+                            print "p2",p2.sitePos
+                            print "s2",s2
+
+                            
                         # Add new column if needed
                         if p==alnLen or ( (mult[seq1][p]>p1.sitePos[seq1][s1] or mult[seq1][p]==-1) and \
                               (mult[seq2][p]>p2.sitePos[seq2][s2] or mult[seq2][p]==-1) and \
@@ -599,20 +1093,33 @@ class MultiModule:
                             sites.insert(p,p1.sites[s1])
                             alnLen+=1
 
+                        #print seq1,s1,common,s2,seq2,s2,(clq[i],clq[j])
+                        #print "mult[%s]=%s"%(seq1,str(mult[seq1]))
+                        #print "mult[%s]=%s"%(common,str(mult[common]))
+                        #print "mult[%s]=%s\n"%(seq2,str(mult[seq2]))
                         try:
                             assert(p1.sites[s1].match(p2.sites[s2]))
                             assert(mult[seq1][p]==-1 or mult[seq1][p]==p1.sitePos[seq1][s1])
                             assert(mult[common][p]==-1 or mult[common][p]==p1.sitePos[common][s1])
                             assert(mult[seq2][p]==-1 or mult[seq2][p]==p2.sitePos[seq2][s2])
+                            goods+=1
                         except AssertionError:
-                            raise
+                            fails+=1
+                            #pdb.set_trace()
+                            #continue
+                            #return None
+                            #raise
                             def pos_left(arr,x):
                                 for p in range(len(arr)):
                                     if arr[p]>=0 and arr[p]>x:
                                         return p
                                 return len(arr)
                             print "Graph size:",len(self._pairs)
-                            print "CLIQUE:",clq
+                            print "CLIQUE:",clq,"Doing pairs",clq[i],clq[j]
+                            print str(self._pairs[clq[i]])
+                            print str(self._pairs[clq[j]])
+                            #for c in clq:
+                            #    print self._pairs[c].id
                             a=StringIO()
                             a.write("graph G {\n")
                             self.cliqueToDot(clqId,a)
@@ -634,13 +1141,20 @@ class MultiModule:
 
                             for seq in mult.keys():
                                 print "%10s %s"%(seq[:10],mult[seq])
-                            raise
+                            #raise
+                            #continue
+                            return None
                         # (Re)set the values
                         mult[seq1][p]=p1.sitePos[seq1][s1]
                         mult[common][p]=p1.sitePos[common][s1]
                         mult[seq2][p]=p2.sitePos[seq2][s2]
                         colCount[p]+=1
-                        
+                    if fails>0:
+                        print "Good/fail= %d / %d"%(goods,fails)
+                        print clq[i],clq[j]
+                        print str(self._pairs[clq[i]])
+                        print str(self._pairs[clq[j]])
+                                  
                     #for key,val in mult.items():print "%s: %s"%(key[:5],str(val))
                     #print "      ",colCount
                         
@@ -713,6 +1227,7 @@ class MultipleAlignment:
 
         currMod=None
         currModId=""
+        cisModRows=0
         for line in xreadlines.xreadlines(fhandle):
             line=line.strip()
             if len(line)==0 or line[0]=='#':  ## Skip empty and comment lines.
@@ -724,7 +1239,6 @@ class MultipleAlignment:
                 print line
                 raise
             attribs=self._parseAttribs(attribs)
-            lineModId=fname+attribs["CM"]
             # Start of a new cis module
             if feat=='CisModule':
                 try:
@@ -733,13 +1247,15 @@ class MultipleAlignment:
                     seq2=attribs["Target"].replace('"','')
                 start2=int(attribs["Start"])
                 stop2=int(attribs["End"])
-                if currModId!=lineModId:
+                if cisModRows<1:
                     if currMod:
                         self._modules.append(currMod)
+                    lineModId="%s.%s.%d"%(fname,attribs["CM"],len(self._modules))
                     currMod=PairModule(lineModId,float(score),seq,int(start),int(stop),\
                                        seq2,start2,stop2)
-                    currModId=lineModId
+                    cisModRows+=1
             else:
+                cisModRows=0
                 #assert(lineModId==currModId)
                 siteId=Site(feat,float(score),strand,int(stop)-int(start))
                 currMod.appendSite({seq:int(start)},siteId)
@@ -787,28 +1303,49 @@ class MultipleAlignment:
         other methods."""
 
         self.resAligns=[]
+        nAligns=[]
+        import random
+        #random.shuffle(self._modules)
         while len(self._modules)>0:
-            r=0
+            nAligns=[]
+            r=None
             p=self._modules.pop()
             for mmod in self._multiAlign:
                 if mmod.addPair(p):
-                    r=1
-            if r==0:
+                    if not r:
+                        r=mmod
+                        nAligns.append(r)
+                    else:
+                        print "Uniting two multi modules"
+                        r.uniteButLast(mmod)
+                else:
+                    nAligns.append(mmod)
+            if not r:
                 nMulti=MultiModule()
                 nMulti.addPair(p)
-                self._multiAlign.append(nMulti)
+                nAligns.append(nMulti)
+
+            self._multiAlign=nAligns[:]
         # Multiple alignment by Prohaska et.al.
+
+        self._multiAlign=[x for x in self._multiAlign if len(x._pairs)>1 ]
+        #self._multiAlign=filter(lambda x:len(x._pairs)>1,self._multiAlign)
+        c=0
         for mmod in self._multiAlign:
-            mmod.TransitiveClosure()
-            mmod.InconsistencyGraph()
+            #mmod.TransitiveClosure()
+            #mmod.InconsistencyGraph()
+            mmod.InconsistencyGraph3()
             mmod.allMaxCliques()
 
             for i in range(len(mmod._cliques)):
-                if len(mmod._cliques[i])<2:continue
                 try:
+                    #print "Module",c,"Cliques:",len(mmod._cliques),[x.id[-10:] for x in mmod._pairs]
                     self.resAligns.append(mmod.makeMultiAlign(i))
                 except AssertionError:
+                    print "AE"
+                    print mmod._overlaps.keys()
                     raise
+            c=c+1
             
     def __str__(self):
         strbuf=StringIO()
@@ -820,36 +1357,78 @@ class MultipleAlignment:
 def apu(datat=1):
     a=MultipleAlignment()
     if datat==0:
+        print "MYF5"
         a.addGFFfile("/home/kpalin/tyot/comparative/mabs/hmmyf5.align.opt.gff")
         a.addGFFfile("/home/kpalin/tyot/comparative/mabs/hrmyf5.align.opt.gff")
         a.addGFFfile("/home/kpalin/tyot/comparative/mabs/mrmyf5.align.opt.gff")
     elif datat==1:
+        print "ENSall"
         a.addGFFfile("/home/kpalin/tyot/comparative/mabs/ENS.10ekaa.gff")
+    elif datat==2:
+        print "Multikoe"
+        a.addGFFfile("/home/kpalin/tyot/comparative/mabs/mabslib/tmp/cliqueMin.gff")
+    elif datat==3:
+        print "bestmyf5"
+        a.addGFFfile("/home/kpalin/tyot/comparative/mabs/mabslib/tmp/bestmyf5.gff")
     a.multiAlign()
 
-    return 
     for b in range(len(a._multiAlign)):
         for c in range(len(a._multiAlign[b]._cliques)):
-            print "Module",b,"clique",c
+            if len(a._multiAlign[b]._cliques[c])<2: continue
+            #print "Module",b,"clique",c
             #print
             try:
                 x=str(a._multiAlign[b].makeMultiAlign(c))
                 print x
             except AssertionError:
+                raise
                 pass
-        open("tmp.%d.dot"%(b),"w").write(a._multiAlign[b].cliquesToDot())
-        print "Module",b,"cliques",len(a._multiAlign[b]._cliques)
+        open("tmp.%d.dot"%(b),"w").write(a._multiAlign[b].inconsistToDot())
+        #print "Module",b,"cliques",len(a._multiAlign[b]._cliques)
 
-    x=[len(x._cliques) for x in a._multiAlign]
-    x.sort()
-    print x
+    if datat==3:
+        goodOverlap=[(3, 2), (3, 1), (0, 1), (5, 1), (2, 7), (8, 4), (4, 1), (6, 1), (1, 6), (7, 2), (7, 1), (2, 1), (4, 8), (1, 0), (1, 3), (1, 2), (1, 5), (1, 4), (1, 7), (2, 3)]
+        goodOverlap.sort()
+        goodMap=['f5.gff.3.4', 'f5.gff.2.1', 'f5.gff.2.5', 'f5.gff.7.8', '5.gff.10.2', '5.gff.11.0', 'f5.gff.5.3', 'f5.gff.3.6', 'f5.gff.4.7']
+
+        b=a._multiAlign[0]
+        helpOverlap=[ (goodMap.index(b._pairs[x].id[-10:]),goodMap.index(b._pairs[y].id[-10:])) for (x,y) in b._overlaps.keys()]
+        helpOverlap.sort()
+        print helpOverlap
+        print goodOverlap
+        assert(helpOverlap==goodOverlap)
+
+        goodIncons=[(1, 5), (2, 4), (3, 4), (4, 2), (4, 3), (5, 1)]
+        helpIncons=[ (goodMap.index(b._pairs[x].id[-10:]),goodMap.index(b._pairs[y].id[-10:])) for (x,y) in b._inconsist.keys()]
+        helpIncons2=[ (b._pairs[x].id[-10:],b._pairs[y].id[-10:]) for (x,y) in b._inconsist.keys()]
+        helpIncons.sort()
+        print helpIncons2
+        print 
+        print helpIncons
+        print goodIncons
+        assert(helpIncons==goodIncons)
+
+    if datat==0:
+        print "Should be\n(cliques,inconsists,pairs,overlapsM) [(1, 0, 4, 4), (36, 94, 18, 50), (1, 0, 3, 3), (1, 0, 2, 1), (1, 0, 3, 2)]"
+    x=[ (len(x._cliques),len(x._inconsist),len(x._pairs),reduce(lambda z,y:z+y,map(len,x._overlapsM.values()))) for x in a._multiAlign]
+    #x.sort()
+    print "(cliques,inconsists,pairs,overlapsM)",x
 ##    for b in range(len(a)):
 ##        x=str(a[b])
 ##        print "Align %d\n"%(b),x
     
 
 if __name__=="__main__":
-    import profile,pstats
-    profile.run("apu(1)","mabs.prof")
-    p=pstats.Stats("mabs.prof")
-    p.sort_stats('time').print_stats(20)
+    import profile,pstats,sys
+    if 0:
+        profile.run("apu(0)","mabs.prof")
+        p=pstats.Stats("mabs.prof")
+        p.sort_stats('time').print_stats(20)
+    else:
+        if len(sys.argv)>1:
+            code=int(sys.argv[1])
+        else:
+            code=0
+        pdb.run("apu(code)")
+        #apu(code)
+        
