@@ -11,6 +11,11 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.13  2004/12/14 13:08:05  kpalin
+#
+# Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun
+# "My hovercraft is full of EELs" )
+#
 # Revision 1.12  2004/10/21 12:45:43  kpalin
 # Added possibility to gzip also the alignment files.
 #
@@ -80,10 +85,13 @@ def savematch(data, filename=''):
                 F=open(filename,'w')
         else:
                 F=open(filename,'w')
-        for Matr in data.keys():
-            for Seq in data[Matr].keys():
-                for Pos,Strand in data[Matr][Seq].keys():
-                    F.write("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\n"%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand))
+
+## This is in wrong format Seq and Matr are reversed.
+##        for Matr in data.keys():
+##            for Seq in data[Matr].keys():
+##                for Pos,Strand in data[Matr][Seq].keys():
+##                    F.write("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\n"%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand))
+        F.write(get(data))
         F.close()
         return filename
         
@@ -94,10 +102,12 @@ def savematch(data, filename=''):
 def showmatch(data):
     """data must have the following format:
     dictionary from Matrix to Sequence to Index to Score"""
-    for Matr in data.keys():
-        for Seq in data[Matr].keys():
-            for Pos,Strand in data[Matr][Seq].keys():
-                print "%s\teel\t%s\t%d\t%d\t%f\t%s\t."%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand)
+##    for Matr in data.keys():
+##        for Seq in data[Matr].keys():
+##            for Pos,Strand in data[Matr][Seq].keys():
+##                print "%s\teel\t%s\t%d\t%d\t%f\t%s\t."%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand)
+
+    print get(data)
 
 import types
 
@@ -115,9 +125,11 @@ def get(data):
             else:
                 olist.append(i)
         return olist
-    output="".join(flatten(map(lambda Mat:map(lambda Seq:map(lambda ((Ind,strand),score):\
-        ("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\n"%(Seq,Mat.getName(),Ind,Ind+len(Mat)-1,score,strand)),\
-        data[Mat][Seq].items()), data[Mat].keys()),data.keys())))
+    output="".join(flatten(map( \
+        lambda Seq:map(lambda Mat:map(lambda ((Ind,strand),score):\
+        ("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\n"%(\
+        Seq,Mat.getName(),Ind,Ind+len(Mat)-1,score,strand)),\
+        data[Seq][Mat].items()), data[Seq].keys()),data.keys())))
     return output
 
 
