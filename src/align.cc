@@ -22,12 +22,21 @@
 
 
 
+#define HAVE_GZSTREAM 1
+
+#ifdef HAVE_GZSTREAM
+#include <gzstream.h>
+#endif
+
 
 
 
 /*
  *
  *  $Log$
+ *  Revision 1.3  2003/12/29 12:43:32  kpalin
+ *  Ilmeisesti jotain uutta. En tiedä mitä.
+ *
  *
  */
 
@@ -1220,11 +1229,32 @@ align_alignfile(PyObject *self, PyObject *args)
     return  Py_BuildValue("s", "");
   }
 
-  ifstream inData(file);
+  istream *inData;
+  ifstream clearData;
 
-  ret=align_alignCommon(self,args,&inData);
+#ifdef HAVE_GZSTREAM   // If we have zlib
+  
+  igzstream gzData(file);
+  inData=&gzData;
 
-  inData.close();
+  if(!gzData.good()) {
+    clearData.open(file);
+    inData=&clearData;
+  }
+#else // If we do not have zlib
+  clearData.open(file);
+  inData=&clearData;
+#endif
+
+  ret=align_alignCommon(self,args,inData);
+
+
+#ifdef HAVE_GZSTREAM
+  gzData.close();
+#endif
+
+
+  clearData.close();
 
   return ret;
 }
