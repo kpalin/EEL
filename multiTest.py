@@ -1,6 +1,11 @@
 
 
 # $Log$
+# Revision 1.1  2004/01/23 12:51:31  kpalin
+# Added accessory and developement testing tools. SyntenyToEnsembl
+# makes a link to www.ensembl.org from our sequence names and
+# multiTest.py is a brute force concept implementation of multiple alignment.
+#
 
 files=[#"ENSDARG00000006837.ENSG00000134323.align.gff",
        #"ENSDARG00000006837.ENSMUSG00000037169.align.gff",
@@ -20,9 +25,12 @@ files=["hum_hum_1031_937.abs9.chrIbg.align.gff",
        "hum_mus_1031.abs9.chrIbg.align.gff",
        "mus_hum_1031_937.abs9.chrIbg.align.gff"]
 
-species={"HUMAN|4.119820698-119936581":0,
-         "HUMAN|8.97218432-97331876":1,
-         "MOUSE|13.63720377-63822119":2}
+files=["hmmyf5.align.opt.gff","hrmyf5.align.opt.gff","mrmyf5.align.opt.gff"]
+
+species={"HUMAN":0,"RAT":1,"MOUSE":2}
+#species={"HUMAN|4.119820698-119936581":0,
+#         "HUMAN|8.97218432-97331876":1,
+#         "MOUSE|13.63720377-63822119":2}
 specCount=0
 
 
@@ -223,26 +231,27 @@ for file in files:
     handle=open(file)
     print file
     parts=file.split(".")
-    if not species.has_key(parts[0]):
-        species[parts[0]]=specCount
+    spec1str=parts[0].split("|")[0]
+    if not species.has_key(spec1str):
+        species[spec1str]=specCount
         specCount+=1
-    if not species.has_key(parts[1]):
-        species[parts[1]]=specCount
-        specCount+=1
+##    if not species.has_key(parts[1]):
+##        species[parts[1]]=specCount
+##        specCount+=1
     handle.readline()
     line=handle.readline()  # First CisModule
     parts=line.split("\t")
     while len(line)>0:
-        spec1=species[parts[0]]
-        spec1str=parts[0]
+        spec1str=parts[0].split("|")[0]
+        spec1=species[spec1str]
         
         CMcode=CMpat.search(parts[-1])
         CMcode=int(CMcode.group(1))
         #print CMcode
         line=handle.readline() #Second CisModule
         parts=line.split("\t") 
-        spec2=species[parts[0]]
-        spec2str=parts[0]
+        spec2str=parts[0].split("|")[0]
+        spec2=species[spec2str]
 
         spec1,spec2=min(spec1,spec2),max(spec1,spec2)
         CMid=(spec1,spec2,CMcode)
@@ -258,7 +267,7 @@ for file in files:
 
         while len(line)>0 and parts[2]!="CisModule":
             
-            node1Id=(species[parts[0]],parts[2],int(parts[3]))
+            node1Id=(species[parts[0].split("|")[0]],parts[2],int(parts[3]))
             node1Line=line
 
             sPos1=int(parts[3])
