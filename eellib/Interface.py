@@ -20,6 +20,10 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.21  2005/01/12 13:34:55  kpalin
+# Added Tkinter/Tix Graphical user interface and command -no-gui to
+# avoid it.
+#
 # Revision 1.20  2005/01/07 13:41:25  kpalin
 # Works with py2exe. (windows executables)
 #
@@ -520,27 +524,36 @@ If you use '.' as filename the local data are aligned."""
             
         
     def align(self, filename='.', num_of_align=3,
-              Lambda=1.0, xi=1.0, mu=0.5,nu=1.0, nuc_per_rotation=10.4):
+              Lambda=1.0, xi=1.0, mu=0.5,nu=1.0, nuc_per_rotation=10.4,
+              firstSeq=None,secondSeq=None):
         "aligns the computed BS or some given in file"
         if hasattr(self,"alignment"):
             del(self.alignment)
+
+        if filename!='.':
+            files=glob(filename)
+            if len(files)==0:
+                raise AttributeError("Can't find input file!")
+            elif len(files)>1:
+                raise AttributeError("Ambiguous input file glob. Could be "+",".join(files))
+            filename=files[0]
             
         if filename=='.' and  hasattr(self,"tempFileName"):
             filename=self.tempFileName
 
         collect()
+
         if filename=='.':
             if len(self.__comp)==0:
                 return "No binding sites"
             else:
                 self.alignment=align.aligndata(Output.get(self.__comp),num_of_align,
                                                Lambda, xi,
-                                               mu, nu,nuc_per_rotation)
+                                               mu, nu,nuc_per_rotation,firstSeq,secondSeq)
 
         else:
             self.alignment= align.alignfile(filename, num_of_align,Lambda,
-                                            xi, mu, nu,nuc_per_rotation)
-
+                                            xi, mu, nu,nuc_per_rotation,firstSeq,secondSeq)
         self.moreAlignments(num_of_align)
         if self.alignment:
             #Interface.showalignSTDO(self)

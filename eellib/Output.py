@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 """Takes care of the output formating.
 
 Also gzip related."""
@@ -11,6 +13,10 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.16  2005/01/12 13:34:55  kpalin
+# Added Tkinter/Tix Graphical user interface and command -no-gui to
+# avoid it.
+#
 # Revision 1.15  2005/01/07 13:41:25  kpalin
 # Works with py2exe. (windows executables)
 #

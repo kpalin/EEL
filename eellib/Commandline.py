@@ -16,6 +16,9 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.15  2005/01/13 09:38:30  kpalin
+# Added catch for EOFError in no-gui
+#
 # Revision 1.14  2005/01/12 13:34:55  kpalin
 # Added Tkinter/Tix Graphical user interface and command -no-gui to
 # avoid it.
@@ -84,7 +87,6 @@ except ImportError:
 except Exception:
     pass
 
-import glob
 try:
     import os
 except ImportError:
@@ -487,13 +489,67 @@ If you use '.' as filename the local data are aligned."""
             if nuc_per_rotation=='.':
                 nuc_per_rotation=10.4
 
-            if not Interface.align(self, filename, int(num_of_align),
-                            float(Lambda), float(xi),
-                            float(mu), float(nu),float(nuc_per_rotation)):
-                print "No alignment for a reason or an other"
-            
-        except ValueError:
-            print "Error: unallowed arguments passed to 'align'"
+            try:
+                if not Interface.align(self, filename, int(num_of_align),
+                                       float(Lambda), float(xi),
+                                       float(mu), float(nu),float(nuc_per_rotation)):
+                    print "No alignment for a reason or an other"
+            except AttributeError,val:
+                if len(val.args)==1 or (len(val.args)>1 and len(val.args[1])<2):
+                    print val.args[0]
+                else:
+                    msg,seqs=val
+                    # This function is expected to be defined in subclass
+                    firstSeq,secondSeq=self.selectTwoSequences(msg,seqs)
+                    if not Interface.align(self, filename, int(num_of_align),
+                                           float(Lambda), float(xi),
+                                           float(mu), float(nu),
+                                           float(nuc_per_rotation),
+                                           firstSeq,secondSeq):
+                        print "No alignment for a reson or an another"
+        except ValueError,e:
+            print "Error: unallowed arguments passed to 'align'",e
+
+
+    def selectTwoSequences(self,message,sequences):
+        print message
+        while 1:
+            print "Select first sequence"
+            seqs=zip(range(len(sequences)),sequences)
+
+            for i,seq in seqs:
+                print "%d %s"%(i,seq)
+
+            print
+            firstSeqCode=raw_input("Give Sequence: ")
+            try:
+                firstSeqCode=int(firstSeqCode)
+                assert(0<=firstSeqCode<len(sequences))
+                firstSeq=sequences[firstSeqCode]
+                del(sequences[firstSeqCode])
+                break
+            except(AssertionError,ValueError):
+                pass
+
+        while 1:
+            print "Select second sequence"
+            seqs=zip(range(len(sequences)),sequences)
+
+            for i,seq in seqs:
+                print "%d %s"%(i,seq)
+
+            print
+            secondSeqCode=raw_input("Give Sequence: ")
+            try:
+                secondSeqCode=int(secondSeqCode)
+                assert(0<=secondSeqCode<len(sequences))
+                secondSeq=sequences[secondSeqCode]
+                del(sequences[secondSeqCode])
+                break
+            except(AssertionError,ValueError):
+                pass
+
+        return (firstSeq,secondSeq)
 
 
     def moreAlignment(self,arglist=(1,)):

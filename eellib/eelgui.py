@@ -2,6 +2,9 @@
 
 ##
 ## $Log$
+## Revision 1.2  2005/01/12 13:55:09  kpalin
+## Path handling fixed.
+##
 ## Revision 1.1  2005/01/12 13:34:55  kpalin
 ## Added Tkinter/Tix Graphical user interface and command -no-gui to
 ## avoid it.
@@ -13,6 +16,8 @@
 from eellib.Interface import Interface
 from eellib.tixgui import tixgui,fontStr
 
+
+import tkMessageBox
 from Tix import *
 #from Tkinter import *
 
@@ -43,8 +48,9 @@ class alignUI(Frame):
     def cancel_button(self):
         self.master.destroy()
         pass
-    def align_button(self):
-        print self.loadFile.get()
+
+
+    def align(self,seq1=None,seq2=None):
         if int(self.loadFile.get())>0:
             fname=self.siteFileName.get()
             try:
@@ -62,12 +68,81 @@ class alignUI(Frame):
         nu=float(self.nuStr.get())
         nuc_per_rot=float(self.nprStr.get())
         resultReq=int(self.resultCount.get())
-        self._parent.master.align(fname,resultReq,lambdaVal,xi,mu,nu,nuc_per_rot)
+
+        self._parent.master.align(fname,resultReq,lambdaVal,xi,mu,nu,nuc_per_rot,seq1,seq2)
         if hasattr(self._parent.master,"alignment"):
             self._parent.master._widgets["saveAlign_button"].config(state="normal")
-        self.master.destroy()
-        pass
+            self.master.destroy()
+            pass
+        
+    def align_button(self):
+        #print self.loadFile.get()
+        try:
+            self.align()
+        except AttributeError,val:
+            if len(val.args)==1 or (len(val.args)>1 and len(val.args[1])<2):
+                tkMessageBox.showerror("Error..",val.args[0])
+            else:
+                root=Toplevel(self)
+                root.title("Select sequences..")
+                self._widgets["selectSeqWindow"]=selectSequences(root,seqsToChoose=val.args[1])
+                self._widgets["selectSeqWindow"].pack()
+                #tkMessageBox.showerror("Error..",val.args[0])
+                msg,seqs=val
+          
 
+
+class selectSequences(Frame):
+    def __init__(self, *args, **params):
+    ## Standard heading: initialization
+        self.seqsToChoose=params["seqsToChoose"]
+        del(params["seqsToChoose"])
+        
+        apply(Frame.__init__, (self,) + args, params)
+        self._parent = None
+        if len(args) != 0: self._parent = args[0]
+
+        self._widgets={}
+        self.firstSeqName=StringVar()
+        self.secondSeqName=StringVar()
+        
+        self._widgets["firstSeqCombo"]=ComboBox(self,label="Select first sequence:",variable=self.firstSeqName,listcmd=lambda x="firstSeqCombo":self.addComboList(x),dropdown=TRUE,command=lambda x:self.setValidSeqs("firstSeqCombo",x))
+        self._widgets["firstSeqCombo"].grid(row=1,column=1,columnspan=2,sticky="w")
+
+        self._widgets["secondSeqCombo"]=ComboBox(self,label="Select second sequence:",variable=self.secondSeqName,listcmd=lambda x="secondSeqCombo":self.addComboList(x),dropdown=TRUE,command=lambda x:self.setValidSeqs("secondSeqCombo",x))
+        self._widgets["secondSeqCombo"].grid(row=2,column=1,columnspan=2,sticky="w")
+
+
+        self._widgets["ok_button"]=Button(self,name="button_OK",font=fontStr,text="OK",command=self.button_OK)
+        self._widgets["ok_button"].grid(column=2,row=3)
+
+        self._widgets["cancel_button"]=Button(self,name="button_cancel",font=fontStr,text="Cancel",command=self.button_cancel)
+        self._widgets["cancel_button"].grid(column=1,row=3)
+
+        self.firstSeqName.set(self.seqsToChoose[0])
+        self.secondSeqName.set(self.seqsToChoose[1])
+
+    def setValidSeqs(self,fixed,newvalue):
+        for x in self.seqsToChoose:
+            if x!=newvalue:
+                break
+        if fixed=="firstSeqCombo" and newvalue==self.secondSeqName.get():
+            self.secondSeqName.set(x)
+        if fixed=="secondSeqCombo" and newvalue==self.firstSeqName.get():
+            self.firstSeqName.set(x)
+            
+
+    def button_cancel(self):
+        self._parent.destroy()
+
+    def button_OK(self):
+        
+        self._parent.master.align(self.firstSeqName.get(),self.secondSeqName.get())
+
+    
+    def addComboList(self,comboStr):
+        for i in self.seqsToChoose:
+            self._widgets[comboStr].subwidget("listbox").insert(END,i)
 
 class alignData(Frame):
     def __init__(self, *args, **params):
@@ -192,7 +267,10 @@ class getTFBS(Frame):
 
     def getTFBS(self,cutoff=9.0):
         bgStr=self._widgets["background"].bg_variable.get()
-        self._widgets["background"]._widgets[bgStr].select()
+        if bgStr=="radio_single" and not self._widgets["background"]._widgets["single"].hasNormalFreq():
+            return
+            
+        #self._widgets["background"]._widgets[bgStr].select()
         isAbsolute=int(self._widgets["other"].bg_mode.get())
 
         self._parent.master.getTFBS(cutoff,isAbsolute)
@@ -285,6 +363,7 @@ class _bgSelect(Frame):
         self._parent._parent.master.setBGFreq(self._widgets["single"].getNormalFreq())
         
     def selectMarkov(self):
+        self._widgets["markov"].button.invoke()
         fname=self.markovFile.get()
         
         self.setMarkov(fname)
@@ -348,6 +427,16 @@ class _bgFreq(Frame):
         self.freqC.set("0.25")
         self.freqG.set("0.25")
         self.freqT.set("0.25")
+
+
+    def hasNormalFreq(self):
+        a,c,g,t=self.freqA.get(),self.freqC.get(),self.freqG.get(),self.freqT.get()
+        self.getNormalFreq()
+        A,C,G,T=self.freqA.get(),self.freqC.get(),self.freqG.get(),self.freqT.get()
+        if A==a and C==c and G==g and T==t:
+            return 1
+        else:
+            return 0
 
     def getNormalFreq(self):
         

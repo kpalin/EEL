@@ -36,6 +36,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.16  2005/01/12 13:35:21  kpalin
+ *  Allowing #-comments in GFF files.
+ *
  *  Revision 1.15  2005/01/07 11:58:46  kpalin
  *  Windows port. Should work with Visual C++ 7.1
  *
@@ -1356,6 +1359,75 @@ void estimateMemoryConsumption(align_AlignmentObject *self)
 
 ////////////////////////////////////////////////////////////
 
+void align_WrongSeqErr(matchlisttype *matchlist,char *message)
+{
+  
+  PyObject *value;
+  PyObject *seqList=PyList_New(matchlist->size());
+  PyObject *messageStr;
+  matchlisttype::iterator iter;
+  int i;
+
+
+  messageStr=PyString_FromString(message);
+  
+  for(iter=matchlist->begin(),i=0; iter!=matchlist->end(); iter++,i++) {
+    PyList_SetItem(seqList,i,PyString_FromString(iter->first.c_str()));
+  }
+
+  value=Py_BuildValue("(OO)",messageStr,seqList);
+  PyErr_SetObject(PyExc_AttributeError,value);
+}
+
+
+int getSequences(matchlisttype *matchlist, string &firstSeqName,string &secondSeqName,char *firstSeq,char *secondSeq)
+{
+  matchlisttype::iterator iter;
+
+
+  if(!secondSeq && matchlist->size()!=2){
+    align_WrongSeqErr(matchlist,"Wrong number of sequences in the data!");
+    return 0;
+  }else if(firstSeq) {
+    // Get first user given sequence name
+    firstSeqName=string(firstSeq);
+    if(matchlist->find(firstSeqName)==matchlist->end()) {
+      PyErr_SetString(PyExc_AttributeError,firstSeq);
+      return 0;
+    }
+    // Get second user given sequence name
+    if(secondSeq) {
+      secondSeqName=string(secondSeq);
+      if(matchlist->find(secondSeqName)==matchlist->end()) {
+	PyErr_SetString(PyExc_AttributeError,secondSeq);
+	return 0;
+      }
+    } else {  //  if(!secondSeq)
+
+      // Set the second sequence to be something else than the first sequence
+      for(iter=matchlist->begin();
+	  iter!=matchlist->end() &&
+	    iter->first.compare(firstSeqName)==0;iter++) {
+	// pass
+      }
+      if(iter==matchlist->end()) {
+	PyErr_SetString(PyExc_AssertionError,"Shoud not be able to get here!");
+	return 0;
+      }
+      secondSeqName=string(iter->first);
+    }
+  } else {
+    iter=matchlist->begin();
+    firstSeqName=string(iter->first);
+    iter++;
+    secondSeqName=string(iter->first);
+  }
+
+
+  return 1;
+}
+
+
 static PyObject *
 align_alignCommon(PyObject *self, PyObject *args,istream *data)
 {
@@ -1363,81 +1435,21 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
   char* stub;
   double lambda, xi, mu, nuc_per_rotation,nu;
   int result_ask;
+  char *firstSeq=NULL,*secondSeq=NULL;
   string firstSeqName,secondSeqName;
 
-  if (!PyArg_ParseTuple(args, "siddddd", &stub,&result_ask,
-			&lambda, &xi, &mu, &nu,&nuc_per_rotation)){
-    return  Py_BuildValue("s", "");
+  if (!PyArg_ParseTuple(args, "siddddd|zz", &stub,&result_ask,
+			&lambda, &xi, &mu, &nu,&nuc_per_rotation,&firstSeq,&secondSeq)){
+    return  Py_BuildValue("s", "Couldn't parse arguments!");
   }
 
 
   matchlisttype* matchlist=parseStream(data);
-  matchlisttype::iterator iter;
 
-  if(matchlist->size()<2)
-    {
-      #ifdef ALIGN_OUTPUT
-      cerr<<"Error: too few sequences in data"<<endl;
-      #endif
-      delete matchlist;
-      return Py_BuildValue("s", "Error: too few sequences in data");
-    }
-
- if(matchlist->size()==2){
-    iter=matchlist->begin();
-    firstSeqName=string(iter->first);
-    iter++;
-    secondSeqName=string(iter->first);
+  if(!getSequences(matchlist,firstSeqName,secondSeqName,firstSeq,secondSeq)) {
+    delete matchlist;
+    return (PyObject*)NULL;
   }
-
-  if(matchlist->size()>2)
-    {
-      cout<<"Please select two sequences  you want to be aligned."<<endl;
-      vector<string> seqNames;
-      for(iter=matchlist->begin(); iter!= matchlist->end(); iter++){
-        seqNames.push_back(iter->first);
-      }
-      for(uint i=0; i<seqNames.size(); i++){
-        cout<<"("<<i<<") "<<seqNames[i]<<endl;
-      }
-      int name1, name2;
-      cin>>name1;
-      if(!cin.good()) {
-        cin.clear();
-        cin.ignore(INT_MAX,'\n');
-        name1=-1;
-      }
-
-      while(name1<0 || name1 >= (int)seqNames.size()){
-        cout<<"wrong number!"<<endl;
-        cin>>name1;
-        if(!cin.good()) {
-          cin.clear();
-          cin.ignore(INT_MAX,'\n');
-          name1=-1;
-        }
-      }
-      firstSeqName=seqNames[name1];
-      cout<<"Using sequence "<<firstSeqName<<" as first sequence"<<endl
-          <<"select second sequence"<<endl;
-      cin>>name2;
-      if(!cin.good()) {
-        cin.clear();
-        cin.ignore(INT_MAX,'\n');
-        name2=-1;
-      }
-      while(name2<0 || name2>=(int)seqNames.size() || name1==name2){
-        cout<<"wrong number or number equals first one!"<<endl;
-        cin>>name2;
-        if(!cin.good()) {
-          cin.clear();
-          cin.ignore(INT_MAX,'\n');
-          name2=-1;
-        }
-      }
-      secondSeqName=seqNames[name2];
-      cout<<"Using sequence "<<secondSeqName<<" as second sequence"<<endl;
-    }
   
   vector<triple> seq_x,seq_y,tmp_seq;
   seq_x=(*matchlist)[firstSeqName];
@@ -1607,14 +1619,14 @@ static PyObject *
 align_alignfile(PyObject *self, PyObject *args)
 {
   char* file;
-  double lambda, xi, mu, nuc_per_rotation,nu;
-  int result_ask;
   PyObject *ret;
-  string firstSeqName,secondSeqName;
 
-  if (!PyArg_ParseTuple(args, "siddddd", &file,&result_ask,
-			&lambda, &xi, &mu, &nu,&nuc_per_rotation)){
-    return  Py_BuildValue("s", "");
+  ret=PySequence_GetItem(args,0);
+  if (!ret) {
+    PyErr_SetString(PyExc_AttributeError,"Invalid file argument");
+    return  (PyObject*)NULL;
+  } else {
+    file=PyString_AsString(ret);
   }
 
   istream *inData;
@@ -1633,7 +1645,6 @@ align_alignfile(PyObject *self, PyObject *args)
   clearData.open(file);
   inData=&clearData;
 #endif
-
   ret=align_alignCommon(self,args,inData);
 
 
@@ -1652,12 +1663,9 @@ static PyObject *
 align_aligndata(PyObject *self, PyObject *args)
 {
   char* data;
-  double lambda, xi, mu, nuc_per_rotation,nu;
-  string firstSeqName,secondSeqName,sequence;
-  int result_ask;
 
-  if (!PyArg_ParseTuple(args, "siddddd", &data,&result_ask,
-			&lambda, &xi, &mu, &nu, &nuc_per_rotation)){
+  if (!(data=PyString_AsString(PySequence_GetItem(args, 0)))){
+    PyErr_SetString(PyExc_AttributeError,"Invalid data argument!");
     return 0;
   }
   
