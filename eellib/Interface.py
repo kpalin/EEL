@@ -20,6 +20,10 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.22  2005/01/13 13:16:42  kpalin
+# Moved the requesting of sequences to be aligned to Python side
+# of stuff. Much better.
+#
 # Revision 1.21  2005/01/12 13:34:55  kpalin
 # Added Tkinter/Tix Graphical user interface and command -no-gui to
 # avoid it.
@@ -70,14 +74,14 @@ if 0:
 
 from eellib import align
 
-## try:
-##     # Greedy multiple alignment written in python
-##     from eellib import Multialign
-
-##     # Exact multiD multiple alignment written in C
-##     from eellib import multiAlign
-## except ImportError:
-##     pass
+try:
+    # Greedy multiple alignment written in python
+    from eellib import Multialign
+    
+    # Exact multiD multiple alignment written in C
+    from eellib import multiAlign
+except ImportError:
+    pass
 from eellib import _c_matrix
 
 import sys,math
@@ -240,7 +244,10 @@ If you use '.' as filename the local data are aligned."""
                 print "No multiple alignment for a reason or an other"
             else:
                 print "Done"
-#                print "goodAlign=",self.malignment.nextBest()
+                self.moreAlignments(1)
+                print len(self.alignment.bestAlignments)
+                for y in [(x.motif,x.score,zip(self.alignment.names,x.beginEnd,x.siteScore,x.siteSeqPos)) for x in self.alignment.bestAlignments[0]]:print y
+#                print "goodAlign=",map(str,self.alignment.nextBest())
         except ValueError:
             print "Error: unallowed arguments passed to 'multipleAlign'"
 
@@ -311,8 +318,9 @@ If you use '.' as filename the local data are aligned."""
             except IOError, (errno, strerror):
                 print "%s: %s" % (strerror, f)
         # Make the matrix names nicer.
-        cpreflen=len(os.path.commonprefix([x.fname for x in self.matlist]))
-        for m in self.matlist: m.name=m.fname[cpreflen:]
+        cpreflen=len(os.path.commonprefix([os.path.dirname(x.fname) for x in self.matlist]))+1
+        for m in self.matlist:
+            m.name=m.fname[cpreflen:]
         
 
             
