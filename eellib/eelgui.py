@@ -2,6 +2,10 @@
 
 ##
 ## $Log$
+## Revision 1.1  2005/01/12 13:34:55  kpalin
+## Added Tkinter/Tix Graphical user interface and command -no-gui to
+## avoid it.
+##
 ##
 
 
@@ -11,6 +15,8 @@ from eellib.tixgui import tixgui,fontStr
 
 from Tix import *
 #from Tkinter import *
+
+import os.path
 
 
 class alignUI(Frame):
@@ -443,10 +449,10 @@ class eelgui(Interface,tixgui):
         filelist=self._widgets["sequences_pick"].subwidget("filelist").subwidget("listbox")
 
         pattern=self._widgets["sequences_pick"].filter["value"]
-        basedir="/".join(pattern.split("/")[:-1])
-        
+        basedir=os.path.dirname(pattern)
+                
         files=filelist.get(0,END)
-        self.addSequence([basedir+"/"+x for x in files])
+        self.addSequence([os.path.join(basedir,x) for x in files])
         self.updateSequenceList()
 
     def addSequences(self,filename):
@@ -467,10 +473,10 @@ class eelgui(Interface,tixgui):
         filelist=self._widgets["mat_pick"].subwidget("filelist").subwidget("listbox")
 
         pattern=self._widgets["mat_pick"].filter["value"]
-        basedir="/".join(pattern.split("/")[:-1])
+        basedir=os.path.dirname(pattern)
         
         files=filelist.get(0,END)
-        self.addMatrix([basedir+"/"+x for x in files])
+        self.addMatrix([os.path.join(basedir,x) for x in files])
         self.updateMatrixList()
         
     def addMatrices(self,filename):
