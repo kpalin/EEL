@@ -5,6 +5,9 @@ import sys,os
 
 #
 #  $Log$
+#  Revision 1.2  2004/02/23 12:22:57  kpalin
+#  Updates for per gene orthologous runs.
+#
 #  Revision 1.1  2004/02/20 10:56:05  kpalin
 #  Serves the list of files given as parameter.
 #  Keeps some log who is running what.
@@ -47,7 +50,9 @@ def nextFasta(clientID):
     global FileList,runListName,supposedlyDone
     dirs=["/fs/home/kpalin/tyot/mabs/synteny/output/good/",
           "/fs/home/kpalin/tyot/mabs/synteny/output/",
-          "/fs/home/kpalin/tyot/mabs/synteny/output/good/ws/"]
+          "/fs/home/kpalin/tyot/mabs/synteny/output/good/ws/",
+          "/fs/home/kpalin/tyot/mabs/synteny/perGene/output/",
+          "/fs/home/kpalin/tyot/mabs/synteny/perGene/output/ws/output/"]
     try:
         
         for i in range(len(FileList)):
@@ -70,7 +75,9 @@ def nextFasta(clientID):
         open(FileListName,"w").write(repr(FileList))
         open(runListName,"w").write(repr(runningFiles))
         return filen
-    except IndexError,e:
+    except Exception,e:
+        import traceback
+        traceback.print_exc(file=sys.stderr)
         return "xAllDone"
     
 

@@ -1,19 +1,22 @@
 """Converts a GFF file to chromosomal coordinates.
 
 GFF file with sequence names like HUMAN|1.12345-19999
-are converted to names like HUMAN|1 with the start coordinate
-added to the feature coordinates.
+are converted to names like 1 with the start coordinate
+added to the feature coordinates. Just remember to properly GREP
+the input before running this!!.
 
 Output comes to standard output. Filename is given on commandline."""
 import sys,re
 
-
+##
+## $Log$
+## 
 
 
 fname=sys.argv[1]
 import re
 
-coordReg=re.compile(r'(\d+).(\d+)-(\d+)')
+coordReg=re.compile(r'\w+\|(\d+).(\d+)-(\d+)')
 
 for line in map(lambda x:x.split("\t",8),open(fname).readlines()):
     coordMatch=coordReg.search(line[0])

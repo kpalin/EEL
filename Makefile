@@ -7,10 +7,14 @@ all: src/matrix.cc src/align.cc src/editdist.c src/gzstream/libgzstream.a
 	@echo "# python setup.py install" 
 	@echo "******************************************************************"
 	@echo 
-	python2.2 setup.py build
-	cp  build/lib*/*.so .
+	#make -C src/
+	python setup.py build
+	#cp -u  build/lib*/*.so .
 	#cp build/scripts*/mabs .
 
+
+debug:src/matrix.cc src/align.cc src/editdist.c src/gzstream/libgzstream.a
+	python setup.py debug build
 
 modules/matrix.so: src/matrix.cc
 

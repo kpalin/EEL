@@ -4,6 +4,9 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.1  2004/11/12 07:56:36  kpalin
+# Initial check-in
+#
 #
 # For making even sized sequence "logos" which are not sequence logos
 
@@ -766,11 +769,11 @@ EndLogo
     def sort(self):
         for i in range(self.stacks):
             if self.sortOrder==0:
-                self.stackStrs[i].sort(lambda x,y:cmp(x[1],y[1]))
-            else:
+                self.stackStrs[i].sort(lambda x,y:cmp(y[1],x[1]))
+            elif self.sortOrder==1:
                 self.stackStrs[i].sort(lambda x,y:cmp((x[0],-ord(x[1])),(y[0],-ord(y[1]))))
-                if self.sortOrder==2:
-                    self.stackStrs[i].reverse()
+            elif self.sortOrder==2:
+                self.stackStrs[i].sort(lambda x,y:cmp((y[0],ord(y[1])),(x[0],ord(x[1]))))
 
     def stacksStr(self,s=StringIO()):
         self.sort()
@@ -795,9 +798,12 @@ EndLogo
                                 
 if __name__=="__main__":
     if len(sys.argv)<2:
-        print "usage: python pfm2ps.py TF/joku.pfm"
+        print "usage: python pfm2ps.py TF/joku.pfm [sortcode]"
         sys.exit(1)
-    pfm=PfmFormat(sys.argv[1])
+    sortOrder=1
+    if len(sys.argv)>=3:
+        sortOrder=int(sys.argv[2])
+    pfm=PfmFormat(sys.argv[1],sortOrder)
     
     print str(pfm)
     #print "\n".join(makeStacks(pfm))
