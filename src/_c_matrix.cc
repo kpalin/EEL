@@ -19,7 +19,9 @@ using namespace std;
 #define SEQ_BUFFER_SIZE 15000000
 #endif
 
-
+/*
+ * $Log$
+ */
 
 unsigned long py_fileLikeTell(PyObject *py_file);
 int py_fileLikeSeek(PyObject *py_file, unsigned long pos);
@@ -63,6 +65,16 @@ int SNPdat::operator==(SNPdat &other)
 {
   return this->pos==other.pos && this->allele==other.allele && this->ambig==other.ambig;
 }
+
+bool operator<(const class TFBSscan &t1, const class TFBSscan &t2){
+  return t1.length()<t2.length() || (t1.length()==t2.length() && t1.py_matrix<t2.py_matrix);
+}
+
+bool lessThan(TFBSscan* t1,TFBSscan* t2){
+  return *t1<*t2;
+}
+
+
 //gets a Python list of lists (Matrix)
 vector<vector<double> > parse(PyObject* listoflists)
 {
@@ -977,7 +989,8 @@ void TFBSscan::halfHistories()
     Iter=this->history.erase(Iter);
     Iter++;
   }
-
+  assert(this->history.size()>0);
+  assert(this->compl_history.size()>0);
 }
 
 vector<int> snpIndexFromCode(int snpCode,int snpCount)
@@ -1151,17 +1164,17 @@ TFBShit::TFBShit(TFBSscan* mat,unsigned int seqPos,char strand)
   this->pos=seqPos-mat->length()+1; // seqPos is the sequence number of the last nucleotide of the site.
   this->strand=strand;
   this->score=-DBL_MAX;
+  this->minScore=DBL_MAX;
 }
 
 void TFBShit::addHit(double Score,vector<class SNPdat> genotype)
 {
 
+  // Be nice and give the maximum score if both alleles are accepted.
   this->score=max(this->score,Score);
+  this->minScore=min(this->score,Score);
 
-//   if(genotype.size()>0) {
-//     for(unsigned int i=0;i<genotype.size();i++) 
-//       printf("genotype: %c%c%d(%c)\n",this->strand,genotype[i].ambig,genotype[i].pos,genotype[i].allele);
-//   }
+
 
   if(this->sigGenotype.size()==0 && genotype.size()>0) {
     this->sigGenotype=genotype;
@@ -1181,7 +1194,7 @@ void TFBShit::addHit(double Score,vector<class SNPdat> genotype)
 #ifndef NDEBUG
   if(this->sigGenotype.size()>0) {
     int kokoe=this->sigGenotype.size();
-    for(int i=0;i<this->sigGenotype.size();i++) {
+    for(unsigned int i=0;i<this->sigGenotype.size();i++) {
       SNPdat apu=this->sigGenotype[i];
       if(!(this->sigGenotype[i].allele=='A' ||
 	   this->sigGenotype[i].allele=='C' ||
@@ -1198,16 +1211,29 @@ void TFBShit::addHit(double Score,vector<class SNPdat> genotype)
 
 
  
-vector<SNPdat> TFBShelper::getSNPs(int snpCode)
+vector<SNPdat> TFBShelper::getSNPs(int snpCode,int matInd)
 {
 
+  // Get SNPs for the matrix matInd.  This might have less SNP matches 
+  // than the recorded background region.
+
   vector<SNPdat> ret;
-  
+
+
   if(this->allelCount()>1) {
+
+    // Correct the snpCode for the larger number of SNPs
+    if(matInd>=0 && this->matricies[matInd]->allelCount()<this->allelCount()) {
+      snpCode*=this->allelCount()/this->matricies[matInd]->allelCount();
+    }
+
     vector<int> ind=snpIndexFromCode(snpCode,this->SNPs.size());
     for(unsigned int i=0;i<ind.size();i++) {
-      assert(ind[i]<this->SNPs.size());
-      ret.push_back(this->SNPs[ind[i]]);
+      assert(ind[i]<(int)this->SNPs.size());
+      if(matInd<0 || this->SNPs[ind[i]].pos<(int)(this->matricies[matInd]->length()+this->bgOrder())) {
+	// Don't record the SNPs that are not on the matrices region.
+	ret.push_back(this->SNPs[ind[i]]);
+	}
     }
   }
   
@@ -1230,7 +1256,9 @@ vector<TFBShit*> TFBShelper::getMatches()
 
     class TFBShit *watson=NULL,*crick=NULL;
 
-    for(unsigned int snpCode=0;snpCode<this->allelCount();snpCode++) {
+    for(unsigned int snpCode=0;snpCode<this->matricies[matInd]->allelCount();snpCode++) {
+      assert(WatsonScores.size()==CrickScores.size());
+      assert(WatsonScores.size()==this->matricies[matInd]->allelCount());
       double bgProb=this->getBGprob(matInd,snpCode);
       double WatsonScore=WatsonScores[snpCode]-bgProb;
       double CrickScore=CrickScores[snpCode]-bgProb;
@@ -1238,13 +1266,13 @@ vector<TFBShit*> TFBShelper::getMatches()
 	if(!watson) {
 	  watson=new TFBShit(this->matricies[matInd],this->seqPos(),'+');
 	}
-	watson->addHit(WatsonScore,this->getSNPs(snpCode));
+	watson->addHit(WatsonScore,this->getSNPs(snpCode,matInd));
       }
       if(CrickScore>scoreBound) {
 	if(!crick) {
 	  crick=new TFBShit(this->matricies[matInd],this->seqPos(),'-');
 	}
-	crick->addHit(CrickScore,this->getSNPs(snpCode));
+	crick->addHit(CrickScore,this->getSNPs(snpCode,matInd));
       }
     }
     if(watson) {
@@ -1260,14 +1288,33 @@ vector<TFBShit*> TFBShelper::getMatches()
 double TFBShelper::getBGprob(int matInd,int snpCode)
 {
 
-  TFBSscan *mat=this->matricies[matInd];
-
   if(!this->haveBG) {
     return 0.0;
   }
+
+  TFBSscan *mat=this->matricies[matInd];
+  unsigned int matAlleles=this->matricies[matInd]->allelCount();
+
   int pos=mat->length()-1;
 
-  return this->probBuffer[snpCode][pos];
+  double bgP=-DBL_MAX;
+  int alleleFactor=this->allelCount()/matAlleles;
+
+#ifndef NDEBUG
+  double oldBgP=this->probBuffer[snpCode*alleleFactor][pos];
+#endif
+  // Return the most likely background probability i.e. Be conservative.
+  for(int sCode=snpCode*alleleFactor;sCode<(snpCode+1)*alleleFactor;sCode++) {
+    bgP=max(bgP,this->probBuffer[sCode][pos]);
+#ifndef NDEBUG  
+    // Since we report the SNPs in the markov context, we should get equal values here. 
+    // i.e. this should be innecessary loop.
+    assert(fabs(oldBgP-bgP)<1e-5);
+    oldBgP=bgP;
+#endif
+  }
+
+  return bgP;
 }
 
 
@@ -1291,20 +1338,49 @@ TFBShelper::TFBShelper(matrix_bgObject *bgIn,vector<TFBSscan*> &mat) : matricies
   this->maxLen=0;
 
   for(unsigned int i=0;i<this->matricies.size();i++) {
+    cout<<this->matricies[i]->length()<<endl;
     this->maxLen=max(this->maxLen,this->matricies[i]->length());
   }
 
 
   this->haveBG=(bgIn!=NULL);
   if(this->haveBG) {
-    this->maxLen+=bgIn->order;
     this->bg.push_back(*bgIn);  //Copy !!!
+    this->maxLen+=this->bgOrder();
     this->probBuffer.push_back(deque<double>(this->maxLen,0.0));
   }
 
 }
 
 
+void TFBShelper::removeScannerHistories()
+{
+
+
+  int snpId=0;
+  unsigned int lookBackDist=0;
+
+  // Longest matrix first
+  for(int i=this->matricies.size()-1;i>=0 && snpId<this->SNPs.size();i--) {
+    // Loop min(number of matricies, number of SNPs) times.
+
+
+    lookBackDist=this->matricies[i]->length()+this->bgOrder();
+    
+
+    // Furthest SNP first
+    while(snpId<this->SNPs.size() && this->SNPs[snpId].pos>(int)lookBackDist) {
+      snpId++;
+    }
+    if(snpId<this->SNPs.size() && this->SNPs[snpId].pos==(int)lookBackDist) {
+      this->matricies[i]->halfHistories();
+    }
+  }
+
+
+
+
+}
 
 
 void TFBShelper::nextChar(char chr)
@@ -1314,32 +1390,38 @@ void TFBShelper::nextChar(char chr)
   for(unsigned int i=0;i<this->SNPs.size();i++) {
     this->SNPs[i].pos++;
   }
+  //static int erot=0;
+
+
   // Remove the SNPs that we have past and left behind
-  while(this->SNPs.size()>0 && this->SNPs[0].pos>this->maxLen) {
-    // This loop should be executed at most ones per call of nextChar()
-    this->SNPs.pop_front();
-    this->SNPs.pop_front();
+  if(this->SNPs.size()>0) {
 
-    if(this->haveBG) {
-      deque<deque<double> >::iterator probIter=this->probBuffer.begin();
-      deque<matrix_bgObject>::iterator bgIter=this->bg.begin();
-      // Remove every second value
-      while(probIter!=this->probBuffer.end()) {
-	probIter=this->probBuffer.erase(probIter);
-	probIter++;
-	bgIter=this->bg.erase(bgIter);
-	bgIter++;
+    this->removeScannerHistories();
+
+    if( this->SNPs[0].pos>this->maxLen) {
+
+
+
+      // Remove the passed SNP alleles
+      this->SNPs.pop_front();
+      this->SNPs.pop_front();
+      
+      if(this->haveBG) {
+	// Remove record keeping for the alleles for the background
+	deque<deque<double> >::iterator probIter=this->probBuffer.begin();
+	deque<matrix_bgObject>::iterator bgIter=this->bg.begin();
+	// Remove every second value
+	while(probIter!=this->probBuffer.end()) {
+	  probIter=this->probBuffer.erase(probIter);
+	  probIter++;
+	  bgIter=this->bg.erase(bgIter);
+	  bgIter++;
+	}
+
       }
+      
     }
-
-    for(unsigned int i=0;i<this->matricies.size();i++) {
-      this->matricies[i]->halfHistories();
-    }
-
-//     printf("removed BG snps: %d buffers: %d\n",this->SNPs.size(),this->probBuffer.size());
-
   }
-
 
 
   
@@ -1476,7 +1558,7 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
   if(Mat.size()==0 || PyErr_Occurred()!=NULL) {
     return 0;
   }
-
+  sort(Mat.begin(),Mat.end(),lessThan);
   TFBShelper scanner(bg,Mat);
   /*
   printf("matricies: %d cutoffs: %d cutoff: %g \n",
@@ -1578,6 +1660,16 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
       assert(PyTuple_Check(snps));
       assert(ret);
       addMatchWithKey(ret,hits[i]->mat->py_matrix,hits[i]->pos,hits[i]->strand,hits[i]->score,snps);
+
+#ifndef NDEBUG
+      if((hits[i]->score-hits[i]->minScore)>1.0) {
+	char *str=PyString_AsString(PyObject_GetAttrString(hits[i]->mat->py_matrix,"name"));
+
+	printf("pos=%d %s score_delta=%g\n",hits[i]->pos,str,hits[i]->score-hits[i]->minScore);
+      }
+#endif
+      delete hits[i];
+      hits[i]=NULL;
       if(PyErr_Occurred()!=NULL) {
 	return NULL;
       }
