@@ -193,9 +193,9 @@ class Interface:
             Output.showmatch(self.__comp)
 
     def showMoreAlignments(self,count=1):
-        """Gets and shows more alignments on stdout"""
+        """Gets more alignments but doesn't display them"""
         self.moreAlignments(count)
-        print Output.formatalign(self.alignment,self.seq),
+        #print Output.formatalign(self.alignment,self.seq),
         
 
     def quit(self):
