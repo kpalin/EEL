@@ -20,6 +20,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.24  2005/02/24 11:36:53  kpalin
+# Added handling of the site annotations.
+#
 # Revision 1.23  2005/02/21 09:50:41  kpalin
 # Fixed a bug conserning beatifying matrix names with similar filenames.
 #
@@ -353,8 +356,8 @@ If you use '.' as filename the local data are aligned."""
 
         self.bg=_c_matrix.BackGround(sampleStr,int(order))
 
-        for m in self.matlist:
-            m.setMarkovBackground(self.bg)
+        Matrix.setMarkovBackground(self.bg)
+        map(Matrix.Matrix.initWeights,self.matlist)
             
 
 
