@@ -29,6 +29,10 @@
 /*
  *
  * $Log$
+ * Revision 1.1  2004/06/22 08:41:18  kpalin
+ * A full version that compiles. Doesn't probably work
+ * and is totally untested and slow but it's just a first trial.
+ *
  *
  */
 
@@ -92,6 +96,10 @@ public:
 
   int getMatrixCoord() { assert(matrix_p==dataPoint()); return matrix_p; }
 
+  void output() {
+    for(uint i=0;i<m;i++) {
+      cout<<p[i]<<",";
+    } cout<<endl; }
 };
 
 class ABset {
@@ -101,8 +109,8 @@ class ABset {
   int pointer;
 
 public:
-  ABset(int dim,int limit=2) { B.resize(dim); this->limit=limit; pointer=0; }
-  void addChar(int seq,int chr);
+  ABset(int dim,int limit=2) { B.resize(dim*2); this->limit=limit; pointer=0; }
+  void addChar(int seq,int chr,char strand);
   int moreAlphas();
   vector<int> nextB();
 };
@@ -129,10 +137,17 @@ public:
 };
 
 
-void ABset::addChar(int seq,int chr)
+void ABset::addChar(int seq,int chr,char strand)
 {
+  if(strand=='+') {
+    chr=chr*2;
+  } else if(strand=='-') {
+    chr=chr*2+1;
+  } else {
+    abort();
+  }
   B[chr].push_back(seq);
-  if(B[chr].size()>(uint)limit) {
+  if(B[chr].size()>=(uint)limit) {
     A.push_back(chr);
   }
 }
@@ -145,7 +160,7 @@ vector<int> ABset::nextB()
 
 int ABset::moreAlphas()
 {
-  if(pointer>(int)A.size())
+  if(pointer<(int)A.size())
     return 1;
   return 0;
 }
@@ -155,7 +170,7 @@ ABset Inputs::getAB(PointerVec &p,int limit)
   ABset out=ABset(factors(),limit);
 
   for(int i=0;i<sequences();i++) {
-    out.addChar(i,seq[i][p[i]].ID);
+    out.addChar(i,seq[i][p[i]].ID,seq[i][p[i]].strand);
   }
 
   return out;
@@ -224,7 +239,7 @@ const PointerVec& PointerVec::operator++(int dummy)
       matrix_p+=(*dimFactors)[i];
       if(p[i]>=dimlen[i]) {
 	p[i]=0;
-	matrix_p-=(dimlen[i]-1)*(*dimFactors)[i];
+	matrix_p-=dimlen[i]*(*dimFactors)[i];
 	i++;
       } else {
 	break;
@@ -272,6 +287,7 @@ public:
   matrixentry getValue(PointerVec &);
   void setValue(PointerVec &,matrixentry &);
   matrixentry &operator[](PointerVec &p) { return data[p.getMatrixCoord()]; }
+  int size() { return data.size(); }
 };
 
 
@@ -375,11 +391,12 @@ int Inputs::addSite(PyObject *site)
   string seqName=string(PyString_AsString(PySequence_GetItem(site,0)));
   if(PyErr_Occurred()) return 0;
   
-  map<string,uint>::iterator seq_iter=TF_to_id.find(seqName);
+  map<string,uint>::iterator seq_iter=SEQ_to_id.find(seqName);
 
   if(seq_iter==SEQ_to_id.end()) {
     seq_id=SEQ_to_id.size();
     SEQ_to_id[seqName]=seq_id;
+    seq.resize(seq_id+1);
   } else {
     seq_id=seq_iter->second;
   }
@@ -402,11 +419,11 @@ int Inputs::addSite(PyObject *site)
   id_triple new_site;
 
   new_site.ID=tf_id;
-  new_site.pos=(posind)PyInt_AsLong(PySequence_GetItem(site,3));
+  new_site.pos=(posind)PyInt_AsLong(PyNumber_Int(PySequence_GetItem(site,3)));
   if(PyErr_Occurred()) return 0;
-  new_site.epos=(posind)PyInt_AsLong(PySequence_GetItem(site,4));
+  new_site.epos=(posind)PyInt_AsLong(PyNumber_Int(PySequence_GetItem(site,4)));
   if(PyErr_Occurred()) return 0;
-  new_site.weight=(double)PyFloat_AsDouble(PySequence_GetItem(site,5));
+  new_site.weight=(double)PyFloat_AsDouble(PyNumber_Float(PySequence_GetItem(site,5)));
   if(PyErr_Occurred()) return 0;
 
   char *strand_p=PyString_AsString(PySequence_GetItem(site,6));
@@ -423,7 +440,7 @@ int Inputs::addSite(PyObject *site)
 
 vector<id_triple> Inputs::getSites(PointerVec &p)
 {
-  vector<id_triple> out;
+  vector<id_triple> out=vector<id_triple>();
 
   for(int i=0;i<sequences();i++) {
     out.push_back(seq[i][p[i]]);
@@ -434,7 +451,7 @@ vector<id_triple> Inputs::getSites(PointerVec &p)
 
 vector<int> Inputs::sequenceLens() 
 {
-  vector<int> dims;
+  vector<int> dims=vector<int>();
   for(int i=0;i<sequences();i++) {
     dims.push_back(seq[i].size());
   }
@@ -462,7 +479,7 @@ PointerVec& matrixentry::getBacktrace()
 
 PointerVec PointerVec::project(vector<int> &boundDims)
 {
-  PointerVec ret;
+  PointerVec ret=PointerVec();
 
   if(boundDims.size()>=m) {
     return ret;
@@ -844,7 +861,7 @@ static PyMemberDef malignment_members[] = {
 static PyTypeObject malign_AlignmentType = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
-    "align.Alignment",             /*tp_name*/
+    "multiAlign.MAlignment",             /*tp_name*/
     sizeof(malign_AlignmentObject), /*tp_basicsize*/
     0,                         /*tp_itemsize*/
     (destructor)malignment_dealloc,                         /*tp_dealloc*/
@@ -863,7 +880,7 @@ static PyTypeObject malign_AlignmentType = {
     0,                         /*tp_setattro*/
     0,                         /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT,        /*tp_flags*/
-    "Alignment object",           /* tp_doc */
+    "Multiple alignment object",           /* tp_doc */
     0,		               /* tp_traverse */
     0,		               /* tp_clear */
     0,		               /* tp_richcompare */
@@ -916,21 +933,48 @@ inline double penalty(malign_AlignmentObject *dat,posind d1,posind d2)
 
 
 
+void outputMemory(double bytes)
+{
+  if(bytes>(1024*1024)) {
+    cout<<(bytes/(1024*1024.0))<<" megabytes";
+  } else {
+    cout<<(bytes/(1024))<<" kilobytes";
+  }
+  
+}
+
+
+
+
 static PyObject *
 malignObject(malign_AlignmentObject *self)
 { 
   store Score;
-
   // The main multiple alignment algorithm.
 
+  int Empty=0,nonEmpty=0;
+
   for(PointerVec entry=self->CP->dynmat.getOrigin();entry.isOK();entry++) {
-    
+#ifndef NDEBUG
+    //entry.output();
+#endif
     ABset AB=self->CP->indata.getAB(entry);
 
     vector<id_triple> sites=self->CP->indata.getSites(entry);
 
+    if(AB.moreAlphas()) {
+      nonEmpty++;
+//       for(int i=0;i<self->CP->indata.sequences();i++) {
+// 	cout<<sites[i].ID<<sites[i].strand<<",";
+//       }
+//       cout<<" non empty A";
+//       cout<<endl;
+    } else {
+      Empty++;
+    }
+
     store maxScore=0;
-    PointerVec maxSource;
+    PointerVec maxSource=PointerVec();
     while(AB.moreAlphas()) {
       vector<int> Bak=AB.nextB();
 
@@ -958,6 +1002,8 @@ malignObject(malign_AlignmentObject *self)
 	  maxScore=Score;
 	  maxSource=k;
 	}
+
+	if(PyErr_Occurred()) return NULL;
       }
 
 
@@ -966,7 +1012,12 @@ malignObject(malign_AlignmentObject *self)
 
   }
 
-
+#ifndef NDEBUG
+  cout<<"Empty:     "<<Empty<<endl
+      <<"Non empty: "<<nonEmpty<<endl
+      <<"percentage of non empty: "<<nonEmpty/(1.0*Empty+nonEmpty)<<endl
+      <<"Using matrix of "<<self->CP->dynmat.size()<<" items."<<endl;
+#endif
   return (PyObject*)self;
 }
 
@@ -1072,7 +1123,7 @@ malign_aligndata(PyObject *self, PyObject *args)
 
 static PyMethodDef malignMethods[] = {
   {"aligndata",  malign_aligndata, METH_VARARGS,
-   "aligns computed sequences"},
+   "aligns computed sequences\nArguments: data,result_ask,lambda,xi,mu,nu,nuc_per_rotation"},
 //   {"alignfile",  align_alignfile, METH_VARARGS,
 //    "aligns sequences from a gff-file"},
   {NULL, NULL, 0, NULL}        /* Sentinel */
@@ -1082,7 +1133,7 @@ static PyMethodDef malignMethods[] = {
 //PyMODINIT_FUNC
 extern "C"
 void
-initalign(void)
+initmultiAlign(void)
 {
     PyObject* m=NULL;
 
@@ -1104,5 +1155,9 @@ initalign(void)
 
     Py_INCREF(&malign_colType);
     PyModule_AddObject(m, "SiteColumn", (PyObject *)&malign_colType);
+
+#ifndef NDEBUG
+    cout<<"MultiAlignLoaded"<<endl;
+#endif
 }
 
