@@ -32,6 +32,9 @@
 /*
  *
  * $Log$
+ * Revision 1.7  2004/12/22 11:14:34  kpalin
+ * Some fixes for better distributability
+ *
  * Revision 1.6  2004/12/14 14:07:22  kpalin
  * *** empty log message ***
  *
@@ -145,6 +148,18 @@ ABset Inputs::getAB(PointerVec &p,int limit)
   return out;
 }
 
+PointerVec::PointerVec(const PointerVec &other)
+{
+  dimlen=other.dimlen;
+  dimFactors=other.dimFactors;
+  bound.resize(other.m,0);
+  p=other.p;
+  m=other.m;
+  matrix_p=dataPoint();
+  ok=1;
+
+}
+
 
 PointerVec::PointerVec(vector<int> &p, vector<int> &dims,vector<int> *dimFactors)
 {
@@ -193,6 +208,7 @@ const PointerVec& PointerVec::operator--(int dummy)
 
   //this->output();
   if(i>=m) {
+    cout<<"Invalidating";this->output();cout<<endl;
     ok=0;
   }
   assert(matrix_p==dataPoint());
@@ -533,19 +549,15 @@ void PointerVec::output()
    The "bound" dimensions are irrelevant and are not explored
    because they have no effect on the scoring.
 */
-PointerVec PointerVec::project(vector<int> &boundDims)
+PointerVec PointerVec::project(vector<int> &freeDims)
 {
   PointerVec ret=PointerVec();
 
-  if(p[0]==3 && p[1]==5 && p[2]==0) {
-    cerr<<"JOTAIN JÄNNÄÄ"<<endl;
-  }
-
-
-  if(boundDims.size()>m) {  
+  if(freeDims.size()>m) {  
     return ret;
   }
 
+  // Limit this pointer to "before" part of the matrix
   ret.dimlen=dimlen;
   for(uint i=0;i<ret.dimlen.size();i++) {
     ret.dimlen[i]=min(this->dimlen[i],p[i]+1);
@@ -569,9 +581,14 @@ PointerVec PointerVec::project(vector<int> &boundDims)
 //   ret.ok=1;ret.output();
 // #endif
 
-  for(uint i=0;i<boundDims.size();i++) {
-    ret.bound[boundDims[i]]=0;
-    ret.p[boundDims[i]]=max(0,ret.p[boundDims[i]]-1);
+  for(uint i=0;i<freeDims.size();i++) {
+    ret.bound[freeDims[i]]=0;
+    //ret.p[freeDims[i]]=max(0,ret.p[freeDims[i]]-1);
+    ret.p[freeDims[i]]=ret.p[freeDims[i]]-1;
+    if(ret.p[freeDims[i]]<0) {
+      ret.ok=0;
+      return ret;
+    }
   }
 
 
@@ -580,24 +597,53 @@ PointerVec PointerVec::project(vector<int> &boundDims)
   return ret;
 }
 
+// DOESN'T HAVE ANY IDEA
+PointerVec PointerVec::limitBacktrack(Inputs *indata,int maxbp) {
+  PointerVec ret=PointerVec(*this);
 
-PointerVec PointerVec::projectAndLimit(vector<int> &boundDims,Inputs *indata,
+  // Limit this pointer to "before" part of the matrix
+  ret.dimlen=this->dimlen;
+  for(uint i=0;i<ret.dimlen.size();i++) {
+    ret.dimlen[i]=min(this->dimlen[i],this->p[i]+1);
+  }
+  // Set the limit values
+  ret.limData=indata;
+  ret.limitBP=maxbp;
+
+
+
+  vector<int> freedims;
+  // Ugly hack. FIX THIS
+  freedims.resize(this->bound.size());
+  for(uint i=0;i<freedims.size();i++) {
+    freedims[i]=i;
+  }
+  return projectAndLimit(freedims,indata,maxbp);
+
+
+}
+
+
+PointerVec PointerVec::projectAndLimit(vector<int> &freeDims,Inputs *indata,
 				       int maxbp)
 {
-  PointerVec ret=this->project(boundDims);
+  PointerVec ret=this->project(freeDims);
   if(!ret.isOK()) {
-    cout<<"IHMEJAKUMMA"<<endl;
-    assert(ret.isOK());
+    return ret;
   }
   ret.limData=indata;
   ret.limitBP=maxbp;
 
-  for(uint i=0;i<boundDims.size();i++) {
-    int bd=boundDims[i];
-    while(ret.p[bd]>0 && 
+  for(uint i=0;i<freeDims.size();i++) {
+    int bd=freeDims[i];
+    while(ret.p[bd]>=0 && 
 	  indata->getSite(ret.p[bd],bd).epos >= indata->getSite(this->p[bd],bd).pos) {
       ret.p[bd]--;
       ret.matrix_p-=(*ret.dimFactors)[bd];
+    }
+    if(ret.p[bd]<0) {
+      ret.ok=0;
+      break;
     }
   }
 
@@ -1041,20 +1087,24 @@ malignObject(malign_AlignmentObject *self)
   int Empty=0,nonEmpty=0,unNecessary=0;
 
   for(PointerVec entry=self->CP->dynmat->getOrigin();entry.isOK();entry++) {
-#ifndef NDEBUG
-    //entry.output();
-#endif
     ABset AB=self->CP->indata->getAB(entry);
+
+
+
 
     vector<id_triple> sites=self->CP->indata->getSites(entry);
 
 #ifndef NDEBUG
     if(AB.moreAlphas()) {
       nonEmpty++;
+      cout<<endl<<"Solua "; entry.output(); cout<<" varten:"<<endl;
     } else {
       Empty++;
+      cout<<endl<<"Solu   "; entry.output(); cout<<" tyhjä:"<<endl;
     }
 #endif
+
+
 
     store maxScore=SCORE_FAIL;
     siteCode maxSite=SITE_FAIL;
@@ -1065,6 +1115,9 @@ malignObject(malign_AlignmentObject *self)
       maxScore=-DBL_MAX;
       vector<int> Bak=AB.nextB();
 
+#ifndef NDEBUG
+      cout<<"Mahdollisesti "<<self->CP->indata->factor(sites[Bak[0]].ID)<<endl;
+#endif
       store base=0;
       int n=Bak.size();
       for(int i=0;i<n;i++) {
@@ -1085,19 +1138,20 @@ malignObject(malign_AlignmentObject *self)
       cout<<"."<<flush;
 #endif
       for(PointerVec k=entry.projectAndLimit(Bak,self->CP->indata,MAX_BP_DIST);
-	  k.isOK(); k--) {  // Exponential loop
-
-	assert(k.getMatrixCoord()>=0);
-
+      //      for(PointerVec k=entry.limitBacktrack(self->CP->indata,MAX_BP_DIST);
+	   k.isOK(); k--) {  // Exponential loop
+	 
+	 assert(k.getMatrixCoord()>=0);
+	 
 #ifndef NDEBUG
-	cout<<"*"<<flush;
+	 k.output();cout<<"s"<<endl;
 #endif
-
+	 
 	// Continuing alignment.
 #ifndef NDEBUG
-	if((*self->CP->dynmat)[k].getValue()==0.0) {
-	  unNecessary++;
-	}
+	 if((*self->CP->dynmat)[k].getValue()==0.0) {
+	   unNecessary++;
+	 }
 #endif
 	Score=base+(*self->CP->dynmat)[k].getValue();
 	for(uint i=0;i<Bak.size();i++) {
@@ -1117,8 +1171,7 @@ malignObject(malign_AlignmentObject *self)
 	}
 
 	if(PyErr_Occurred()) return NULL;
-      }
-
+       }
 
     }
 
