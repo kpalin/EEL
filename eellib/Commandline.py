@@ -12,6 +12,9 @@ import string
 
 
 # $Log$
+# Revision 1.8  2004/04/08 13:05:38  kpalin
+# Some cleaning and fixes.
+#
 # Revision 1.7  2004/03/03 09:27:25  kpalin
 # Added interface for multiple alignment.
 #
@@ -111,9 +114,10 @@ class Commandline(Interface):
                          'ass':               (self.addSingleSequence,1),
                          'saveMarkovBackground':  (self.saveMarkovBackground,1),
                          'more':               (self.moreAlignment,0),
-                         'multipleAlign':      (self.multiAlign,1),
-                         'showMultiAlign':     (self.showMultiAlign,0),
-                         'saveMultiAlign':     (self.saveMultiAlign,1)}
+                         '__multipleAlignGreedy':      (self.multiAlignGreedy,1),
+                         'multipleAlign':      (self.multiAlign,0),
+                         '__showMultiAlign':     (self.showMultiAlign,0),
+                         '__saveMultiAlign':     (self.saveMultiAlign,1)}
 
     def run(self):
         "waits for std input and executes these commands"
