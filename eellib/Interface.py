@@ -127,6 +127,7 @@ class Interface:
                     #self.__gff=Output.get(self.__comp).split('\n')
                 if totalMatches>50000:
                     self.storeTmpGFF()
+                    self.__comp={m:{}}
                     totalMatches=0
         if hasattr(self,"tempFileName"):
             self.finalTmpGFF()
@@ -148,9 +149,10 @@ class Interface:
             atexit.register(condRemoveTmp,self.tempFileName)
             print "Storing gziped temporary file",self.tempFileName
         print "Writing temporary file"
-        self.tempFile.write(Output.get(self.__comp))
-        self.tempFile.flush()
-        self.__gff=""
+        outData=Output.get(self.__comp)
+        if len(outData)>0:
+            self.tempFile.write(outData)
+            self.tempFile.flush()
 
     def finalTmpGFF(self):
         "Store BS data to temporary file and close it"
