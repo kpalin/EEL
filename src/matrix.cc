@@ -1004,7 +1004,7 @@ matrix_getTFBS(PyObject *self, PyObject *args)
   PyObject *py_infile,*py_matrix;
   int i, j;
   int mat_length;
-  int nucleotide, compl_nucleotide,loop_status;
+  int nucleotide=-1, compl_nucleotide=-1,loop_status;
 
   int bytes_read,buf_p;
   int const loop_continue=1,loop_break=2,loop_OK=0;
@@ -1296,7 +1296,7 @@ matrix_getTFBSwithBG(PyObject *self, PyObject *args)
   PyObject *py_infile,*py_matrix;
   int i, j;
   int mat_length;
-  int nucleotide, compl_nucleotide,loop_status;
+  int nucleotide=-1, compl_nucleotide=-1,loop_status;
 
   int bytes_read,buf_p;
   int const loop_continue=1,loop_break=2,loop_OK=0;
@@ -1319,18 +1319,15 @@ matrix_getTFBSwithBG(PyObject *self, PyObject *args)
   }
 
   if((PyObject*)bg==Py_None) {
-    Py_DECREF(bg);
     bg=NULL;
   }
-  //if(bg) {
-  //  startContext(bg,"CTGA");
-  //}
 
   vector<vector<double> > M= parse(py_matrix);
   if(M.size()==0) {
     PyErr_SetString(PyExc_ValueError,"Malformed matrix");
     return 0;
   }
+
 
   mat_length= M[0].size();
 
@@ -1398,7 +1395,7 @@ matrix_getTFBSwithBG(PyObject *self, PyObject *args)
       }
     }
 
-    switch(Seq[buf_p])
+    switch(toupper(Seq[buf_p]))
       {
       case '\n':
       case ' ':
@@ -1406,7 +1403,7 @@ matrix_getTFBSwithBG(PyObject *self, PyObject *args)
 	loop_status=loop_continue;
 	break;
       case '>':
-	cout<<"Encountered unexpectedly an another sequence!"<<endl;
+	cerr<<"Encountered unexpectedly an another sequence!"<<endl;
 	PyDict_SetItem(ret,PyString_FromString("NEXT_SEQ"),PyLong_FromUnsignedLong(py_fileLikeTell(py_infile)));
 	loop_status=loop_break;
 	break;
@@ -1429,7 +1426,7 @@ matrix_getTFBSwithBG(PyObject *self, PyObject *args)
 	compl_nucleotide=0;
 	break;
 	default:
-	  //cout<<"Wrong letter in Sequence! Reading it like 'N'"<<endl;
+	  cerr<<"Wrong letter in Sequence! Reading it like 'N'"<<endl;
 	case 'N': 
 	case 'X':
 	  //cout<<"."<<flush;
@@ -1599,19 +1596,4 @@ initmatrix(void)
 
   Py_INCREF(&matrix_bgType);
   PyModule_AddObject(m,"BackGround",(PyObject*) &matrix_bgType);
-}
-
-int
-main(int argc, char *argv[])
-{
-    /* Pass argv[0] to the Python interpreter */
-    Py_SetProgramName(argv[0]);
-
-    /* Initialize the Python interpreter.  Required. */
-    Py_Initialize();
-
-    /* Add a static module */
-    initmatrix();
-   
-    return 0;
 }

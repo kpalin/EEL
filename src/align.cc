@@ -34,6 +34,10 @@
 /*
  *
  *  $Log$
+ *  Revision 1.4  2003/12/30 11:21:36  kpalin
+ *  Added a conditional dependency on gzstream and zlib to allow processing of
+ *  gziped files.
+ *
  *  Revision 1.3  2003/12/29 12:43:32  kpalin
  *  Ilmeisesti jotain uutta. En tiedä mitä.
  *
@@ -266,7 +270,7 @@ matchlisttype* parseStream(istream *in)
     }
   }
 
-
+  //cout<<"The whole stream parsed successfully!"<<endl;
 
   // the lists must be sorted
   matchlisttype::iterator iter;
@@ -395,7 +399,6 @@ typedef struct {
   double mu;
   double nu;
   double nuc_per_rotation;
-  uint num_of_align;
   int mem_usage;
   int item_count;
   double fill_factor;
@@ -462,7 +465,6 @@ alignment_init(align_AlignmentObject *self, PyObject *args, PyObject *kwds)
 
     
 
-    self->num_of_align=10;
     self->nu=1.0;
     self->mu=1.0;
     self->lambda=0.5;
@@ -1013,15 +1015,15 @@ alignObject(align_AlignmentObject *self)
 
 
 
+
 static PyObject *
 align_alignCommon(PyObject *self, PyObject *args,istream *data)
 {
   char* stub;
-  int num_of_align;
   double lambda, xi, mu, nuc_per_rotation,nu;
   string firstSeqName,secondSeqName;
 
-  if (!PyArg_ParseTuple(args, "siddddd", &stub, &num_of_align, 
+  if (!PyArg_ParseTuple(args, "sddddd", &stub,
 			&lambda, &xi, &mu, &nu,&nuc_per_rotation)){
     return  Py_BuildValue("s", "");
   }
@@ -1035,6 +1037,7 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
       #ifdef ALIGN_OUTPUT
       cerr<<"Error: too few sequences in data"<<endl;
       #endif
+      delete matchlist;
       return Py_BuildValue("s", "");
     }
 
@@ -1098,6 +1101,8 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
   seq_x=(*matchlist)[firstSeqName];
   seq_y=(*matchlist)[secondSeqName];
   
+
+  delete matchlist;
 
   // Check that we get short rows.
   string tmp_str;
@@ -1204,12 +1209,9 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
   ret_self->mu=mu;
   ret_self->nu=nu;
   ret_self->nuc_per_rotation=nuc_per_rotation;
-  ret_self->num_of_align=num_of_align;
 
 
   return (PyObject*)alignObject(ret_self);
-  //id_seq_x, id_seq_y, ID_to_TF, 
-  //	       num_of_align, lambda, xi, mu, nuc_per_rotation,firstSeqName,secondSeqName);
 }
 
 
@@ -1219,12 +1221,11 @@ static PyObject *
 align_alignfile(PyObject *self, PyObject *args)
 {
   char* file;
-  int num_of_align;
   double lambda, xi, mu, nuc_per_rotation,nu;
   PyObject *ret;
   string firstSeqName,secondSeqName;
 
-  if (!PyArg_ParseTuple(args, "siddddd", &file, &num_of_align, 
+  if (!PyArg_ParseTuple(args, "sddddd", &file, 
 			&lambda, &xi, &mu, &nu,&nuc_per_rotation)){
     return  Py_BuildValue("s", "");
   }
@@ -1264,12 +1265,11 @@ static PyObject *
 align_aligndata(PyObject *self, PyObject *args)
 {
   char* data;
-  int num_of_align;
   double lambda, xi, mu, nuc_per_rotation,nu;
   string firstSeqName,secondSeqName,sequence;
 
 
-  if (!PyArg_ParseTuple(args, "siddddd", &data, &num_of_align, 
+  if (!PyArg_ParseTuple(args, "sdddd", &data,
 			&lambda, &xi, &mu, &nu,&nuc_per_rotation)){
     return Py_BuildValue("s", "");
   }
