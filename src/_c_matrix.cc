@@ -23,6 +23,20 @@ unsigned long py_fileLikeTell(PyObject *py_file);
 int py_fileLikeSeek(PyObject *py_file, unsigned long pos);
 
 
+
+class SNPdat{
+public:
+  char ambig;
+  char allele;
+  int pos;
+  SNPdat(char amb,char all,int p) {ambig=amb;allele=all;pos=p;}
+  int operator==(SNPdat &other);
+};
+
+int SNPdat::operator==(SNPdat &other)
+{
+  return this->pos==other.pos && this->allele==other.allele && this->ambig==other.ambig;
+}
 //gets a Python list of lists (Matrix)
 vector<vector<double> > parse(PyObject* listoflists)
 {
@@ -71,6 +85,40 @@ void drawvector(vector<vector<double> > ret)
     }
 }  
 
+
+
+
+
+
+char *getAllels(char IUPAC)
+{
+  char *allels=NULL;
+  switch(IUPAC) {
+  case 'R':
+    allels="GA";
+    break;
+  case 'Y':
+    allels="TC";
+    break;
+  case 'M':
+    allels="AC";
+    break;
+  case 'K':
+    allels="GT";
+    break;
+  case 'S':
+    allels="GC";
+    break;
+  case 'W':
+    allels="AT";
+    break;
+  }
+
+  return allels;
+}
+
+
+
 static PyObject *
 matrix_draw(PyObject *self, PyObject *args)
 {
@@ -80,129 +128,16 @@ matrix_draw(PyObject *self, PyObject *args)
   return Py_None;
 }
 
-//match a matrix on a sequence
-static PyObject *
-matrix_match(PyObject *self, PyObject *args)
+
+
+void addMatch(PyObject *dict,int const pos,char const strand,double const score,char const allele,int const snpPos)
 {
-  char* Seq= PyString_AsString (PyTuple_GetItem(args, 1));
-  int seq_length=PyString_Size (PyTuple_GetItem(args, 1));
-  int i, j;
-  int mat_length;
-  int nucleotide, compl_nucleotide;
-
-  vector<vector<double> > M= parse(PyTuple_GetItem(args, 0));
-  mat_length= M[0].size();
-
-  // histories store the interim results of the matching
-  // one for each the 2 complement strangs
-  deque<double> history(mat_length,0);
-  deque<double> compl_history(mat_length,0);
-
-  // iterators to work with the histories
-  // notice that iter is a reverse_iterator
-  deque<double>::reverse_iterator iter;
-  deque<double>::iterator compl_iter;
-  
-
-  cout << "THIS PROBABLY WON'T WORK"<<endl;
-
-  PyObject* ret, *entry;
-  if(!(ret=PyList_New(seq_length))) 
-    {
-      cerr << "could not allocate return list"<<endl;
-    }
-  
-  for (i=0; i<seq_length; i++)
-    {
-      /*      //the score at position i is the max of the fronts of the histories
-      entry=(history.front()<compl_history.front() ?
-	     PyFloat_FromDouble(compl_history.front()):
-	     PyFloat_FromDouble(history.front()));
-      PyList_SET_ITEM(ret, i, entry);
-      */
-      switch(Seq[i])
-	{
-	case 'A':
-	  //nucleotide stores in which line of the matrix is to search
-	  nucleotide=0;        
-	  compl_nucleotide=3;
-	  break;
-	case 'C':
-	  nucleotide=1;
-	  compl_nucleotide=2;
-	  break;
-	case 'G':
-	  nucleotide=2;
-	  compl_nucleotide=1;
-	  break;
-	case 'T':
-	  nucleotide=3;
-	  compl_nucleotide=0;
-	  break;
-	default:
-	  cout<<"."<<flush;
-	    //cout<<"Wrong letter in Sequence! Reading it like 'N'"<<endl;
-	case 'N': 
-	case 'X':
-	  //histories are used like queues
-	  history.pop_front();
-	  history.push_back(0);
-	  compl_history.pop_front();
-	  compl_history.push_back(0);
-
-	  // in case of 'N' a specific value is added to the histories
-	  // to make sure, that it becomes no hit
-	  iter=history.rbegin();
-	  compl_iter=compl_history.begin();
-	  for(j=0; j<mat_length; j++)
-	    {
-	      *iter+=-10;              //what do I add best to the histories?
-	      ++iter;  // notice that iter is a reverse_iterator
-	      
-	      *compl_iter+=-10;        //what do I add best to the histories?
-	      ++compl_iter;
-	    }
-	  
-	  continue;
-	  break;
-	}
-
-      //histories are used like queues
-      history.pop_front();
-      history.push_back(0);
-      compl_history.pop_front();
-      compl_history.push_back(0);
-
-      iter=history.rbegin();
-      compl_iter=compl_history.begin();
-      for(j=0; j<mat_length; j++)
-	{
-	  *iter+= M[nucleotide][j];
-	  ++iter;  // notice that iter is a reverse_iterator
-
-	  *compl_iter+=M[compl_nucleotide][j];
-	  ++compl_iter;
-	}
-
-      entry=(history.front()<compl_history.front() ?
-	     PyFloat_FromDouble(compl_history.front()):
-	     PyFloat_FromDouble(history.front()));
-      PyList_SET_ITEM(ret, i, entry);
-
-    }
-      
-  return ret;
-}
-
-
-void addMatch(PyObject *dict,int const pos,char const strand,double const score)
-{
-  PyDict_SetItem(dict, Py_BuildValue("(ic)",pos,strand),PyFloat_FromDouble(score));
+  PyDict_SetItem(dict, Py_BuildValue("(icci)",pos,strand,allele,snpPos),PyFloat_FromDouble(score));
 
 }
 
 
-void addMatchWithKey(PyObject *dict,PyObject *key,int const pos,char const strand,double const score)
+void addMatchWithKey(PyObject *dict,PyObject *key,int const pos,char const strand,double const score,char const allele,int const snpPos)
 {
   PyObject *subDict;
   if(!PyMapping_HasKey(dict,key)) {
@@ -211,7 +146,7 @@ void addMatchWithKey(PyObject *dict,PyObject *key,int const pos,char const stran
   } else {
     subDict=PyDict_GetItem(dict,key);
   }
-  addMatch(subDict,pos,strand,score);
+  addMatch(subDict,pos,strand,score,allele,snpPos);
 
 }
 
@@ -1016,569 +951,6 @@ int py_fileLikeSeek(PyObject *py_file, unsigned long pos)
 }
 
 
-//Returns a map from index to score of possible TFBS.
-//The arguments are matrix, sequence and bound.
-static PyObject *
-matrix_getTFBS(PyObject *self, PyObject *args)
-{
-  char *Seq=NULL; //= PyString_AsString (PyTuple_GetItem(args, 1));
-  //int seq_length;//=PyString_Size (PyTuple_GetItem(args, 1));
-  double bound;//=PyFloat_AsDouble(PyTuple_GetItem(args, 2));
-  PyObject *py_infile,*py_matrix;
-  int i, j;
-  int mat_length;
-  int nucleotide=-1, compl_nucleotide=-1,loop_status;
-
-  int bytes_read,buf_p;
-  int const loop_continue=1,loop_break=2,loop_OK=0;
-
-
-
-#ifdef TIME_TFBS
-  clock_t before,after;
-
-  // Start timing
-  before=clock();
-#endif
-
-
-  if (!PyArg_ParseTuple(args, "OOd" ,&py_matrix,&py_infile,&bound)){
-    Py_INCREF(Py_None);
-    return Py_None;
-  }
-
-  
-  //vector<vector<double> > M= parse(PyTuple_GetItem(args, 0));
-  vector<vector<double> > M= parse(py_matrix);
-  if(M.size()==0) {
-    Py_INCREF(Py_None);
-    return Py_None;
-  }
-
-  mat_length= M[0].size();
-
-
-
-
-  // histories store the interim results of the matching
-  // one for each of the 2 complement strands
-  deque<double> history(mat_length,0.0);
-  deque<double> compl_history(mat_length,0.0);
-
-  // iterators to work with the histories
-  deque<double>::reverse_iterator iter;
-  deque<double>::iterator compl_iter;
-  
-  PyObject* ret;
-  //float entry;
-  //char* strand="+";
-
-  if(!(ret=PyDict_New())) 
-    {
-      PyErr_NoMemory();
-      return 0;
-    }
-  
-
-
-  PyObject *py_read=NULL;
-  
-  
-  unsigned long fileStartPos=py_fileLikeTell(py_infile);
-
-
-  py_read=PyObject_GetAttrString(py_infile,"read");
-
-
-  PyObject *py_readParam=NULL;
-  PyObject *py_strBuf=NULL;
-
-  py_readParam=Py_BuildValue("(l)",SEQ_BUFFER_SIZE);
-
-
-  //py_strBuf=PyObject_CallObject(py_read,py_readParam);
-
-  //cout<<PyString_AsString(py_strBuf)<<endl;
-  //bytes_read=strlen(Seq);
-  //cout<<bytes_read;
-  //bytes_read=fread(Seq,SEQ_BUFFER_SIZE-1,1,cinfile);
-  //buf_p=0;
-  loop_status=loop_OK;
-
-
-  bytes_read=1;
-  buf_p=1;
-  
-   
-  for (i=0; bytes_read>0; i++,buf_p++) {
-    if(buf_p>=bytes_read) {
-      if(py_strBuf)
-	Py_DECREF(py_strBuf);
-      
-      py_strBuf=PyObject_CallObject(py_read,py_readParam);
-      Seq=PyString_AsString(py_strBuf);
-      bytes_read=PyObject_Size(py_strBuf);
-      //bytes_read=fread(Seq,SEQ_BUFFER_SIZE-1,1,cinfile);
-      Seq[bytes_read]=0;
-      buf_p=0;
-      //cout<<"Read "<<bytes_read<<" more bytes"<<endl;
-
-      cout<<"."<<flush;
-      if(bytes_read==0) {
-	break;
-      }
-    }
-
-    switch(Seq[buf_p])
-      {
-      case '\n':
-      case ' ':
-	i--;
-	loop_status=loop_continue;
-	break;
-      case '>':
-	cout<<"Encountered unexpectedly an another sequence!"<<endl;
-	PyDict_SetItem(ret,PyString_FromString("NEXT_SEQ"),PyLong_FromUnsignedLong(py_fileLikeTell(py_infile)));
-	loop_status=loop_break;
-	break;
-
-      case 'A':
-	//nucleotide stores in which line of the matrix is to search
-	nucleotide=0;        
-	compl_nucleotide=3;
-	break;
-      case 'C':
-	nucleotide=1;
-	compl_nucleotide=2;
-	break;
-      case 'G':
-	nucleotide=2;
-	compl_nucleotide=1;
-	break;
-      case 'T':
-	nucleotide=3;
-	compl_nucleotide=0;
-	break;
-	default:
-	  //cout<<"Wrong letter in Sequence! Reading it like 'N'"<<endl;
-	case 'N': 
-	case 'X':
-	  //cout<<"."<<flush;
-	  //histories are used like queues
-	  history.pop_front();
-	  history.push_back(0);
-	  compl_history.pop_front();
-	  compl_history.push_back(0);
-
-	  // in case of 'N' a specific value is added to the histories
-	  // to make sure, that it becomes no hit
-	  iter=history.rbegin();
-	  compl_iter=compl_history.begin();
-	  for(j=0; j<mat_length; j++)
-	    {
-	      *iter+=-10;              //what do I add best to the histories?
-	      ++iter;  
-	      
-	      *compl_iter+=-10;        //what do I add best to the histories?
-	      ++compl_iter;
-	    }
-	  
-	  continue;
-	  break;
-	}
-
-
-      
-
-
-      if(loop_status==loop_break) {
-	break;
-      } else if(loop_status==loop_continue) {
-	loop_status=loop_OK;
-	continue;
-      }
-
-
-      // Add the score from nucleotide seq[i] to the lists.
-      iter=history.rbegin();
-      compl_iter=compl_history.begin();
-      for(j=0; j<mat_length; j++)
-	{
-	  *iter+= M[nucleotide][j];
-	  ++iter; 
-
-	  //*compl_iter+=M[compl_nucleotide][mat_length-j-1];
-	  *compl_iter+=M[compl_nucleotide][j];
-	  ++compl_iter;
-	}
-
-      /*
-      iter=history.begin();
-      cout<<"+"<<Seq[i];
-      for(j=0; j<mat_length; j++)
-	{
-	  printf(" %d %g ",i+2-j-mat_length,*iter);
-	  ++iter; 
-	}
-      cout<<endl;
-      iter=compl_history.begin();
-      cout<<"-"<<Seq[i];
-      for(j=0; j<mat_length; j++)
-	{
-	  printf(" %d %g ",i+2-j-mat_length,*iter);
-	  ++iter; 
-	}
-      cout<<endl;
-      */
-      // The front element has the score for match with last nucleotide i.
-
-      int pos=i-mat_length+2;
-      if(pos>0 && history.front()>bound) {
-	addMatch(ret,pos,'+',history.front());
-      //printf("+hit: %d+: %g\n%d-: %g\n\n",pos,history.front(),pos,compl_history.front());
-      }
-      if(pos>0 && compl_history.front()>bound) {
-	//printf("-hit: %d+: %g\n%d-: %g\n\n",pos,history.front(),pos,compl_history.front());
-	addMatch(ret,pos,'-',compl_history.front());
-      }
-
-      
-      //histories are used like queues
-      history.pop_front();
-      history.push_back(0);
-      compl_history.pop_front();
-      compl_history.push_back(0);
-
-
-      /*
-      if (history.front()<compl_history.front())
-	{
-	  entry= compl_history.front();
-	  strand="-";
-	}
-      else
-	{
-	  entry= history.front();
-	  strand="+";
-	}
-
-      if(entry>bound)
-	{
-	  int pos=i-mat_length+1+1;
-	  if(pos<=0)
-	    continue;
-	  PyObject* pair=PyTuple_New(2);
-	  PyTuple_SetItem(pair, 0, PyFloat_FromDouble(entry));
-	  PyTuple_SetItem(pair, 1, PyString_FromString(strand));
-	  //int help=(strand=="+" ?
-	  //	    i:
-	  //	    i-mat_length+1);
-	  PyDict_SetItem(ret, PyInt_FromLong(i-mat_length+1+1), pair);
-	}
-      */
-
-
-    }
-      
-
-
-
-  // Reset file position
-  if(!py_fileLikeSeek(py_infile,fileStartPos)) {
-    return NULL;
-  }
-
-  Py_DECREF(py_readParam);
-  Py_DECREF(py_read);
-
-#ifdef TIME_TFBS
-  // End timing
-  after=clock();
-
-  cout<<"CPU secs: "
-      <<((after-before)*1.0/CLOCKS_PER_SEC<<endl;
-
-#endif
-
-  if(py_strBuf)
-    Py_DECREF(py_strBuf);
-
-  return ret;
-}
-
-//Returns a map from index to score of possible TFBS.
-//The arguments are matrix, sequence and bound.
-static PyObject *
-matrix_getTFBSwithBG(PyObject *self, PyObject *args)
-{
-  char *Seq=NULL; //= PyString_AsString (PyTuple_GetItem(args, 1));
-  //int seq_length;//=PyString_Size (PyTuple_GetItem(args, 1));
-  double bound;//=PyFloat_AsDouble(PyTuple_GetItem(args, 2));
-  PyObject *py_infile,*py_matrix;
-  int i, j;
-  int mat_length;
-  int nucleotide=-1, compl_nucleotide=-1,loop_status;
-
-  int bytes_read,buf_p;
-  int const loop_continue=1,loop_break=2,loop_OK=0;
-  matrix_bgObject *bg=NULL;
-
-
-#ifdef TIME_TFBS
-  clock_t before,after;
-
-  // Start timing
-  before=clock();
-#endif
-
-
-  if (!PyArg_ParseTuple(args, "OOd|O" ,&py_matrix,&py_infile,&bound,&bg)){
-    //Py_INCREF(Py_None);
-    //return Py_None;
-    return NULL;
-  }
-
-  if((PyObject*)bg==Py_None) {
-    bg=NULL;
-  }
-
-  vector<vector<double> > M= parse(py_matrix);
-  if(M.size()==0) {
-    PyErr_SetString(PyExc_ValueError,"Malformed matrix");
-    return 0;
-  }
-
-
-  mat_length= M[0].size();
-
-
-
-  // histories store the interim results of the matching
-  // one for each of the 2 complement strands
-  deque<double> history(mat_length,0.0);
-  deque<double> compl_history(mat_length,0.0);
-  deque<double> bg_history(mat_length,0.0);
-
-  // iterators to work with the histories
-  deque<double>::reverse_iterator iter;
-  deque<double>::iterator compl_iter;
-  deque<double>::reverse_iterator bg_iter;
-  
-  PyObject* ret;
-
-  if(!(ret=PyDict_New())) 
-    {
-      PyErr_NoMemory();
-      return 0;
-    }
-  
-
-
-  PyObject *py_read=NULL;
-  
-  
-  unsigned long fileStartPos=py_fileLikeTell(py_infile);
-
-
-  py_read=PyObject_GetAttrString(py_infile,"read");
-
-
-  PyObject *py_readParam=NULL;
-  PyObject *py_strBuf=NULL;
-
-  py_readParam=Py_BuildValue("(l)",SEQ_BUFFER_SIZE);
-
-
-  loop_status=loop_OK;
-
-
-  bytes_read=1;
-  buf_p=1;
-  
-   
-  for (i=0; bytes_read>0; i++,buf_p++) {
-    if(buf_p>=bytes_read) {  // Reading from a File like object (StringIO or File)
-      if(py_strBuf)
-	Py_DECREF(py_strBuf);
-      
-      py_strBuf=PyObject_CallObject(py_read,py_readParam);
-      Seq=PyString_AsString(py_strBuf);
-      bytes_read=PyObject_Size(py_strBuf);
-      //bytes_read=fread(Seq,SEQ_BUFFER_SIZE-1,1,cinfile);
-      Seq[bytes_read]=0;
-      buf_p=0;
-      //cout<<"Read "<<bytes_read<<" more bytes"<<endl;
-
-      cout<<"."<<flush;
-      if(bytes_read==0) {
-	break;
-      }
-    }
-
-    switch(toupper(Seq[buf_p]))
-      {
-      case '\n':
-      case ' ':
-	i--;
-	loop_status=loop_continue;
-	break;
-      case '>':
-	cerr<<"Encountered unexpectedly an another sequence!"<<endl;
-	PyDict_SetItem(ret,PyString_FromString("NEXT_SEQ"),PyLong_FromUnsignedLong(py_fileLikeTell(py_infile)));
-	loop_status=loop_break;
-	break;
-
-      case 'A':
-	//nucleotide stores in which line of the matrix is to search
-	nucleotide=0;        
-	compl_nucleotide=3;
-	break;
-      case 'C':
-	nucleotide=1;
-	compl_nucleotide=2;
-	break;
-      case 'G':
-	nucleotide=2;
-	compl_nucleotide=1;
-	break;
-      case 'T':
-	nucleotide=3;
-	compl_nucleotide=0;
-	break;
-	default:
-	  cerr<<"Wrong letter in Sequence! Reading it like 'N'"<<endl;
-	case 'N': 
-	case 'X':
-	  //cout<<"."<<flush;
-	  //histories are used like queues
-	  history.pop_front();
-	  history.push_back(0);
-	  compl_history.pop_front();
-	  compl_history.push_back(0);
-	  bg_history.pop_front();
-	  bg_history.push_back(100000.0);
-
-	  // in case of 'N' a specific value is added to the histories
-	  // to make sure, that it becomes no hit
-	  iter=history.rbegin();
-	  compl_iter=compl_history.begin();
-	  bg_iter=bg_history.rbegin();
-
-	  for(j=0; j<mat_length; j++)
-	    {
-	      *iter+=-10;              //what do I add best to the histories?
-	      ++iter;  
-	      
-	      *compl_iter+=-10;        //what do I add best to the histories?
-	      ++compl_iter;
-	    }
-	  
-	  continue;
-	  break;
-	}
-
-
-      
-
-
-      if(loop_status==loop_break) {
-	break;
-      } else if(loop_status==loop_continue) {
-	loop_status=loop_OK;
-	continue;
-      }
-
-
-      double bgP=0.0;
-      if(bg) {
-	bgP=logPnextInStream(bg,Seq[buf_p]);
-      }
-      // Add the score from nucleotide seq[i] to the lists.
-      iter=history.rbegin();
-      compl_iter=compl_history.begin();
-      bg_iter=bg_history.rbegin();
-
-      for(j=0; j<mat_length; j++)
-	{
-	  *iter+= M[nucleotide][j];
-	  ++iter; 
-
-	  *bg_iter+=bgP;
-	  ++bg_iter;
-
-	  //*compl_iter+=M[compl_nucleotide][mat_length-j-1];
-	  *compl_iter+=M[compl_nucleotide][j];
-	  ++compl_iter;
-	}
-
-      // The front element has the score for match with last nucleotide i.
-
-      int pos=i-mat_length+2;
-
-      double WatsonScore=history.front();
-      if(bg) {
-	WatsonScore-=bg_history.front();
-
-	assert(bg_history.front()<0.0);
-	assert(history.front()<0.0);
-      }
-      //printf("watson: %g\n",WatsonScore);
-
-      if(pos>0 && WatsonScore>bound) {
-	addMatch(ret,pos,'+',WatsonScore);
-      }
-
-      double CrickScore=compl_history.front();
-      if(bg) {
-	CrickScore-=bg_history.front();
-	assert(compl_history.front()<0.0);
-	assert(bg_history.front()<0.0);
-      }
-      //printf("crick: %g\n",CrickScore);
-
-      if(pos>0 && CrickScore>bound) {
-	addMatch(ret,pos,'-',CrickScore);
-      }
-
-      
-      //histories are used like queues
-      history.pop_front();
-      history.push_back(0);
-
-      compl_history.pop_front();
-      compl_history.push_back(0);
-
-      bg_history.pop_front();
-      bg_history.push_back(0);
-
-    }
-      
-
-
-
-  // Reset file position
-  if(!py_fileLikeSeek(py_infile,fileStartPos)) {
-    return NULL;
-  }
-
-  Py_DECREF(py_readParam);
-  Py_DECREF(py_read);
-
-#ifdef TIME_TFBS
-  // End timing
-  after=clock();
-
-  cout<<"CPU secs: "
-      <<((after-before)*1.0/CLOCKS_PER_SEC<<endl;
-
-#endif
-
-  if(py_strBuf)
-    Py_DECREF(py_strBuf);
-
-  return ret;
-}
-
 //################################################################################
 
 //################################################################################
@@ -1586,26 +958,45 @@ matrix_getTFBSwithBG(PyObject *self, PyObject *args)
 
 
 class TFBSscan {
+  void nextACGTsingle(char chr,int snpCode);
+  void nextACGT(char chr,int fromCode=0);
 public:
   PyObject *py_matrix;  // Pointer to the matrix itself
   double bound;   // Cutoff
   int mat_length;   //Matrix length
   vector<vector<double> > M;   // Parsed matrix for easy access
-  deque<double> history;
-  deque<double> compl_history;
+  deque<deque<double> > history;
+  deque<deque<double> >  compl_history;
   
+  deque<class SNPdat> SNPs;
+
   TFBSscan(PyObject *mat,double cutoff);
   void nextChar(char chr);
-  double WatsonScore() {return this->history.front(); };
-  double CrickScore() {return this->compl_history.front(); }
+  vector<double> WatsonScore();
+  vector<double> CrickScore();
   int length() { return this->mat_length; }
-  //   // iterators to work with the histories
-  //   deque<double>::reverse_iterator iter;
-  //   deque<double>::iterator compl_iter;
-  //   deque<double>::reverse_iterator bg_iter;
-  
 };
 
+vector<double> TFBSscan::WatsonScore() 
+{
+  vector<double> ret;
+  for(unsigned int i=0;i<this->history.size();i++) {
+    ret.push_back(this->history[i].front());
+  }
+
+  return ret;
+}
+
+
+vector<double> TFBSscan::CrickScore() 
+{
+  vector<double> ret;
+  for(unsigned int i=0;i<this->compl_history.size();i++) {
+    ret.push_back(this->compl_history[i].front());
+  }
+
+  return ret;
+}
 
 TFBSscan::TFBSscan(PyObject *mat,double cutoff)
 {
@@ -1623,20 +1014,80 @@ TFBSscan::TFBSscan(PyObject *mat,double cutoff)
     return;
   }
   this->mat_length=this->M[0].size();
-  this-> history.resize(this->mat_length,0.0);
-  this->compl_history.resize(this->mat_length,0.0);
+  this->history.push_front( deque<double>(this->mat_length,0.0) );
+  this->compl_history.push_front(deque<double>(this->mat_length,0.0));
 }
   
 void TFBSscan::nextChar(char chr)
 {
+
+  for(unsigned int i=0;i<this->SNPs.size();i++) {
+    this->SNPs[i].pos++;
+  }
+  // Remove the SNPs that we have past and left behind
+  while(this->SNPs[0].pos>this->length() && this->history.size()>(unsigned int)1) {
+    // This loop should be executed at most ones per call of nextChar()
+    this->SNPs.pop_front();
+    this->SNPs.pop_front();
+
+    deque<deque<double> >::iterator Iter=this->history.begin();
+    deque<deque<double> >::iterator compl_Iter=this->compl_history.begin();
+    // Remove every second value
+    while(Iter!=this->history.end()) {
+      Iter=this->history.erase(Iter);
+      Iter++;
+      compl_Iter=this->compl_history.erase(compl_Iter);
+      compl_Iter++;
+    }
+//     printf("removed snps: %d buffers: %d\n",this->SNPs.size(),this->history.size());
+
+  }
+
+
+
+  char *allels=getAllels(chr);
+
+  if(allels==NULL) {
+    this->nextACGT(chr);
+  } else {
+    for(int allel_p=0;allel_p<2;allel_p++) {
+      this->SNPs.push_back(SNPdat(chr,allels[allel_p],0));
+      if(allel_p==0) {
+	this->nextACGT(allels[allel_p]);
+      } else if(allel_p==1) {
+	int newStart=this->history.size();
+	this->history.insert(this->history.end(),
+				this->history.begin(),this->history.end());
+	this->compl_history.insert(this->compl_history.end(),
+			this->compl_history.begin(),this->compl_history.end());
+	this->nextACGT(allels[allel_p],newStart);
+      } else {
+	cout<<"Core meltdown! Repent your sins!"<<endl;
+      }
+    }
+//     printf("added snps: %d buffers: %d\n",this->SNPs.size(),this->history.size());
+  }
+
+}
+
+
+void TFBSscan::nextACGT(char chr,int fromCode)
+{
+  for(unsigned int i=fromCode;i<this->history.size();i++) {
+    this->nextACGTsingle(chr,i);
+  }
+}
+
+void TFBSscan::nextACGTsingle(char chr,int snpCode)
+{
   int nucleotide=-1,compl_nucleotide=-1;
 
   //histories are used like queues
-  this->history.pop_front();
-  this->history.push_back(0.0);
+  this->history[snpCode].pop_front();
+  this->history[snpCode].push_back(0.0);
   
-  this->compl_history.pop_front();
-  this->compl_history.push_back(0.0);
+  this->compl_history[snpCode].pop_front();
+  this->compl_history[snpCode].push_back(0.0);
   
 
   switch(chr) {
@@ -1657,26 +1108,20 @@ void TFBSscan::nextChar(char chr)
     nucleotide=3;
     compl_nucleotide=0;
     break;
-  case 'R':  // SNPs
-  case 'Y':
-  case 'M':
-  case 'K':
-  case 'S':
-  case 'W':
   default:
-    cerr<<"Wrong letter in Sequence! Reading it like 'N'"<<endl;
+    //cerr<<"Wrong letter in Sequence! Reading it like 'N'"<<endl;
   case 'N': 
   case 'X':
     //histories are used like queues
-    this->history.pop_front();
-    this->history.push_back(-1000.0);
-    this->compl_history.pop_front();
-    this->compl_history.push_back(-1000.0);
+    this->history[snpCode].pop_front();
+    this->history[snpCode].push_back(-1000.0);
+    this->compl_history[snpCode].pop_front();
+    this->compl_history[snpCode].push_back(-1000.0);
 
     // in case of 'N' a specific value is added to the histories
     // to make sure, that it becomes no hit
-    deque<double>::reverse_iterator iter=this->history.rbegin();
-    deque<double>::iterator compl_iter=this->compl_history.begin();
+    deque<double>::reverse_iterator iter=this->history[snpCode].rbegin();
+    deque<double>::iterator compl_iter=this->compl_history[snpCode].begin();
       
     for(int j=0; j<this->mat_length; j++) {
       *iter+=-1000.0;              //what do I add best to the histories?
@@ -1692,8 +1137,8 @@ void TFBSscan::nextChar(char chr)
   }
   // If we got a proper nucleotide
   // Add the score from nucleotide seq[seq_i] to the lists.
-  deque<double>::reverse_iterator iter=this->history.rbegin();
-  deque<double>::iterator compl_iter=this->compl_history.begin();
+  deque<double>::reverse_iterator iter=this->history[snpCode].rbegin();
+  deque<double>::iterator compl_iter=this->compl_history[snpCode].begin();
       
   for(int j=0; j<this->mat_length; j++) {
     *iter+= this->M[nucleotide][j];
@@ -1708,21 +1153,31 @@ void TFBSscan::nextChar(char chr)
 
 }
 
+
+
 class MarkovBGhelper {
-  matrix_bgObject *bg;
-  deque<double> probBuffer;
+  int haveBG;
+  deque<matrix_bgObject> bg;
+  deque<deque<double> > probBuffer;
   int maxLen;
+
+  void nextACGT(char chr,unsigned int startFrom=0);
 public:
+  deque<class SNPdat> SNPs;
   MarkovBGhelper(matrix_bgObject *bg,int maxLenIn);
   void nextChar(char chr);
-  double getBGprob(class TFBSscan *mat);
-  unsigned int seqLen() {return this->bg->streamCount; }
+  vector<double> getBGprob(class TFBSscan *mat);
+  unsigned int seqLen() {return this->bg[0].streamCount; }
 };
 
-double MarkovBGhelper::getBGprob(class TFBSscan *mat)
+vector<double> MarkovBGhelper::getBGprob(class TFBSscan *mat)
 {
   int pos=mat->length()-1;
-  double P=this->probBuffer[pos];
+  vector<double> P;
+
+  for(unsigned int i=0;i<this->probBuffer.size();i++) {
+    P.push_back(this->probBuffer[i][pos]);
+  }
   //printf("Giving %g for mat length %d(%d)\n",P,mat->length(),pos);
 
   return P;
@@ -1730,31 +1185,87 @@ double MarkovBGhelper::getBGprob(class TFBSscan *mat)
 
 MarkovBGhelper::MarkovBGhelper(matrix_bgObject *bgIn,int maxLenIn)
 { 
-  this->bg=bgIn; 
-  this->maxLen=maxLenIn;
-  this->probBuffer.resize(maxLenIn,0.0);
+  this->haveBG=(bgIn!=NULL);
+  if(this->haveBG) {
+    this->bg.push_back(*bgIn);  //Copy !!!
+    this->maxLen=maxLenIn;
+    this->probBuffer.push_back(deque<double>(maxLenIn,0.0));
+  }
 
 }
 
+
+
+
 void MarkovBGhelper::nextChar(char chr)
 {
-  if(!this->bg) return;
+  if(!this->haveBG) return;
+
+  for(unsigned int i=0;i<this->SNPs.size();i++) {
+    this->SNPs[i].pos++;
+  }
+  // Remove the SNPs that we have past and left behind
+  while(this->SNPs[0].pos>(this->maxLen+this->bg[0].order) && this->bg.size()>(unsigned int)1) {
+    // This loop should be executed at most ones per call of nextChar()
+    this->SNPs.pop_front();
+    this->SNPs.pop_front();
+
+    deque<deque<double> >::iterator probIter=this->probBuffer.begin();
+    deque<matrix_bgObject>::iterator bgIter=this->bg.begin();
+    // Remove every second value
+    while(probIter!=this->probBuffer.end()) {
+      probIter=this->probBuffer.erase(probIter);
+      probIter++;
+      bgIter=this->bg.erase(bgIter);
+      bgIter++;
+    }
+//     printf("removed BG snps: %d buffers: %d\n",this->SNPs.size(),this->probBuffer.size());
+
+  }
 
 
-  double bgP=logPnextInStream(this->bg,chr);
 
-  if(bgP>0.0)
-    printf("adding funny figure %g for %c\n",bgP,chr);
+  char *allels=getAllels(chr);
 
-  // Iterate the buffer
-  this->probBuffer.pop_back();
-  this->probBuffer.push_front(0.0);
+  if(allels==NULL) {
+    this->nextACGT(chr);
+  } else {
+    for(int allel_p=0;allel_p<2;allel_p++) {
+      this->SNPs.push_back(SNPdat(chr,allels[allel_p],0));
+      if(allel_p==0) {
+	this->nextACGT(allels[allel_p]);
+      } else if(allel_p==1) {
+	int newStart=this->probBuffer.size();
+	this->probBuffer.insert(this->probBuffer.end(),
+				this->probBuffer.begin(),this->probBuffer.end());
+	this->bg.insert(this->bg.end(),
+			this->bg.begin(),this->bg.end());
+	this->nextACGT(allels[allel_p],newStart);
+      } else {
+	cout<<"Core meltdown! Repent your sins!"<<endl;
+      }
+    }
+//     printf("added BG snps: %d buffers: %d\n",this->SNPs.size(),this->probBuffer.size());
+  }
+
+}
+
+void MarkovBGhelper::nextACGT(char chr,unsigned int startFrom)
+{
+
+  for(unsigned int i=startFrom;i<this->probBuffer.size();i++) {  // ACG or T with previous snps
+
+    double bgP=logPnextInStream(&this->bg[i],chr);
+
+
+    // Iterate the buffer
+    this->probBuffer[i].pop_back();
+    this->probBuffer[i].push_front(0.0);
 
   // Add the probabilities for this character
-  //printf("adding %g for %c\n",bgP,chr);
-  for(int i=0;i<this->maxLen;i++) {
-    //printf("probBuf[%d]=%g\n",i,probBuffer[i]);
-    this->probBuffer[i]+=bgP;
+    for(int j=0;j<this->maxLen;j++) {
+      this->probBuffer[i][j]+=bgP;
+    }
   }
 }
 
@@ -1946,30 +1457,57 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
     
 
     for(int i=0;i<matrixCount;i++) {
-      
-      // The front element has the score for match with last nucleotide i.
-      
       int pos=seq_i-Mat[i]->length()+2;
       if(pos<1) {
 	continue;
       };
       
-      double bgP=mBG.getBGprob(Mat[i]);
+      vector<double> bgP=mBG.getBGprob(Mat[i]);
+      vector<double> WatsonScores=Mat[i]->WatsonScore();
+      vector<double> CrickScores=Mat[i]->CrickScore();
+
+// #ifndef NDEBUG
+//       if(bgP.size()!=1)
+// 	printf("bgP.size()=%d\n",bgP.size());
+//       if(WatsonScores.size()!=1)
+// 	printf("WatsonScores.size()=%d\n",WatsonScores.size());
+//       if(CrickScores.size()!=1)
+// 	printf("CrickScores.size()=%d\n",CrickScores.size());
+// #endif
+
+      for(unsigned int BGsnpCode=0;BGsnpCode<bgP.size();BGsnpCode++) {
+	unsigned int posSnpCode=0;
+	while(posSnpCode<Mat[i]->SNPs.size() && 
+	      !(mBG.SNPs[BGsnpCode]==Mat[i]->SNPs[posSnpCode])) {
+// 	  printf("loopataan\n");
+	  posSnpCode++;
+	}
+	if(posSnpCode>0 && posSnpCode>=Mat[i]->SNPs.size()) {
+// 	  printf("hypätään\n");
+	  continue;
+	}
+	double WatsonScore=WatsonScores[posSnpCode]-bgP[BGsnpCode];
+	double CrickScore=CrickScores[posSnpCode]-bgP[BGsnpCode];
+	
+	//printf("s[%d]=(%g,%g) - %g\n",pos,Mat[i]->WatsonScore(),Mat[i]->CrickScore(),bgP);
+
+	int snpPos=0;
+	char snpAllele='.';
+	if(Mat[i]->SNPs.size()>0) {
+	  snpPos=Mat[i]->length()-Mat[i]->SNPs[posSnpCode].pos;
+	  snpAllele=Mat[i]->SNPs[posSnpCode].allele;
+	}
+	  
+
+	// Needs significant improvement on interfacing with python.
+	if(WatsonScore>Mat[i]->bound) {
+	  addMatchWithKey(ret,Mat[i]->py_matrix,pos,'+',WatsonScore,snpAllele,snpPos);
+	}
+
+	if(CrickScore>Mat[i]->bound) {
+	  addMatchWithKey(ret,Mat[i]->py_matrix,pos,'-',CrickScore,snpAllele,snpPos);	}
       
-      double WatsonScore=Mat[i]->WatsonScore()-bgP;
-      double CrickScore=Mat[i]->CrickScore()-bgP;
-
-      //printf("s[%d]=(%g,%g) - %g\n",pos,Mat[i]->WatsonScore(),Mat[i]->CrickScore(),bgP);
-
-      if(WatsonScore>Mat[i]->bound) {
-	addMatchWithKey(ret,Mat[i]->py_matrix,pos,'+',WatsonScore);
       }
-
-      if(CrickScore>Mat[i]->bound) {
-	addMatchWithKey(ret,Mat[i]->py_matrix,pos,'-',CrickScore);
-      }
-      
-
     }
     
   }
@@ -2006,12 +1544,6 @@ static PyMethodDef matrixMethods[] = {
    "Draws a matrix"},
   {"computeBG",  matrix_computeBG, METH_VARARGS,
    "Kind of computes higher order Background: (seq,order)"},
-  {"match", matrix_match, METH_VARARGS,
-   "matches a Matrix on a Sequence.\nArguments: Matrix (As List of Lists), Sequence (As String)\nOutput is a sequence of scores. Score[i] is the maximum score (Watson or Crick strand) of BS ending at character i"},
-  {"getTFBS", matrix_getTFBS, METH_VARARGS,
-   "Returns a map from index to score of possible TFBS.\nThe arguments are matrix, sequence and bound. *depricated* Use withBG instead"},
-  {"getTFBSwithBg", matrix_getTFBSwithBG, METH_VARARGS,
-   "Returns a map from index to score of possible TFBS.\nThe arguments are matrix, sequence, bound and background object."},
   {"getAllTFBSwithBg", matrix_getAllTFBSwithBG, METH_VARARGS,
    "Returns a map from matrix to index to score of possible TFBS.\nThe arguments are a list of matricies, the sequence, list/float of cutoffs and a background object."},
   {NULL, NULL, 0, NULL}        /* Sentinel */
