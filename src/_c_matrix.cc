@@ -22,6 +22,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.7  2005/02/28 08:40:12  kpalin
+ * Windows porting.
+ *
  * Revision 1.6  2005/02/25 09:27:57  kpalin
  * Little, just little, less inefficient SNP scanner.
  *
@@ -136,11 +139,12 @@ char *getAllels(char IUPAC)
 {
   char *allels=NULL;
   switch(IUPAC) {
+    // Order ACGT
   case 'R':
-    allels="GA";
+    allels="AG";
     break;
   case 'Y':
-    allels="TC";
+    allels="CT";
     break;
   case 'M':
     allels="AC";
@@ -149,12 +153,13 @@ char *getAllels(char IUPAC)
     allels="GT";
     break;
   case 'S':
-    allels="GC";
+    allels="CG";
     break;
   case 'W':
     allels="AT";
     break;
   }
+  //printf("%c=>%s\n",IUPAC,allels);
 
   return allels;
 }
@@ -175,9 +180,17 @@ matrix_draw(PyObject *self, PyObject *args)
 void addMatch(PyObject *dict,int const pos,char const strand,double const score,PyObject *snps,double const altScore=0.0)
 {
   assert(snps!=NULL);
+  assert(dict!=NULL);
   PyObject *hitKey=Py_BuildValue("(icO)",pos,strand,snps);
-  assert(dict);
-  assert(hitKey);
+
+  if(PyErr_Occurred()!=NULL) {
+#ifndef NDEBUG
+    printf("Python error! Probably ran out of memory!");
+#endif
+    return;
+  }
+
+  assert(hitKey!=NULL);
   assert(PyTuple_Check(hitKey));
   assert(PyDict_Check(dict));
   PyDict_SetItem(dict, hitKey,Py_BuildValue("(dd)",score,altScore));
@@ -1006,6 +1019,11 @@ void TFBSscan::halfHistories()
 {
   // Remove the SNPs that we have past and left behind
 
+//   cout<<"halving"<<endl;
+#ifndef NDEBUG
+  int before=this->history.size();
+#endif
+
   deque<deque<double> >::iterator Iter=this->history.begin();
   deque<deque<double> >::iterator compl_Iter=this->compl_history.begin();
   // Remove every second value
@@ -1015,8 +1033,16 @@ void TFBSscan::halfHistories()
     Iter=this->history.erase(Iter);
     Iter++;
   }
+  assert((before>>1)==this->history.size());
   assert(this->history.size()>0);
   assert(this->compl_history.size()>0);
+}
+
+void printIntBits(int val)
+{
+   char str[33];
+   bit32toStr(str,(bit32)val);
+   printf("%s %d\n",str,val);
 }
 
 vector<int> snpIndexFromCode(int snpCode,int snpCount)
@@ -1024,10 +1050,11 @@ vector<int> snpIndexFromCode(int snpCode,int snpCount)
   vector<int> ret;
   int  ind;
 
-  for(int i=0;i<snpCount  ;i+=2) {
-    ind=snpCode%2;
-    ret.push_back(i+ind);
-    snpCode/=2;
+
+  for(int i=0;i<snpCount  ;i+=1) {
+    ind=snpCode & 1;
+    ret.push_back((i<<1)|ind);
+    snpCode=snpCode>>1;
   }
   return ret;
 }
@@ -1035,6 +1062,7 @@ vector<int> snpIndexFromCode(int snpCode,int snpCount)
 vector<double> TFBSscan::WatsonScore() 
 {
   vector<double> ret;
+  
   for(unsigned int i=0;i<this->history.size();i++) {
     ret.push_back(this->history[i].front());
   }
@@ -1078,41 +1106,57 @@ void TFBSscan::nextChar(char chr)
 
   char *allels=getAllels(chr);
 
+
   if(allels==NULL) {
     this->nextACGT(chr);
   } else {
     for(int allel_p=0;allel_p<2;allel_p++) {
-      this->SNPs.push_back(SNPdat(chr,allels[allel_p],0));
+      //this->SNPs.push_back(SNPdat(chr,allels[allel_p],0));
+      int newStart;
       if(allel_p==0) {
-	this->nextACGT(allels[allel_p]);
-      } else if(allel_p==1) {
-	int newStart=this->history.size();
+	newStart=this->history.size();
+
 	this->history.insert(this->history.end(),
 				this->history.begin(),this->history.end());
 	this->compl_history.insert(this->compl_history.end(),
 			this->compl_history.begin(),this->compl_history.end());
+	this->nextACGT(allels[allel_p],0,newStart);
+      } else if(allel_p==1) {
 	this->nextACGT(allels[allel_p],newStart);
       } else {
 	cout<<"Nobody expects the Spanish Inquisition!"<<endl;
       }
     }
-//     printf("added snps: %d buffers: %d\n",this->SNPs.size(),this->history.size());
+//      printf("added snp buffers: %d\n",this->history.size());
   }
+
 
 }
 
 
-void TFBSscan::nextACGT(char chr,int fromCode)
+void TFBSscan::nextACGT(char chr,int fromCode,int toCode)
 {
-  for(unsigned int i=fromCode;i<this->history.size();i++) {
-    this->nextACGTsingle(chr,i);
+  //printf("chr: %c fromCode: %d history.size(): %d\n",chr,fromCode,this->history.size());
+  if(toCode<=fromCode) {
+    toCode=this->history.size();
   }
+#ifndef NDEBUG
+  if(toCode>8) {
+    printf("toCode: %d\n",toCode);
+  }
+#endif
+  for(unsigned int i=fromCode;i<toCode;i++) {
+    this->nextACGTsingle(chr,i);
+    //cout<<i<<endl;
+  }
+
 }
 
 void TFBSscan::nextACGTsingle(char chr,int snpCode)
 {
   int nucleotide=-1,compl_nucleotide=-1;
 
+  assert(snpCode>=0 && snpCode<this->history.size());
   //histories are used like queues
   this->history[snpCode].pop_front();
   this->history[snpCode].push_back(0.0);
@@ -1170,8 +1214,9 @@ void TFBSscan::nextACGTsingle(char chr,int snpCode)
   // Add the score from nucleotide seq[seq_i] to the lists.
   deque<double>::reverse_iterator iter=this->history[snpCode].rbegin();
   deque<double>::iterator compl_iter=this->compl_history[snpCode].begin();
-      
+
   for(int j=0; j<this->mat_length; j++) {
+    //printf("pos:%d score:%g\n",j,this->M[nucleotide][j]);      
     *iter+= this->M[nucleotide][j];
     ++iter; 
 	  
@@ -1180,6 +1225,11 @@ void TFBSscan::nextACGTsingle(char chr,int snpCode)
     ++compl_iter;
   }
 
+ //  printf("\n%c %d\n",chr,snpCode);
+//   for(unsigned int j=0;j<this->history[snpCode].size();j++) {
+//     printf("%g,",this->history[snpCode][j]);
+//   }
+//   printf("\n");
   
 
 }
@@ -1201,6 +1251,12 @@ void TFBShit::addHit(double Score,vector<class SNPdat> genotype)
   this->minScore=min(this->score,Score);
 
 
+//   printf("%g: ",Score);
+//   for(int i=0;i<genotype.size();i++) {
+//     printf("%d%c%c ",genotype[i].pos,genotype[i].ambig,genotype[i].allele);
+//   }
+//   cout<<endl;
+
 
   if(this->sigGenotype.size()==0 && genotype.size()>0) {
     this->sigGenotype=genotype;
@@ -1210,6 +1266,7 @@ void TFBShit::addHit(double Score,vector<class SNPdat> genotype)
       assert(this->sigGenotype[i].pos==genotype[i].pos);
       assert(this->sigGenotype[i].ambig==genotype[i].ambig);
       if(this->sigGenotype[i].allele!=genotype[i].allele) {
+// 	printf("N:ing. %d%c%c %d%c%c\n",this->sigGenotype[i].pos,this->sigGenotype[i].ambig,this->sigGenotype[i].allele,genotype[i].pos,genotype[i].ambig,genotype[i].allele);
 	this->sigGenotype[i].allele='N';
       }
     }
@@ -1246,16 +1303,21 @@ vector<SNPdat> TFBShelper::getSNPs(int snpCode,int matInd)
   vector<SNPdat> ret;
 
 
-  if(this->allelCount()>1) {
+  if(this->SNPcount()>0) {
 
     // Correct the snpCode for the larger number of SNPs
     if(matInd>=0 && this->matricies[matInd]->allelCount()<this->allelCount()) {
       snpCode*=this->allelCount()/this->matricies[matInd]->allelCount();
     }
 
-    vector<int> ind=snpIndexFromCode(snpCode,this->SNPs.size());
+    vector<int> ind=snpIndexFromCode(snpCode,this->SNPcount());
+//     if(this->SNPcount()>2) {
+//       for(int i=0;i<this->SNPs.size();i++){
+// 	printf("%d%c%c\n",this->SNPs[i].pos,this->SNPs[i].ambig,this->SNPs[i].allele);
+//       }
+//     }
     for(unsigned int i=0;i<ind.size();i++) {
-      assert(ind[i]<(int)this->SNPs.size());
+      assert(ind[i]<(int)this->allelCount());
       if(matInd<0 || this->SNPs[ind[i]].pos<(int)(this->matricies[matInd]->length()+this->bgOrder())) {
 	// Don't record the SNPs that are not on the matrices region.
 	ret.push_back(this->SNPs[ind[i]]);
@@ -1274,6 +1336,11 @@ vector<TFBShit*> TFBShelper::getMatches()
 {
 
   vector<TFBShit*> ret;
+#ifndef NDEBUG
+  if(this->SNPcount()>3) {
+    printf("SNPs: %d\n",this->SNPcount());
+  }
+#endif
 
   for(unsigned int matInd=0;matInd<this->matrixCount();matInd++) {
     vector<double> WatsonScores=this->matricies[matInd]->WatsonScore();
@@ -1292,6 +1359,7 @@ vector<TFBShit*> TFBShelper::getMatches()
 	if(!watson) {
 	  watson=new TFBShit(this->matricies[matInd],this->seqPos(),'+');
 	}
+// 	printf("bgprob:%g, watsonscore:%g %d\n",bgProb,WatsonScore,snpCode);
 	watson->addHit(WatsonScore,this->getSNPs(snpCode,matInd));
       }
       if(CrickScore>scoreBound) {
@@ -1317,28 +1385,44 @@ double TFBShelper::getBGprob(int matInd,int snpCode)
   if(!this->haveBG) {
     return 0.0;
   }
-
+ 
   TFBSscan *mat=this->matricies[matInd];
-  unsigned int matAlleles=this->matricies[matInd]->allelCount();
+  unsigned int matAlleles=mat->allelCount();
 
   int pos=mat->length()-1;
 
   double bgP=-DBL_MAX;
   int alleleFactor=this->allelCount()/matAlleles;
 
+
 #ifndef NDEBUG
+  if(this->allelCount()!=this->bg.size()) {
+    printf("allels=%d  bg.size()=%d bgProb.size()=%d\n",this->allelCount(),this->bg.size(),this->probBuffer.size());
+  }
+  assert(this->allelCount()==this->bg.size());
   double oldBgP=this->probBuffer[snpCode*alleleFactor][pos];
-#endif
+
+
   // Return the most likely background probability i.e. Be conservative.
   for(int sCode=snpCode*alleleFactor;sCode<(snpCode+1)*alleleFactor;sCode++) {
+    //printIntBits(sCode);
     bgP=max(bgP,this->probBuffer[sCode][pos]);
-#ifndef NDEBUG  
     // Since we report the SNPs in the markov context, we should get equal values here. 
     // i.e. this should be innecessary loop.
-    assert(fabs(oldBgP-bgP)<1e-5);
-    oldBgP=bgP;
-#endif
+    if(fabs(oldBgP-bgP)>=1e-5) {
+      printf("ERO: %g\n",fabs(oldBgP-bgP));
+      vector<int> ind=snpIndexFromCode(snpCode,this->SNPcount());
+      for(unsigned int i=0;i<ind.size();i++) {
+	printf("%d%c%c\n",this->SNPs[i].pos,this->SNPs[i].ambig,this->SNPs[i].allele);
+      }
+      assert(fabs(oldBgP-bgP)<1e-5);
+
+    }
   }
+#else
+  bgP=this->probBuffer[snpCode*alleleFactor][pos];
+
+#endif
 
   return bgP;
 }
@@ -1456,40 +1540,54 @@ void TFBShelper::nextChar(char chr)
 
 
   
+  
+  char *allels=getAllels(chr);
+  if(allels) {
+    for(int allel_p=0;allel_p<2;allel_p++) {
+      this->SNPs.push_back(SNPdat(chr,allels[allel_p],0));
+    }
+  }
   for(unsigned int i=0;i<this->matricies.size();i++) {
     this->matricies[i]->nextChar(chr);
   }
 
+
   if(this->haveBG) {
-    char *allels=getAllels(chr);
     if(allels==NULL) {
       this->nextACGT(chr);
     } else {
+      int newStart=this->probBuffer.size();
+      this->probBuffer.insert(this->probBuffer.end(),
+			      this->probBuffer.begin(),this->probBuffer.end());
+      this->bg.insert(this->bg.end(),
+		      this->bg.begin(),this->bg.end());
       for(int allel_p=0;allel_p<2;allel_p++) {
-	this->SNPs.push_back(SNPdat(chr,allels[allel_p],0));
 	if(allel_p==0) {
-	  this->nextACGT(allels[allel_p]);
+	  this->nextACGT(allels[allel_p],0,newStart);
 	} else if(allel_p==1) {
-	  int newStart=this->probBuffer.size();
-	  this->probBuffer.insert(this->probBuffer.end(),
-				  this->probBuffer.begin(),this->probBuffer.end());
-	  this->bg.insert(this->bg.end(),
-			  this->bg.begin(),this->bg.end());
 	  this->nextACGT(allels[allel_p],newStart);
 	} else {
 	  cout<<"Now something completely different!"<<endl;
 	}
       }
     }
-//     printf("added BG snps: %d buffers: %d\n",this->SNPs.size(),this->probBuffer.size());
+//     printf("added BG snps: %d buffers: %d\n",this->SNPcount(),this->probBuffer.size());
   }
+  
+//   if(chr!='A' && chr!='C' && chr!='G' && chr!='T' ) {
+//     printf("snps: %d buffers: %d bg=%d\n",this->SNPcount(),this->probBuffer.size(),this->haveBG);
+//   }
 
 }
 
-void TFBShelper::nextACGT(char chr,unsigned int startFrom)
+void TFBShelper::nextACGT(char chr,unsigned int startFrom,unsigned int upTo)
 {
 
-  for(unsigned int i=startFrom;i<this->probBuffer.size();i++) {  // ACG or T with previous snps
+  if(upTo<=startFrom) {
+    upTo=this->probBuffer.size();
+  }
+
+  for(unsigned int i=startFrom;i<upTo;i++) {  // ACG or T with previous snps
 
     double bgP=logPnextInStream(&this->bg[i],chr);
 
@@ -1563,7 +1661,6 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
   if (!PyArg_ParseTuple(args, "OOO|O" ,&py_matlist,&py_infile,&py_cutoff,&bg)){
     return NULL;
   }
-
   // Check background
   if((PyObject*)bg==Py_None) {
     bg=NULL;
