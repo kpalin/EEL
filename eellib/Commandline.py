@@ -16,6 +16,10 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.16  2005/01/13 13:16:42  kpalin
+# Moved the requesting of sequences to be aligned to Python side
+# of stuff. Much better.
+#
 # Revision 1.15  2005/01/13 09:38:30  kpalin
 # Added catch for EOFError in no-gui
 #
@@ -319,7 +323,6 @@ class Commandline(Interface):
             filenames=glob(filestring)
             if filenames:
                 Interface.addMatrix(self, filenames)
-                self.setBGFreq()
             else:
                 print "file not found:", filestring
 
@@ -376,7 +379,7 @@ class Commandline(Interface):
         """Arguments: [bound]
 computes the scores of all matrices and all sequences which are
 better than bound*maxscore. maxscore is the highest reachable
-score of the actual matrix with respect to the background
+score of the matrix with respect to the 0-order background.
 The default value for bound is 0.1"""
         bound=0.1
         try:
