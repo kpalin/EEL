@@ -12,6 +12,9 @@ import string
 
 
 # $Log$
+# Revision 1.5  2004/01/28 08:48:32  kpalin
+# Updated docstrings
+#
 # Revision 1.4  2004/01/14 10:05:57  kpalin
 # Generated documentation
 #
@@ -130,7 +133,16 @@ class Commandline(Interface):
                               num_of_args, "argument"+s
                     # else execute command with its argumments
                     else:
-                        comm(token[1:])
+                        try:
+                            comm(token[1:])
+                        except StandardError,e:
+                            print "#"*67
+                            print "Software error encountered! Please email this"
+                            print "error message to kimmo.palin@helsinki.fi"
+                            print "Error while processing command:",token
+                            import traceback,sys
+                            traceback.print_exc(file=sys.stdout)
+                            print "#"*67
                 else:
                     print token[0],": command not found"
             except KeyboardInterrupt:
@@ -154,7 +166,16 @@ class Commandline(Interface):
                           num_of_args, "argument"+s
                 # else execute command with its argumments
                 else:
-                    comm(token[1:])
+                    try:
+                        comm(token[1:])
+                    except StandardError,e:
+                        print "#"*67
+                        print "Software error encountered! Please email this"
+                        print "error message to kimmo.palin@helsinki.fi"
+                        print "Error while processing command:",token
+                        import traceback,sys
+                        traceback.print_exc(file=sys.stdout)
+                        print "#"*67
             else:
                 print token[0],": command not found"
         except KeyboardInterrupt:
