@@ -17,3 +17,6 @@ exclude src/gzstream/gzstream.o
 exclude mabslib/mabsClient.py  
 exclude mabslib/mabsServer.py  
 exclude mabslib/matrixTest.py
+include clusterSynteny.sh
+include nextFasta.py
+include mabsCommandServer*.py

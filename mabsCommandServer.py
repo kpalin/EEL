@@ -5,6 +5,10 @@ import sys,os
 
 #
 #  $Log$
+#  Revision 1.1  2004/02/20 10:56:05  kpalin
+#  Serves the list of files given as parameter.
+#  Keeps some log who is running what.
+#
 #
 
 
@@ -58,6 +62,7 @@ def nextFasta(clientID):
         FileList=filter(lambda x:x,FileList)
         if runningFiles.has_key(clientID):
             i=FileList.index(runningFiles[clientID])
+            print >> sys.stderr, "Looks like done",FileList[i]
             del FileList[i]
         runningFiles[clientID]=filen
 
@@ -81,6 +86,7 @@ while not OK:
         print e[1]
 
 
-open("mabsCommandServer.portno","w").write(str(portno))
+open("mabsCommandServer.portno","w").write(repr((portno,os.getpid()," ".join(sys.argv))))
+
 server.register_function(nextFasta)
 server.serve_forever()

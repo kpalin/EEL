@@ -30,7 +30,9 @@ modMatrix = Extension('matrix',
 #alignCompileArgs = ["-fno-inline","-Wall","-g","-UNDEBUG"]
 #alignCompileArgs = ["-g","-Wall","-O3"]
 alignCompileArgs = []
-alignCompileArgs = ["-DSAVE_MEM","-DSAVE_MEM_LIMIT=(1024*1024*512)"]
+
+#Save memory if the matrix would be larger than 512MB
+alignCompileArgs = ["-DSAVE_MEM","-DSAVE_MEM_LIMIT=536870912"]
 
 alignLibDirs=[]
 alignLibs=["stdc++"]

@@ -3,6 +3,10 @@ import socket,popen2,time
 
 #
 # $Log$
+# Revision 1.2  2004/02/20 10:57:26  kpalin
+# For use in apache web server so that the distribution
+# can go through firewalls.
+#
 # Revision 1.1  2004/02/20 09:24:34  kpalin
 # Version that sort of takes care of the file serving by it self.
 # Doesn't really work.
@@ -28,7 +32,7 @@ try:
 
 
     servName=socket.gethostname()
-    servPort=int(open("mabsCommandServer.portno").read())
+    (servPort,servPid,servComm)=eval(open("mabsCommandServer.portno").read())
 
 
     server=ServerProxy("http://%s:%d/"%(servName,servPort))
@@ -42,6 +46,10 @@ try:
         
         except Exception,e:
             print >> errstrm,e
+            if e[0]==111 and os.system("/bin/ps -no-headers %d >/dev/null"%(servPid)) != 0:
+                print >> errstrm, "Looks like server has died. Trying to start it."
+                os.system("python2.2 %s 2>/dev/null >/dev/null </dev/null &"%(servComm))
+                
             return "xTryAgain"
 
 
