@@ -1,0 +1,64 @@
+/*
+$Log$
+*/
+DROP TABLE IF EXISTS sequence;
+DROP TABLE IF EXISTS region;
+DROP TABLE IF EXISTS cismodule;
+DROP TABLE IF EXISTS sites;
+DROP TABLE IF EXISTS tfactor;
+DROP TABLE IF EXISTS pairs;
+
+
+CREATE TABLE sequence (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	species VARCHAR(255),
+	DBname VARCHAR(255),
+	name VARCHAR(255)
+);
+
+
+CREATE TABLE region (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	seqID INT,
+	beginPos INT,
+	endPos INT,
+	cisID INT,
+	FOREIGN KEY (seqID) REFERENCES sequence(id)
+	FOREIGN KEY (cisID) REFERENCES cismodule(id)
+);
+
+CREATE TABLE cismodule (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	score FLOAT,
+);
+
+
+CREATE TABLE column (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	tfID INT,
+	strand TINYINT, /* 0 watson, 1 crick */
+	scoredelta FLOAT,
+	FOREIGN KEY (tfID) REFERENCES tfactor(id)
+);
+	
+
+
+
+
+CREATE TABLE sites (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	weight FLOAT,
+	pos INT,
+	regID INT,
+	colID INT,
+	FOREIGN KEY (regID) REFERENCES region(id),
+	FOREIGN KEY (colID) REFERENCES column(id)
+);
+
+
+CREATE TABLE tfactor (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	width INT,
+	name VARCHAR(255)
+);
+
