@@ -11,6 +11,9 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.8  2004/02/23 12:23:52  kpalin
+# Updates for per gene orthologous runs. Maybe litle multiple alignment.
+#
 # Revision 1.7  2004/01/23 12:52:00  kpalin
 # Some, no doubt vital, modifications
 #
@@ -176,9 +179,10 @@ def formatalignCHAOS(alignment):
         if len(goodAlign)==0:
             continue
         prevScore=0.0
-        for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
-            prevScore,score=score,score-prevScore
-            outStrIO.write("\t".join(map(str,[xname,yname,xcoord[0],ycoord[0],xcoord[1]-xcoord[0],score]))+"\n")
+        #        for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
+        for as in goodAlign: # as == Aligned site
+            prevScore,score=as.score,as.score-prevScore
+            outStrIO.write("\t".join(map(str,[xname,yname,as.beginX,as.beginY,as.endX-as.beginX,score]))+"\n")
 
     return outStrIO.getvalue()
 
@@ -189,7 +193,7 @@ def formatalignGFF(alignment):
         return "No alignment\n"
 
     outStrIO=StringIO()
-    GFFformat="%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\tCM %d\n"
+    GFFformat="%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\tCM %d\tMW %g\n" # CM= Cis Module, MW = Matrix weight
     # This format should be OK for gff2aplot 2.0
     GFFalignFormat='%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\t\tTarget "%s";\tStart %d;\tEnd %d;\tStrand .;\tFrame .;\tCM %d;\n'
 
@@ -199,15 +203,17 @@ def formatalignGFF(alignment):
     for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
         if len(goodAlign)==0:
             continue
-        outStrIO.write(GFFalignFormat%(xname,"CisModule",goodAlign[0][4][0],goodAlign[-1][4][1],goodAlign[-1][2],".",yname,goodAlign[0][5][0],goodAlign[-1][5][1],i))
-        outStrIO.write(GFFalignFormat%(yname,"CisModule",goodAlign[0][5][0],goodAlign[-1][5][1],goodAlign[-1][2],".",xname,goodAlign[0][4][0],goodAlign[-1][4][1],i))
+        outStrIO.write(GFFalignFormat%(xname,"CisModule",goodAlign[0].beginX,goodAlign[-1].endX,goodAlign[-1].score,".",yname,goodAlign[0].beginY,goodAlign[-1].endY,i))
+        outStrIO.write(GFFalignFormat%(yname,"CisModule",goodAlign[0].beginY,goodAlign[-1].endY,goodAlign[-1].score,".",xname,goodAlign[0].beginX,goodAlign[-1].endX,i))
+
         prevScore=0.0
-        for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
-            prevScore,score=score,score-prevScore
-            outStrIO.write(GFFformat%(xname,motif,xcoord[0],xcoord[1],score,strand,i))
-            outStrIO.write(GFFformat%(yname,motif,ycoord[0],ycoord[1],score,strand,i))
+        for as in goodAlign:
+            prevScore,score=as.score,as.score-prevScore
+            outStrIO.write(GFFformat%(xname,as.motif,as.beginX,as.endX,score,as.strand,i,as.siteScoreX))
+            outStrIO.write(GFFformat%(yname,as.motif,as.beginY,as.endY,score,as.strand,i,as.siteScoreY))
 
     return outStrIO.getvalue()
+
 
 def formatalign(alignment,seq=None):
     "Formats the alignment for human use"
@@ -253,10 +259,10 @@ def formatalign(alignment,seq=None):
         if len(goodAlign)==0:
             continue
         if seq:
-            xstart=max(goodAlign[0][4][0]-10,0)
-            ystart=max(goodAlign[0][5][0]-10,0)
-            xend=min(goodAlign[-1][4][1]+10,len(seq[xname]))
-            yend=min(goodAlign[-1][5][1]+10,len(seq[yname]))
+            xstart=max(goodAlign[0].beginX-10,0)
+            ystart=max(goodAlign[0].beginY-10,0)
+            xend=min(goodAlign[-1].endX+10,len(seq[xname]))
+            yend=min(goodAlign[-1].endY+10,len(seq[yname]))
 
             xseq=seq[xname][xstart:xend]
             yseq=seq[yname][ystart:yend]
@@ -268,17 +274,18 @@ def formatalign(alignment,seq=None):
 
 
         outStrIO.write("\n### Alignment No %d ###\n"%(i,))
-        for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
-            outStrIO.write("D[%d][%d]=%.2f %s (%d,%d) <=> (%d,%d) %s\n"%(x,y,score,motif,xcoord[0],xcoord[1],ycoord[0],ycoord[1],strand))
+        #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
+        for as in goodAlign:
+            outStrIO.write("D[%d][%d]=%.2f %s (%d,%d) <=> (%d,%d) %s\n"%(as.seqX,as.seqY,as.score,as.motif,as.beginX,as.endX,as.beginY,as.endY,as.strand))
             if seq:
                 y2add=yseq[yadded-ystart:ycoord[0]-1-ystart].lower()
                 x2add=xseq[xadded-xstart:xcoord[0]-1-xstart].lower()
                 #alnFmt="%%s%%-%ds%%s"%(max(len(y2add),len(x2add)))
                 alnFmt="%s%s%s"
                 distYX,y2add,x2add=alignSeq(y2add,x2add)
-                yaln=alnFmt%(yaln,y2add,yseq[ycoord[0]-1-ystart:ycoord[1]-ystart].upper())
-                xaln=alnFmt%(xaln,x2add,xseq[xcoord[0]-1-xstart:xcoord[1]-xstart].upper())
-                xadded,yadded=xcoord[1],ycoord[1]
+                yaln=alnFmt%(yaln,y2add,yseq[as.beginY-1-ystart:as.endY-ystart].upper())
+                xaln=alnFmt%(xaln,x2add,xseq[as.beginX-1-xstart:as.endX-xstart].upper())
+                xadded,yadded=as.endX,as.endY
 
         if seq:
             distYX,y2add,x2add=alignSeq(yseq[yadded-ystart:yend-ystart].lower(),xseq[xadded-xstart:xend-xstart].lower())
