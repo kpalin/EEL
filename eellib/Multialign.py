@@ -2,6 +2,10 @@
 
 #
 # $Log$
+# Revision 1.4  2004/03/02 10:45:56  kpalin
+# Working version. It doesn't give proper output yet and it's not
+# integrated to the mabs interface but it mostly works.
+#
 # Revision 1.3  2004/03/01 10:19:18  kpalin
 # Starting to implement an other aproach by Prohaska et.al.
 #
@@ -82,6 +86,14 @@ class PairModule:
 
         Return true if the modules share a common TF binding site,
         false otherwise."""
+        if not intersection(self,other):
+            return 0
+        return 1
+
+    def intersection(self,other):
+        """Returns the intersection of two PairModules.
+
+        Return value is the list of pairs of overlaping sites."""
         #print "Intersecting",self.sNames,other.sNames
         for common in self.sNames:
             if other.DNApos.has_key(common):
@@ -91,32 +103,27 @@ class PairModule:
             # or starts after the end of the other
             if self.DNApos[common][1]<other.DNApos[common][0] or \
                self.DNApos[common][0]>other.DNApos[common][1]:
-                #print "No overlap on",common
-                #print self.DNApos[common][1],"<",other.DNApos[common[0]],"or",
-                #print self.DNApos[common][0],">",other.DNApos[common[1]]
                 return 0
         except KeyError:
-            #import traceback
-            #traceback.print_exc()
-            #print "No common sequence in",self.sNames,other.sNames
             return 0
 
         i,j=0,0
-        #print self.sitePos
+        inters=[]
         while i<len(self.sites) and j<len(other.sites):
             if self.sitePos[common][i]<other.sitePos[common][j]:
                 i+=1
             elif self.sitePos[common][i]>other.sitePos[common][j]:
                 j+=1
+            elif self.sites[i].match(other.sites[j]):
+                inters.append((i,j))
+                i+=1
+                j+=1
             else:
-                #print self.sites[i],other.sites[j],self.sites[i].match(other.sites[j])
-                if self.sites[i].match(other.sites[j]):
-                    return 1
-                else:
-                    i+=1
-                    j+=1
-        #print "No common site on",common
-        return 0
+                i+=1
+                j+=1
+        if len(inters)==0:
+            return 0
+        return inters
                 
 
     def appendSite(self,sPos,site):
@@ -172,6 +179,109 @@ class PairModule:
                          
 
 
+class MultiOutModule:
+    """Class to assist the output of multiple alignments"""
+    def __init__(self,aligns,sites,colCounts,id):
+        self.align=aligns
+        self.sites=sites
+        self.colCount=colCounts
+        self.id=id
+        self.n=len(self.sites)
+
+        self.sb=StringIO()
+        self.seqs=self.align.keys()
+        self.seqContext=10
+        self.writeSeqNames()
+        self.writePosAln()
+       
+    def __len__(self):
+        return len(self.sites)
+
+    def writeSeqNames(self):
+        self.sb.write("Sequences:\n")
+        for seq in self.seqs:
+            self.sb.write("%s\n"%(seq))
+        self.sb.write("\n")
+
+    def writePosAln(self):
+        self.sb.write(" "*26+"  ".join(["%-10s"%(x[:10]) for x in self.seqs]))
+        for i in range(self.n):
+            self.sb.write("\n%-20s %s %2d "%(self.sites[i].name[-20:],self.sites[i].strand,self.colCount[i]))
+            self.sb.write("  ".join(["%10d"%(self.align[x][i]) for x in self.seqs]))
+        self.sb.write("\n")
+
+    def __str__(self):
+        return self.sb.getvalue()
+
+
+    def writeAlnSeq(self,linelen=60):
+        pos={}
+        aln={}
+        self.sb.write("\n")
+        for (seq,i) in zip(self.seqs,range(len(self.seqs))):
+            pos[seq]=self.align[seq][0]-self.seqContext
+            aln[seq]=self.seqAln[seq].getvalue()
+            self.sb.write("Sequence %d : %s\n"%(i,seq))
+
+        alnLen=len(aln.values()[0])
+        self.sb.write("\n")
+        for p in range(0,alnLen,linelen):
+            for seq in self.seqs:
+                try:
+                    alnLine=aln[seq][p:p+linelen]
+                except KeyError:
+                    print seq,self.seqs,aln.keys()
+                    print self.sb.getvalue()
+                    raise
+                self.sb.write("%7d : %s\n"%(pos[seq],alnLine))
+                pos[seq]=pos[seq]+linelen-alnLine.count("-")
+            self.sb.write("\n")
+            
+                
+            
+
+    def strAln(self,fullSeqs):
+        prevPos={}
+        self.seqAln={}
+        for seq in self.seqs:
+            prevPos[seq]=self.align[seq][0]-self.seqContext
+            self.seqAln[seq]=StringIO()
+
+        #Give 10 bp of context before alignments.
+        intervals=[self.seqContext]
+        for p in range(1,self.n):
+            intervals.append(0)
+            for seq in self.seqs:
+                try:
+                    thisInt=self.align[seq][p]-(self.sites[p-1].width+self.align[seq][p-1])
+                    intervals[-1]=max(intervals[-1],thisInt)
+                except TypeError:
+                    pass
+
+        # Align the sites. The non-site positions are left justified.
+        for p in range(self.n):
+            for seq in self.seqs:
+                nextPos=self.align[seq][p]
+                if nextPos<0:
+                    continue
+                #print "intervals[%d]=%d, nextPos-prevPos[seq]=%d"%(p,intervals[p],nextPos-prevPos[seq])
+                thisInt=max(intervals[p],nextPos-prevPos[seq])
+                intSeq=fullSeqs[seq][prevPos[seq]:nextPos].lower().ljust(thisInt).replace(" ","-")
+                #print "%d. interval for %s: %d-%d : %d : %s"%(p,seq,prevPos[seq],nextPos,thisInt,intSeq)
+                self.seqAln[seq].write(intSeq)
+                self.seqAln[seq].write(fullSeqs[seq][nextPos:(nextPos+self.sites[p].width)].upper())
+                prevPos[seq]=nextPos+self.sites[p].width
+
+        # Last 10bp of context
+        for seq in self.seqs:
+            self.seqAln[seq].write(fullSeqs[seq][prevPos[seq]:prevPos[seq]+self.seqContext].lower())
+            #print self.seqAln[seq].getvalue()
+            #self.sb.write("\n")
+        self.writeAlnSeq()
+
+        
+
+
 class MultiModule:
     """Class that forms to be the cis module in multiple sequences.
 
@@ -213,11 +323,11 @@ class MultiModule:
                     # Do we have an overlapping pairwise alignment?
                     ## Bin search??
                     for opair,code in self._pairsBySeq[common]:
-                        isects=opair.intersects(pair)
+                        isects=opair.intersection(pair)
                         if isects:
                             intersects=1
-                            self._overlaps[(code,n)]=n
-                            self._overlaps[(n,code)]=n
+                            self._overlaps[(code,n)]=isects
+                            self._overlaps[(n,code)]=common
             if not intersects:
                 return 0
 
@@ -411,6 +521,78 @@ class MultiModule:
         self.c=0
         extend2(range(N),0,N)
 
+
+    def makeMultiAlign(self,clqId):
+        """Makes a dictionary of arrays representing the multiple alignment
+        from clique clqId."""
+        mult={}
+        sites=[]
+        colCount=[]
+        clq=self._cliques[clqId]  # Operate on this clique
+        clq.sort()
+        # Make the initial empty vectors
+        for i in clq:
+            for s in self._pairs[i].sNames:
+                mult[s]=[]
+
+        N=len(clq)
+        alnLen=0
+        for i in range(N):
+            for j in range(i+1,N):
+                # Overlaping pairs p1,p2
+                p1,p2=self._pairs[clq[i]],self._pairs[clq[j]]
+                try:
+                    # Find out overlapping and non overlaping sequences
+                    common=self._overlaps[(clq[j],clq[i])]
+                    if p1.sNames[0]==common:
+                        seq1=p1.sNames[1]
+                    else:
+                        seq1=p1.sNames[0]
+
+                    if p2.sNames[0]==common:
+                        seq2=p2.sNames[1]
+                    else:
+                        seq2=p2.sNames[0]
+                        
+                    # Overlapping sites s1 s2
+                    p=0
+                    #print "starting",seq1,common,seq2
+                    #print self._overlaps[(clq[i],clq[j])]
+                    #print [(p1.sitePos[seq1][x],p1.sitePos[common][x],p2.sitePos[seq2][y]) for (x,y) in self._overlaps[(clq[i],clq[j])]]
+                    for s1,s2 in self._overlaps[(clq[i],clq[j])]:
+                        while p<alnLen and mult[seq1][p]<p1.sitePos[seq1][s1] and \
+                              mult[seq2][p]<p2.sitePos[seq2][s2] and \
+                              mult[common][p]<p2.sitePos[common][s2]:
+                            p+=1
+
+                        # Add new column if needed
+                        if p==alnLen or (mult[seq1][p]>p1.sitePos[seq1][s1] and \
+                              mult[seq2][p]>p2.sitePos[seq2][s2] and \
+                              mult[common][p]>p2.sitePos[common][s2]):
+                            for key in mult.keys():
+                                mult[key].insert(p,-1)
+                            colCount.insert(p,0)
+                            sites.insert(p,p1.sites[s1])
+                            alnLen+=1
+
+                        # (Re)set the values
+                        mult[seq1][p]=p1.sitePos[seq1][s1]
+                        mult[common][p]=p1.sitePos[common][s1]
+                        mult[seq2][p]=p2.sitePos[seq2][s2]
+                        colCount[p]+=1
+                        
+                    #for key,val in mult.items():print "%s: %s"%(key[:5],str(val))
+                    #print "      ",colCount
+                        
+                except KeyError:
+                    pass
+                    #print clq[i],clq[j]
+                except ValueError:
+                    print self._overlaps[(clq[i],clq[j])]
+                    raise
+
+        return MultiOutModule(mult,sites,colCount,clqId)
+
         
 class Site:
     """Represents a binding site on the alignment"""
@@ -427,6 +609,10 @@ class Site:
     def __str__(self):
         return "%s %s %d %g"%(self.name,self.strand,self.width,self.score)
 
+    def toGFF(self,seq,method,spos):
+        """Returns the site in GFF row format."""
+        return "%s\t%s\t%s\t%s\t%d\t%d\t%g\t%s\t.\t"(seq,method,self.name,spos,spos+self.width,self.score,self.strand)
+    
     def __repr__(self):
         return "Site(%s,%g,%s,%d)"%(self.name,self.score,self.strand,self.width)
 class MultipleAlignment:
@@ -441,8 +627,7 @@ class MultipleAlignment:
         self._modules=[]
         self._attrPat=re.compile(r"([A-Za-z][A-Za-z0-9_]+) (.*)")
         self._multiAlign=[]
-        pass
-
+        self.totLen=0
 
     def _parseAttribs(self,attr):
         """Parses the attributes on GFF file line.
@@ -521,12 +706,20 @@ class MultipleAlignment:
         self._modules=filter(lambda x:not x.sNames.has_key(sname),self._modules)
 
 
+    def __len__(self):
+        return len(self.resAligns)
+
+    def __getitem__(self,i):
+        return self.resAligns[i]
+
+    
     def multiAlign(self):
         """Compute the local multiple alignment.
 
         The input and output is done through instance of this class with
         other methods."""
-        
+
+        self.resAligns=[]
         while len(self._modules)>0:
             r=0
             p=self._modules.pop()
@@ -538,11 +731,14 @@ class MultipleAlignment:
                 nMulti.addPair(p)
                 self._multiAlign.append(nMulti)
         # Multiple alignment by Prohaska et.al.
-        for mmod in self._multiAlign:            
+        for mmod in self._multiAlign:
             mmod.TransitiveClosure()
             mmod.InconsistencyGraph()
             mmod.allMaxCliques()
-            
+            for i in range(len(mmod._cliques)):
+                if len(mmod._cliques[i])<2:continue
+                self.resAligns.append(mmod.makeMultiAlign(i))
+
             
     def __str__(self):
         strbuf=StringIO()
@@ -560,11 +756,19 @@ if __name__=="__main__":
     a.addGFFfile("/home/kpalin/tyot/comparative/mabs/mrmyf5.align.opt.gff")
     #a._modules.sort()
     a.multiAlign()
-    p=[x._pairs[0] for x in a._multiAlign]
+    #p=[x._pairs[0] for x in a._multiAlign]
     import pdb
+    #b=a._multiAlign[11].makeMultiAlign(0)
+    #print str(b)
     for b in range(len(a._multiAlign)):
-        if len(a._multiAlign[b]._pairs)<2:
-            continue
-        open("tmp%d.dot"%(b),"w").write(a._multiAlign[b].cliquesToDot())
-
+        for c in range(len(a._multiAlign[b]._cliques)):
+            print "Module",b,"clique",c
+            if b==2 and c==6:
+                print a._multiAlign[b]._cliques[6]
+            print str(a._multiAlign[b].makeMultiAlign(c))
+                
+            #if len(a._multiAlign[b]._pairs)<2:
+            #continue
+        #open("tmp%d.dot"%(b),"w").write(a._multiAlign[b].cliquesToDot())
+        
     #pdb.run("a.multiAlign()")
