@@ -3,9 +3,14 @@
 from mabslib.Commandline import Commandline
 import sys
 
+
+# $Log$
+
+
 cl=Commandline()
 
 if len(sys.argv)==1:
+    print "$Id$"
     try:
         cl.run()
     except EOFError:
