@@ -11,6 +11,10 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.17  2005/01/14 13:45:21  kpalin
+##   Better installation and added msvcp71.dll and msvcr71.dll for windows
+##   installation.
+##
 ##   Revision 1.16  2005/01/14 12:51:48  kpalin
 ##   Fixes for TCL/TIX gui in windows
 ##
@@ -44,10 +48,15 @@ import sys
 print sys.argv
 
 common_compile_args=["-Wall"]
-if len(sys.argv)>1 and sys.argv[1]=='debug':
-    common_compile_args=["-O0","-fno-inline","-Wall","-g","-UNDEBUG","-DEXTRADEBUG","-DDEBUG_OUTPUT"]
-    print "Using debug settings"
-    del sys.argv[1]
+if len(sys.argv)>1:
+    if sys.argv[1]=='debug':
+        common_compile_args=["-O0","-fno-inline","-Wall","-g","-UNDEBUG","-DEXTRADEBUG","-DDEBUG_OUTPUT"]
+        print "Using debug settings"
+        del sys.argv[1]
+    elif sys.argv[1]=='profile':
+        common_compile_args=["-pg"]
+        print "Using profiling settings"
+        del sys.argv[1]
 
 
 from distutils.core import setup, Extension
@@ -69,10 +78,10 @@ compileLibs=[]
 
 
 
+extra_data=[]
 
 from glob import glob
 if sys.platform=='win32':
-    extra_data=[]
     try:
         import py2exe
         SDKdir=r"C:\Program Files\Microsoft.NET\SDK\v1.1\Bin"
@@ -142,17 +151,16 @@ modDist = Extension("eellib.editdist",
                     )
 
 
-## modMultiAlign = Extension('eellib.multiAlign',
-##                      library_dirs = alignLibDirs,
-##                      libraries = commonLibs+alignLibs,
-##                      sources = ['src/multiAlign.cc'],
-##                      extra_compile_args=alignCompileArgs+common_compile_args,
-##                      extra_link_args = [])
+modMultiAlign = Extension('eellib.multiAlign',
+                          library_dirs = alignLibDirs,
+                          libraries = commonLibs+alignLibs,
+                          sources = ['src/multiAlign.cc'],
+                          extra_compile_args=alignCompileArgs+common_compile_args,
+                          extra_link_args = [])
 
 
 ext_modList= [modMatrix,modAlignedCols,modAlign,modDist]
 #ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
-#ext_modList= [modAlignedCols,modMultiAlign,modAlign]
 
 setup (name = 'EEL',
        version = '1.0',
