@@ -1,5 +1,19 @@
 --
---  $Log$ 
+--  $Log$
+--  Revision 1.1  2004/05/07 07:48:35  kpalin
+--  SQL commands for loading approximate gff files to mysql database.
+--
+--  The gff files have to be concatenated with command like
+--
+--  grep -H "" og_*.fasta.align.gff |tr \|: \\\t\\\t >gffkoe.txt
+--
+--  and loaded to the database with command like
+--  mysqlimport -ppalindrome
+--  --columns=fileName,species,slice,type,tfsite,start,stop,score,sitestrand,adot,attrib,junk1,junk2,junk3,junk4,junk5,junk6,cisAttrib
+--  --local bbu_palin gffkoe.txt
+--   OR
+--  load data local infile 'gffkoe.txt' into table gffkoe;
+-- 
 --
 
 
@@ -8,7 +22,7 @@ drop table gffkoe;
 create table gffkoe (
 fileName varchar(100),
 species varchar(10),
-enscode varchar(50),
+enscode varchar(40),
 hugocode varchar(20),
 strand varchar(10),
 slice varchar(100),
@@ -29,8 +43,8 @@ junk6 varchar(10),
 junk7 varchar(10),
 junk8 varchar(10),
 junk9 varchar(10),
-cisAttrib varchar(10)
-
+cisAttrib varchar(10),
+KEY (tfsite)
 );
 -- grep -H "" og_*.fasta.align.gff |tr \|: \\\t\\\t >gffkoe.txt
 --load data local infile 'gffkoe.txt' into table gffkoe;
@@ -63,7 +77,7 @@ CREATE TABLE slicekoe (
   beginPos int(11) NOT NULL default '0',
   endPos int(11) NOT NULL default '0',
   fileName varchar(200) NOT NULL default '',
-  enscode varchar(100),
+  enscode varchar(40),
 	geneName varchar(20),
   seqName varchar(200),
   revComplement int(11) NOT NULL default 0,
@@ -160,8 +174,12 @@ insert into cismodulekoe (score,tmpID)
 
 insert into sliceCisLinkKoe (cisID,sliceID) select DISTINCT c.id,s.id
 from cismodulekoe c, slicekoe s,gffkoe g
-where g.enscode = s.enscode and  c.tmpID=concat(g.fileName,g.attrib) and g.hugocode=s.geneName
-and g.tfsite!='CisModule';
+where 
+concat(g.fileName,substring(g.cisAttrib,1,LOCATE(';',g.cisAttrib)-1))=c.tmpID
+-- and g.hugocode=s.geneName
+-- and g.enscode = s.enscode
+and concat_ws('|',g.species,g.slice)=s.seqName
+and g.tfsite='CisModule';
 
 
 
@@ -236,6 +254,14 @@ FROM siteskoeTmp s,alnColsKoe a,regionkoe r
 WHERE s.regId=r.id and r.cisID=a.cisID and s.colInReg=a.cisColId;
 
 
-alter table cismodulekoe drop column tmpId;
+--alter table cismodulekoe drop column tmpId;
 
 --delete from gffkoe where tfsite='CisModule';
+
+-- insert into sliceCisLink (sliceID,cisID) select s.id,c.id from slice s,slicekoe sk,cismodulekoe ck,cismodule c,sliceCisLinkKoe l
+-- where s.seqName=sk.seqName and c.tmpID=ck.tmpID and l.sliceID=sk.id and l.cisID=ck.id
+
+insert into region (beginPos,endPos,seqID,cisID) select beginPos,endPos,s.id,c.id 
+from regionkoe,sequence s, sequencekoe sk, cismodulekoe ck, cismodule c 
+where seqID=sk.id and sk.name=s.name and sk.species=s.species and
+cisID=ck.id and ck.tmpID=c.tmpID;
