@@ -3,13 +3,16 @@ from Sequence import Sequences
 import Output
 import os,shutil
 from tempfile import mktemp
+
 try:
     from gzip import GzipFile
 except ImportError:
     print "No gzip available."
 
+
 if 0:
     print "NOW IMPORTING ALIGN module"
+
 import align
 import sys,math
 
@@ -192,8 +195,14 @@ class Interface:
         "aligns the computed BS or some given in file"
         if hasattr(self,"alignment"):
             del(self.alignment)
+            
         if filename=='.' and  hasattr(self,"tempFile"):
-            filename=self.tempFileName
+            # At least for now, we can't handle gzip:ed files in c++
+            print "Fine! If you say so! But it'd be better to save the matches before alignment!"
+            self.tempFile.flush()
+            self.alignment=align.aligndata(GzipFile(self.tempFileName,"r").read(),
+                                             num_of_align, Lambda, xi,
+                                             mu, nu,nuc_per_rotation)
         elif filename=='.' and len(self.__comp)==0:
             return "No binding sites"
         elif filename==".":
@@ -233,6 +242,10 @@ Contact: Matthias Berg
          D-66123 Saarbruecken
          Germany
 
-         email: bergm@web.de"""
+         email: bergm@web.de
+
+         More up-to-date information from Kimmo Palin:
+
+         kimmo.palin@helsinki.fi"""
 
 

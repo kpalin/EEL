@@ -6,6 +6,7 @@ import re
 import string
 
 
+# $Log$
 
 
 try:
