@@ -34,6 +34,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.6  2004/01/14 10:06:31  kpalin
+ *  Checkings for decref:ing Py_None
+ *
  *  Revision 1.4  2003/12/30 11:21:36  kpalin
  *  Added a conditional dependency on gzstream and zlib to allow processing of
  *  gziped files.
@@ -808,14 +811,19 @@ alignObject(align_AlignmentObject *self)
     mem_usage += self->CP->index[self->CP->seq_x[i].ID].size()*sizeof(matrixentry);	
   }
   self->mem_usage=mem_usage;
-  self->fill_factor=(self->item_count*1.0/(self->CP->seq_x.size() * self->CP->seq_y.size()));
+  self->fill_factor=(self->item_count*1.0/(self->CP->seq_x.size() *1.0* self->CP->seq_y.size()));
 
 
+  double normSize=((self->CP->seq_x.size() * 1.0)*self->CP->seq_y.size() * sizeof(matrixentry));
+		   
   cout <<"Sequence length: x: "<<self->CP->seq_x.size()<<", y: "<<self->CP->seq_y.size()<<endl
-       <<"used memory ~ "<< (mem_usage>>10)  <<" kilobytes"<<endl
+       <<"used memory ~ "<< (mem_usage/(1024*1024.0))  <<" megabytes"<<endl
        <<"normal matrix size would be ~ "
-       << ((self->CP->seq_x.size() * self->CP->seq_y.size() * sizeof(matrixentry))>>10) <<" kilobytes"<<endl
-    <<"So using only "<<(100.0*mem_usage)/(self->CP->seq_x.size() * self->CP->seq_y.size() * sizeof(matrixentry))<<" percent of the matrix"<<endl
+		   //<< (unsigned long)(((self->CP->seq_x.size() * 1.0)*self->CP->seq_y.size() * sizeof(matrixentry))/1024.0) 
+       << (unsigned long)(normSize/(1024.0*1024.0))
+       <<" megabytes"<<endl
+
+       <<"So using only "<<(100.0*(mem_usage/normSize))<<" percent of the matrix"<<endl
        <<"Filling only "<<(self->fill_factor*100.0) <<" percent of the cells"<<endl;
   
       
