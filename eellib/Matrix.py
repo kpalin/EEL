@@ -8,6 +8,10 @@ from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.9  2005/01/27 09:12:05  kpalin
+# Added functions to format the matrix in string good
+# for AHAB and as list of string scoring more than given limit
+#
 # Revision 1.8  2005/01/12 13:34:55  kpalin
 # Added Tkinter/Tix Graphical user interface and command -no-gui to
 # avoid it.
@@ -52,17 +56,38 @@ class Matrix:
         #self.draw()
 
 
+    def toMatCompare(self,s=None):
+        "Return the matrix as file like object suitable for MatCompare input"
+        if not s:
+            s=StringIO()
+        
+        s.write("M.%s\n"%(self.name))
+        self.toColumnMatrix(s)
+        s.write("END")
 
-    def toAhab(self):
-        "Return the matrix as string formatted for ahab"
-        s=StringIO()
-        s.write(">%s Matrix\t%d\n"%(self.name,len(self)))
+        return s
+
+    
+    def toColumnMatrix(self,s=None):
+        "Return a file like object having the transposed matrix"
+        if not s:
+            s=StringIO()
+        
         for i in range(len(self)):
             A,C,G,T=self.LLMatrix[0][i],self.LLMatrix[1][i],self.LLMatrix[2][i],self.LLMatrix[3][i]
             s.write("%d\t%d\t%d\t%d\n"%(A,C,G,T))
-        A,C,G,T=sum(self.LLMatrix[0]),sum(self.LLMatrix[1]),sum(self.LLMatrix[2]),sum(self.LLMatrix[3])
-        s.write("<\n")
-        return s.getvalue()
+
+        return s
+        
+    def toAhab(self,s=None):
+        "Return the matrix as file like object formatted for ahab"
+        if not s:
+            s=StringIO()
+        
+        s.write(">%s Matrix\t%d\n"%(self.name,len(self)))
+        self.toColumnMatrix(s)
+        s.write("<")
+        return s
 
     def seqsBetterThan(self,limit):
         "Return sequences scoring better than limit"
