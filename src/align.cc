@@ -36,6 +36,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.15  2005/01/07 11:58:46  kpalin
+ *  Windows port. Should work with Visual C++ 7.1
+ *
  *  Revision 1.14  2004/12/22 11:14:34  kpalin
  *  Some fixes for better distributability
  *
@@ -238,6 +241,9 @@ int parseLine(string const line,triple &tri,string &sequence)
   double weight;
   char strand;
   istringstream help(line);
+  if(line[0]=='#') {
+    return 2;
+  }
   //if (! (help >> sequence))
   if( ! getline(help,sequence,'\t'))
     {
@@ -318,7 +324,7 @@ matchlisttype* parseStream(istream *in)
   triple tri;
   while(getline(*in, line))
   {
-    if(parseLine(line,tri,sequence)) {
+    if(parseLine(line,tri,sequence)==1) {
       (*matchlist)[sequence].push_back(tri);
     }
   }
