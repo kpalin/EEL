@@ -7,6 +7,10 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.4  2003/12/30 11:20:45  kpalin
+# In interface.py Reverse the previous changes and allow passing of
+# gziped files to c++ align extension
+#
 # Revision 1.3  2003/12/29 12:43:18  kpalin
 # Interface class repaired to enable alignment from gzip:ed temporary files.
 #
@@ -138,6 +142,29 @@ def savealign(alignment, filename=''):
 
 
 
+
+
+
+
+def formatalignCHAOS(alignment):
+    "Formats the alignment as anchoring file for DIALIGN2 (a la CHAOS) Not quite"
+    if not alignment:
+        return "No alignment\n"
+
+    outStrIO=StringIO()
+    xname,yname=alignment.x_name,alignment.y_name
+
+    for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
+        if len(goodAlign)==0:
+            continue
+        prevScore=0.0
+        for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
+            prevScore,score=score,score-prevScore
+            outStrIO.write("\t".join(map(str,[xname,yname,xcoord[0],ycoord[0],xcoord[1]-xcoord[0],score]))+"\n")
+
+    return outStrIO.getvalue()
+
+
 def formatalignGFF(alignment):
     "Formats the alignment for GFF file"
     if not alignment:
@@ -146,7 +173,7 @@ def formatalignGFF(alignment):
     outStrIO=StringIO()
     GFFformat="%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\tCM %d\n"
     # This format should be OK for gff2aplot 2.0
-    GFFalignFormat='%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\t\tTarget "%s";\tStart %d;\tEnd %d;\tStrand +;\tFrame .;\tCM %d;\n'
+    GFFalignFormat='%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\t\tTarget "%s";\tStart %d;\tEnd %d;\tStrand .;\tFrame .;\tCM %d;\n'
 
     outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation))
     xname,yname=alignment.x_name,alignment.y_name
@@ -156,7 +183,9 @@ def formatalignGFF(alignment):
             continue
         outStrIO.write(GFFalignFormat%(xname,"CisModule",goodAlign[0][4][0],goodAlign[-1][4][1],goodAlign[-1][2],".",yname,goodAlign[0][5][0],goodAlign[-1][5][1],i))
         outStrIO.write(GFFalignFormat%(yname,"CisModule",goodAlign[0][5][0],goodAlign[-1][5][1],goodAlign[-1][2],".",xname,goodAlign[0][4][0],goodAlign[-1][4][1],i))
+        prevScore=0.0
         for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
+            prevScore,score=score,score-prevScore
             outStrIO.write(GFFformat%(xname,motif,xcoord[0],xcoord[1],score,strand,i))
             outStrIO.write(GFFformat%(yname,motif,ycoord[0],ycoord[1],score,strand,i))
 
