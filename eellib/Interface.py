@@ -1,23 +1,28 @@
 """Most of the Python functionality and gzip interface"""
 # -*- coding: UTF-8 -*-
 
-
-import Matrix
 from Sequence import Sequences
+
+from eellib import Matrix
 import Output
 import os,shutil
 from tempfile import mktemp
 import atexit
 from glob import glob
 
-try:
-    from gzip import GzipFile
-except ImportError:
-    print "No gzip available."
+import sys
+if sys.platform!='win32':
+    try:
+        from gzip import GzipFile
+    except ImportError:
+        print "No gzip available."
 
 
 #
 # $Log$
+# Revision 1.19  2004/12/22 11:14:24  kpalin
+# Some fixes for better distributability
+#
 # Revision 1.18  2004/12/22 08:02:59  kpalin
 # Hopefully more IO efficient TFBS search.
 #
@@ -58,14 +63,14 @@ if 0:
 
 from eellib import align
 
-try:
-    # Greedy multiple alignment written in python
-    from eellib import Multialign
+## try:
+##     # Greedy multiple alignment written in python
+##     from eellib import Multialign
 
-    # Exact multiD multiple alignment written in C
-    from eellib import multiAlign
-except ImportError:
-    pass
+##     # Exact multiD multiple alignment written in C
+##     from eellib import multiAlign
+## except ImportError:
+##     pass
 
 import sys,math
 
@@ -167,7 +172,7 @@ class Interface:
     def multiAlignGreedy(self,arglist):
         """Arguments: pairwiseGFFfiles
         Join the given pairwise alignment GFF files to multiple alignment."""
-        self.malignment=Multialign.MultipleAlignment()
+        #self.malignment=Multialign.MultipleAlignment()
 
         for fileGlob in arglist:
             filenames=glob(fileGlob)
@@ -380,7 +385,7 @@ If you use '.' as filename the local data are aligned."""
                 except OSError:
                     pass
             atexit.register(condRemoveTmp,self.tempFileName)
-            print "Storing gziped temporary file",self.tempFileName
+            print "Storing temporary file",self.tempFileName
         print "Writing temporary file"
         outData=Output.get(self.__comp)
         if len(outData)>0:

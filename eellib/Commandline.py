@@ -12,8 +12,13 @@ from popen2 import popen3
 import re
 import string
 
+import _c_matrix
+
 
 # $Log$
+# Revision 1.12  2004/12/22 11:14:24  kpalin
+# Some fixes for better distributability
+#
 # Revision 1.11  2004/12/22 08:02:59  kpalin
 # Hopefully more IO efficient TFBS search.
 #
@@ -245,7 +250,6 @@ class Commandline(Interface):
         if len(arglist)>1:
             order=int(arglist[1])
 
-        import matrix
         self.bg=matrix.BackGround(sampleStr,order)
 
         for m in self.matlist:
@@ -309,14 +313,6 @@ class Commandline(Interface):
     def addSequence(self, arglist):
         "Arguments: filelist\nreads sequences from files"
         for filestring in arglist:
-##            if (filestring.find("/")==-1):
-##                filestring = "./" + filestring
-##            # dividing the fiestring in path and filename
-##            filematch= re.match("(.*)/(.*)", filestring)
-##            # using the 'find' command to allow things like '*' in filename
-##            syscomm=('find '+filematch.group(1)+' -maxdepth 1 -xtype f -name "'
-##                     +filematch.group(2)+'"')
-##            filenames= popen3(syscomm)[0].read().split()
             filenames=glob(filestring)
             if filenames:
                 Interface.addSequence(self, filenames)
@@ -349,7 +345,7 @@ The default value for bound is 0.1"""
                 bound= string.atof(arglist[0])
             Interface.getTFBS(self, bound)
         except ValueError:
-            print "arglist:",repr(arglist)
+            print "getTFBS requires an numeric argument!"
 
 
     def getTFBSabsolute(self, arglist):
@@ -363,8 +359,8 @@ The default value for cutoff is 9.0"""
                 cutoff= string.atof(arglist[0])
             Interface.getTFBSAbsolute(self, cutoff)
         except ValueError:
-            print "arglist:",repr(arglist)
-            raise
+            print "getTFBSabsolute requires an numeric argument!"
+            
             
     def showmatch(self,arglist):
         "Arguments: none\nprints the computed scores to stdout"

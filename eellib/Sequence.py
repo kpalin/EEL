@@ -5,14 +5,19 @@ import string
 from cStringIO import StringIO
 #from xreadlines import xreadlines
 
-try:
-    from gzip import GzipFile
-except ImportError:
-    print "No gzip available."
+import sys
+if sys.platform!='win32':
+    try:
+        from gzip import GzipFile
+    except ImportError:
+        print "No gzip available."
 
 
 #
 # $Log$
+# Revision 1.6  2004/12/17 12:17:21  kpalin
+# Fixed depreciated xreadline
+#
 # Revision 1.5  2004/03/03 09:15:43  kpalin
 # Corrected a bug from SingleSequence.getslice() and added better
 # resembelance to mapping object.

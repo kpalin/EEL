@@ -1952,7 +1952,7 @@ static PyMethodDef matrixMethods[] = {
 //PyMODINIT_FUNC
 extern "C"
 void
-initmatrix(void)
+init_c_matrix(void)
 {
   PyObject *m=NULL;
 
@@ -1960,7 +1960,7 @@ initmatrix(void)
   if(PyType_Ready(&matrix_bgType)<0)
     return;
 
-  m=Py_InitModule("eellib.matrix", matrixMethods);
+  m=Py_InitModule("eellib._c_matrix", matrixMethods);
 
   if(m==NULL)
     return;

@@ -4,10 +4,13 @@ import operator
 import string
 import math
 
-from eellib import matrix
+from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.6  2004/12/22 11:14:24  kpalin
+# Some fixes for better distributability
+#
 # Revision 1.5  2004/12/22 08:02:59  kpalin
 # Hopefully more IO efficient TFBS search.
 #
@@ -197,7 +200,7 @@ class Matrix:
         
         if self.maxscore>cutoff:
             #bg=matrix.BackGround(open("/home/kpalin/tyot/comparative/humanGenome/chr1.fa"))
-            ret=matrix.getTFBSwithBg(self.M_weight,sequence,cutoff,self.backGround)
+            ret=_c_matrix.getTFBSwithBg(self.M_weight,sequence,cutoff,self.backGround)
             #ret=matrix.getTFBS(self.M_weight,sequence,cutoff)
             if ret.has_key("NEXT_SEQ"):
                 print "NEXT_SEQ",ret["NEXT_SEQ"]
@@ -218,7 +221,7 @@ class Matrix:
         #seqIO.seek(0)
         #seqIO=open("/home/kpalin/tyot/comparative/mabs/iso.tmp.fa")
         #seqIO.seek(1)
-        ret=matrix.getTFBSwithBg(self.M_weight, sequence, minscore+self.maxscore,self.backGround)
+        ret=_c_matrix.getTFBSwithBg(self.M_weight, sequence, minscore+self.maxscore,self.backGround)
         if not ret:
             ret={}
         if ret.has_key("NEXT_SEQ"):
@@ -243,7 +246,7 @@ def getAllTFBS(sequence,cutoff,matlist,absOrRat=None):
     else:
         Mat=matlist[:]
         BG=matlist[0].backGround
-        ret=matrix.getAllTFBSwithBg(Mat,sequence,cutoff,BG)
+        ret=_c_matrix.getAllTFBSwithBg(Mat,sequence,cutoff,BG)
 
 
     return ret

@@ -5,12 +5,16 @@ Also gzip related."""
 from time import localtime
 from cStringIO import StringIO
 
-
+from eellib import alignedCols
 
 
 
 #
 # $Log$
+# Revision 1.14  2004/12/17 12:21:26  kpalin
+# Changed the matrix dictionary key ordering and made the GFF output
+# routines routine.
+#
 # Revision 1.13  2004/12/14 13:08:05  kpalin
 #
 # Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun
