@@ -7,6 +7,11 @@ import string
 
 
 # $Log$
+# Revision 1.2  2003/12/29 12:43:17  kpalin
+# Interface class repaired to enable alignment from gzip:ed temporary files.
+#
+# Ilmeisesti jotain uutta. En tiedä mitä.
+#
 
 
 try:
@@ -72,6 +77,7 @@ class Commandline(Interface):
                          'savematch':          (self.savematch,0),
                          'savealign':          (self.savealign,0),
                          'savealignGFF':       (self.savealignGFF,0),
+                         'savealignAnchor':       (self.savealignAnchor,0),
                          'showalign':          (self.showalign,0),
                          'sa':                 (self.showalign,0),
                          'setpseudocount':     (self.setPseudoCnt,1),
@@ -113,7 +119,7 @@ class Commandline(Interface):
                 else:
                     print token[0],": command not found"
             except KeyboardInterrupt:
-                print "Aborted"
+                print "Keyboard Interrupt: Aborted"
 
     def execute(self, command):
         "executes the given command (like 'run' does)"
@@ -137,7 +143,7 @@ class Commandline(Interface):
             else:
                 print token[0],": command not found"
         except KeyboardInterrupt:
-            print "Aborted"
+            print "Keyboard Interrupt: Aborted"
         except IndexError:
             pass
 
@@ -382,9 +388,9 @@ e.g. mabs_2003_8_27_15_48.gff"""
 aligns the computed BS or optional the BS from a gff file
 filename specifies a file in gff format is you want to be aligned
 num_of_align        specifies how many alignments you want. (Default 3)
-lambda   Bonus factor for hit (Default 0.5)
+lambda   Bonus factor for hit (Default 2)
 xi       Penalty factor for rotation (Default 1.0)
-mu       Penalty factor for average distance between sites (Default 1.0)
+mu       Penalty factor for average distance between sites (Default 0.5)
 nu       Penalty factor for distance difference between sites (Default 1.0)
 nuc_per_rotation    specifies how many nucletides there are per rotation. (Default 10.4)
 If you want to skip a argument just  write '.' for it.
@@ -423,6 +429,14 @@ If you use '.' as filename the local data are aligned."""
         else:
             count=1
         self.showMoreAlignments(count)
+
+
+
+    def getBaseSaveName(self):
+        a=localtime()
+        filename='mabs_'+str(a.tm_year)+'_'+str(a.tm_mon)+'_'+str(a.tm_mday)+'_'+str(a.tm_hour)+'_'+str(a.tm_min)
+        return filename
+
         
     def savealign(self, arglist):
         """Arguments: [filename]
@@ -433,8 +447,7 @@ e.g. mabs_2003_9_16_11_48.align"""
         if len(arglist):
             filename=arglist[0]
         else:
-            a=localtime()
-            filename='mabs_'+str(a.tm_year)+'_'+str(a.tm_mon)+'_'+str(a.tm_mday)+'_'+str(a.tm_hour)+'_'+str(a.tm_min)+'.align'
+            filename=self.getBaseSaveName()+'.align'
         filename = Interface.savealign(self,filename)
         if filename:
             print"results saved in", filename
@@ -449,10 +462,25 @@ e.g. mabs_2003_9_16_11_48_align.gff"""
         if len(arglist):
             filename=arglist[0]
         else:
-            a=localtime()
-            filename='mabs_'+str(a.tm_year)+'_'+str(a.tm_mon)+'_'+str(a.tm_mday)+'_'+str(a.tm_hour)+'_'+str(a.tm_min)+'_align.gff'
+            filename=self.getBaseSaveName()+'.align.gff'
             
         filename = Interface.savealignGFF(self,filename)
+        if filename:
+            print"results saved in", filename
+
+
+    def savealignAnchor(self, arglist):
+        """Arguments: [filename]
+saves the alignment to disk in Anchor format for DIALIGN
+The default filename is 'mabs_[Date+Time]_align.anc'
+e.g. mabs_2003_9_16_11_48_align.anc"""
+        filename=''
+        if len(arglist):
+            filename=arglist[0]
+        else:
+            filename=self.getBaseSaveName()+'.align.anc'
+            
+        filename = Interface.savealignAnchor(self,filename)
         if filename:
             print"results saved in", filename
 

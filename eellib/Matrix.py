@@ -58,10 +58,7 @@ class Matrix:
             
 
     def setBG(self, sequence):
-        countA=sequence.count('A')
-        countC=sequence.count('C')
-        countG=sequence.count('G')
-        countT=sequence.count('T')
+        countA,countC,countG,countT=seq.count("A")+seq.count("a"),seq.count("C")+seq.count("c"),seq.count("G")+seq.count("g"),seq.count("T")+seq.count("t")
         overall=countA+countC+countG+countT+0.0    # what happens with 'N'?
         self.setBGfreq(countA/overall,countC/overall,countG/overall,countT/overall)
         #self.freqA=countA/overall

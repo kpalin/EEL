@@ -119,7 +119,7 @@ class Sequences:
             outs+=name+"\n"
         return outs
         for name,seq in self.__Seq.items():
-            Ac,Cc,Gc,Tc=seq.count("A"),seq.count("C"),seq.count("G"),seq.count("T")
+            Ac,Cc,Gc,Tc=seq.count("A")+seq.count("a"),seq.count("C")+seq.count("c"),seq.count("G")+seq.count("g"),seq.count("T")+seq.count("t")
             Nc=len(seq)-Ac-Tc-Cc-Gc
             tot=float(len(seq))/100.0
             outs+="%s\nLen A C G T Other= %d %4.2f %4.2f %4.2f %4.2f %4.2f\n\n"%(name,len(seq),Ac/tot,Cc/tot,Gc/tot,Tc/tot,Nc/tot)

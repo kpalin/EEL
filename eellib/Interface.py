@@ -3,6 +3,7 @@ from Sequence import Sequences
 import Output
 import os,shutil
 from tempfile import mktemp
+import atexit
 
 try:
     from gzip import GzipFile
@@ -87,8 +88,7 @@ class Interface:
  
     def getTFBS(self, bound=0.1 , absCutoff=None):
         "computes the possible TFBS"
-        if hasattr(self,"tempFile"):
-            del(self.tempFile)
+        if hasattr(self,"tempFileName"):
             os.remove(self.tempFileName)
             del(self.tempFileName)
 
@@ -119,38 +119,51 @@ class Interface:
                     print "name=",name
                     print "self.__comp=",self.__comp
                     #self.__gff=Output.get(self.__comp).split('\n')
-                if hasattr(self,"tempFile") or totalMatches>50000:
+                if totalMatches>50000:
                     self.storeTmpGFF()
-        if hasattr(self,"tempFile"):
-            self.storeTmpGFF()
+                    totalMatches=0
+        if hasattr(self,"tempFileName"):
+            self.finalTmpGFF()
 
     def storeTmpGFF(self):
+        "Open temporary file and store BS data to it"
         if not hasattr(self,"tempFile"):
             self.tempFileName=mktemp(".gff.gz")
             try:
                 self.tempFile=GzipFile(self.tempFileName,"w")
             except NameError:
-                self.tempFile=self.tempFileName[:-3]
+                self.tempFileName=self.tempFileName[:-3]
                 self.tempFile=open(self.tempFileName,"w")
+            def condRemoveTmp(tmpName):
+                try:
+                    os.remove(tmpName)
+                except OSError:
+                    pass
+            atexit.register(condRemoveTmp,self.tempFileName)
             print "Storing gziped temporary file",self.tempFileName
+        print "Writing temporary file"
         self.tempFile.write(Output.get(self.__comp))
         self.tempFile.flush()
         self.__gff=""
+
+    def finalTmpGFF(self):
+        "Store BS data to temporary file and close it"
+        self.storeTmpGFF()
+        self.tempFile.close()
+        del(self.tempFile)
         
             
     def savematch(self, filename=''):
         "Saves the results."
         # To view the gff file numbered in the same order, use:
         #grep  ENSG tmp.gff |sort --key=5n,5 --key=6n |nl -v0>tmp.sort.ensg.gff
-        if hasattr(self,"tempFile"):
+        if hasattr(self,"tempFileName"):
             print "Storing file in gziped format."
-            self.tempFile.close()
             if not filename[-2:]=="gz":
                 filename=filename+".gz"
             try:
                 shutil.copy(self.tempFileName,filename)
                 os.remove(self.tempFileName)
-                del(self.tempFile)
                 del(self.tempFileName)
             except IOError,e:
                 print e
@@ -161,9 +174,13 @@ class Interface:
 
     def showmatch(self):
         "Prints the results to standard out"
-        if hasattr(self,"tempFile"):
-            self.tempFile.seek(0)
-            print self.tempFile.read()
+        if hasattr(self,"tempFileName"):
+            try:
+                tempFile=GzipFile(self.tempFileName,"r")
+            except NameError:
+                tempFile=open(self.tempFileName,"r")
+            print tempFile.read()
+            tempFile.close()
         else:
             Output.showmatch(self.__comp)
 
@@ -174,6 +191,7 @@ class Interface:
 
     def quit(self):
         "Exits the program"
+        print "Exiting the program"
         sys.exit()
 
 
@@ -196,7 +214,7 @@ class Interface:
         if hasattr(self,"alignment"):
             del(self.alignment)
             
-        if filename=='.' and  hasattr(self,"tempFile"):
+        if filename=='.' and  hasattr(self,"tempFileName"):
             filename=self.tempFileName
 
         if filename=='.':
@@ -204,11 +222,11 @@ class Interface:
                 return "No binding sites"
             else:
                 self.alignment=align.aligndata(Output.get(self.__comp),
-                                               num_of_align, Lambda, xi,
+                                               Lambda, xi,
                                                mu, nu,nuc_per_rotation)
 
         else:
-            self.alignment= align.alignfile(filename, num_of_align, Lambda,
+            self.alignment= align.alignfile(filename, Lambda,
                                             xi, mu, nu,nuc_per_rotation)
 
         self.moreAlignments(num_of_align)
@@ -222,6 +240,10 @@ class Interface:
     def savealignGFF(self,filename=""):
         "Saves the results in GFF format"
         return Output.savealign(Output.formatalignGFF(self.alignment), filename)
+
+    def savealignAnchor(self,filename=""):
+        "Saves the results in Anchor format"
+        return Output.savealign(Output.formatalignCHAOS(self.alignment), filename)
         
     def savealign(self, filename=''):
         "Saves the results"
