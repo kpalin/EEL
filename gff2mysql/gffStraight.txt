@@ -1,0 +1,241 @@
+--
+--  $Log$ 
+--
+
+
+drop table gffkoe;
+
+create table gffkoe (
+fileName varchar(100),
+species varchar(10),
+enscode varchar(50),
+hugocode varchar(20),
+strand varchar(10),
+slice varchar(100),
+type varchar(30),
+tfsite varchar(100),
+start int, 
+stop int,
+score float,
+sitestrand char(1),
+adot char(1),
+attrib varchar(255),
+junk1 varchar(10),
+junk2 varchar(10),
+junk3 varchar(10),
+junk4 varchar(10),
+junk5 varchar(10),
+junk6 varchar(10),
+junk7 varchar(10),
+junk8 varchar(10),
+junk9 varchar(10),
+cisAttrib varchar(10)
+
+);
+-- grep -H "" og_*.fasta.align.gff |tr \|: \\\t\\\t >gffkoe.txt
+--load data local infile 'gffkoe.txt' into table gffkoe;
+-- mysqlimport -ppalindrome --columns=fileName,species,slice,type,tfsite,start,stop,score,sitestrand,adot,attrib,junk1,junk2,junk3,junk4,junk5,junk6,cisAttrib --local bbu_palin gffkoe.txt
+
+
+drop table if exists sequencekoe;
+drop table if exists regionkoe;
+drop table if exists cismodulekoe;
+drop table if exists tfactorkoe;
+drop table if exists sliceCisLinkKoe;
+drop table if exists slicekoe;
+DROP TABLE IF EXISTS alnColsKoe ;
+
+drop table if exists siteskoe;
+
+CREATE TABLE sequencekoe (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	species VARCHAR(125),
+	DBname VARCHAR(125) NOT NULL,
+	name VARCHAR(125) NOT NULL,
+	UNIQUE (name,species,DBname)
+);
+
+
+-- mysqlimport -p  bbu_palin -v --local gffkoe.txt
+
+CREATE TABLE slicekoe (
+  id int(11) AUTO_INCREMENT PRIMARY KEY,
+  beginPos int(11) NOT NULL default '0',
+  endPos int(11) NOT NULL default '0',
+  fileName varchar(200) NOT NULL default '',
+  enscode varchar(100),
+	geneName varchar(20),
+  seqName varchar(200),
+  revComplement int(11) NOT NULL default 0,
+	seqID INT,
+	KEY (seqID),
+  KEY `geneIndex` (`enscode`),
+  KEY (fileName,seqName)
+);
+
+
+create table cismodulekoe (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	score FLOAT,
+	tmpID varchar(255),
+	KEY (tmpID)
+);
+
+	
+CREATE TABLE sliceCisLinkKoe (
+	sliceID int not null,
+	cisID int not null,
+	KEY (sliceID,cisID),
+	PRIMARY KEY (cisID,sliceID)
+);
+
+
+CREATE TABLE alnColsKoe (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	tfID INT,
+	scoredelta FLOAT,
+	cisID INT NOT NULL,
+	cisColId INT NOT NULL,
+	KEY (cisID,cisColId),
+	KEY (tfID)
+);
+
+CREATE TABLE siteskoe (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	weight FLOAT,
+	pos INT,
+	strand CHAR(1),
+	regID INT NOT NULL,
+	colID INT NOT NULL,
+	KEY (regID),
+	KEY (colID)
+);
+
+
+
+CREATE TABLE regionkoe (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	seqID INT,
+	beginPos INT,
+	endPos INT,
+	cisID INT,
+	KEY (seqID),
+	KEY (cisID)
+);
+
+
+CREATE TABLE tfactorkoe (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	width INT,
+	name VARCHAR(255) UNIQUE,
+	KEY (name)
+);
+
+delete from gffkoe where species='### lambda';
+
+insert ignore into tfactorkoe (name,width) select distinct tfsite,stop-start from gffkoe where tfsite!='CisModule';
+
+insert ignore into sequencekoe (species,name) select distinct species,SUBSTRING(slice,1,LOCATE('.',slice)-1) from gffkoe;
+
+
+insert into slicekoe (seqID,beginPos,endPos,ensCode,seqName,geneName,revComplement,filename) 
+select distinct s.id,
+substring(g.slice,locate('.',g.slice)+1,locate('-',substring_index(g.slice,'.',-1))-1) beginPos,
+substring(g.slice,locate('-',g.slice)+1,9999) endPos,enscode as enscode,
+concat_ws('|',g.species,g.enscode,g.hugocode,g.strand,g.slice) as seqName,
+g.hugocode as hugoName,
+IF(g.strand='Crick',1,0), g.fileName
+from gffkoe g,sequencekoe s where s.species=g.species and s.name=SUBSTRING(g.slice,1,LOCATE('.',g.slice)-1);
+
+
+
+
+
+insert into cismodulekoe (score,tmpID)
+	SELECT DISTINCT score,concat(fileName,substring(cisAttrib,1,LOCATE(';',cisAttrib)-1)) FROM gffkoe where tfsite='CisModule';
+
+
+
+
+
+insert into sliceCisLinkKoe (cisID,sliceID) select DISTINCT c.id,s.id
+from cismodulekoe c, slicekoe s,gffkoe g
+where g.enscode = s.enscode and  c.tmpID=concat(g.fileName,g.attrib) and g.hugocode=s.geneName
+and g.tfsite!='CisModule';
+
+
+
+insert into regionkoe (beginPos,endPos,cisID,seqID)
+select substring(g.slice,locate('.',g.slice)+1,locate('-',substring_index(g.slice,'.',-1))-1) + start as beginPos,
+substring(g.slice,locate('.',g.slice)+1,locate('-',substring_index(g.slice,'.',-1))-1)+stop as endPos,c.id as cisID,s.id as seqID
+from gffkoe g,sequencekoe s,cismodulekoe c
+where tfsite='CisModule' and s.species=g.species and s.name=SUBSTRING(slice,1,LOCATE('.',slice)-1) and c.score=g.score and concat(g.fileName,substring(g.cisAttrib,1,LOCATE(';',g.cisAttrib)-1))=c.tmpID;
+
+
+drop table if exists siteskoeTmp;
+CREATE TEMPORARY TABLE siteskoeTmp (
+	id INT,
+	weight FLOAT,
+	pos INT,
+	strand CHAR(1),
+	regID INT NOT NULL,
+	colID INT ,
+	colInReg INT AUTO_INCREMENT not null,
+	FOREIGN KEY (colID) REFERENCES alnColskoe(id),
+	FOREIGN KEY (regID) REFERENCES regionkoe(id),
+	primary KEY (regID,colInReg),
+	KEY (regID),
+	KEY (colID)
+);
+
+
+
+
+
+
+insert into siteskoeTmp (pos,strand,regID)
+select IF(strand='Crick',
+substring(g.slice,locate('-',g.slice)+1,9999)-g.stop,
+substring(g.slice,locate('.',g.slice)+1,locate('-',substring_index(g.slice,'.',-1))-1)+g.start) as pos ,
+IF(strand='Crick',IF(sitestrand='-','+','-'),sitestrand),
+r.id
+from gffkoe g,regionkoe r,cismodulekoe c,sequencekoe s
+where r.cisID=c.id  and concat(g.fileName,g.attrib)=c.tmpID  and
+s.id=r.seqID and g.species=s.species
+order by r.beginPos+g.start;
+
+
+drop table if exists alnColsKoeTmp;
+CREATE temporary TABLE alnColsKoeTmp (
+	id INT,
+	tfID INT,
+	cisID INT NOT NULL,
+	cisColId INT AUTO_INCREMENT NOT NULL,
+	scoredelta FLOAT,
+	PRIMARY KEY (cisID,cisColId),
+	FOREIGN KEY (tfID) REFERENCES tfactorkoe(id)
+);
+
+
+
+insert into alnColsKoeTmp (tfId,scoredelta,cisID)
+select t.id,g.score,c.id
+from tfactorkoe t,cismodulekoe c,gffkoe g
+where t.name=g.tfsite and 
+ c.tmpID=concat(g.fileName,g.attrib) and g.species='HUMAN' ORDER BY g.start; -- !!!!!!!
+
+insert into alnColsKoe  (tfId,scoredelta,cisID,cisColId)
+select tfId,scoredelta,cisId,cisColId
+from alnColsKoeTmp;
+
+
+
+insert into siteskoe (weight,pos,strand,regId,colId)
+select s.weight,s.pos,s.strand,s.regId,a.id as colId
+FROM siteskoeTmp s,alnColsKoe a,regionkoe r
+WHERE s.regId=r.id and r.cisID=a.cisID and s.colInReg=a.cisColId;
+
+
+alter table cismodulekoe drop column tmpId;
+
+--delete from gffkoe where tfsite='CisModule';
