@@ -5,6 +5,16 @@ python2.2 setup.py debug build
 """
 import sys
 
+
+
+
+
+##
+##   $Log$
+##
+
+
+
 print sys.argv
 
 common_compile_args=["-Wall","-O3"]
@@ -62,7 +72,7 @@ modDist = Extension("editdist",
 
 
 setup (name = 'mabs',
-       version = '1_beta12',
+       version = '1_beta13',
        url = "http://www.cs.helsinki.fi/u/kpalin/",
        author = "Kimmo Palin, Matthias Berg",
        author_email = "kimmo.palin@helsinki.fi",
