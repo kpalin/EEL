@@ -17,6 +17,9 @@ except ImportError:
 
 #
 # $Log$
+# Revision 1.14  2004/04/08 13:03:33  kpalin
+# Updates on multiple alignment.
+#
 # Revision 1.13  2004/03/03 09:26:34  kpalin
 # Added interface for multiple alignment.
 #
@@ -169,7 +172,7 @@ class Interface:
         #for i in [self.malignment[0]]:
         for i in self.malignment:
             i.setAlnLimit(minPairs)
-            if not i or len(i)<2:continue
+            #if not i or len(i)<2:continue
             if len([x for x in i.seqs if x in self.seq.getNames()])==len(i.seqs):
                 i.strAln(self.seq)
             print str(i)
@@ -177,16 +180,24 @@ class Interface:
 
 
     def saveMultiAlign(self,arglist):
-        """Arguments: filename
-        Outputs the multiple alignment to file 'filename'."""
+        """Arguments: filename [minPairs]
+        Outputs the multiple alignment to file 'filename'.
+        If an integer minPairs is given, no sites aligned with less than that
+        number of pairwise alignments, is reported."""
         fname=arglist[0]
+        try:
+            minPairs=int(arglist[1])
+        except (IndexError,ValueError):
+            minPairs=0
+            
         if not hasattr(self,"malignment"):
             print "No multiple alignment to save!"
             return
         m="w"
         for i in self.malignment:
-            if len(i)<2:continue
-            if len(self.seq)>0:
+            i.setAlnLimit(minPairs)
+            #if len(i)<2:continue
+            if len([x for x in i.seqs if x in self.seq.getNames()])==len(i.seqs):
                 i.strAln(self.seq)
             Output.savealign(str(i)+"\n",fname,m)
             m="a"
