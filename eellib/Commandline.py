@@ -12,6 +12,11 @@ import string
 
 
 # $Log$
+# Revision 1.10  2004/12/14 13:08:05  kpalin
+#
+# Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun
+# "My hovercraft is full of EELs" )
+#
 # Revision 1.9  2004/07/30 12:21:08  kpalin
 # Commands for multiple alignment and discouragement of using greedy
 # alignment.
@@ -341,7 +346,6 @@ The default value for bound is 0.1"""
             Interface.getTFBS(self, bound)
         except ValueError:
             print "arglist:",repr(arglist)
-            print arglist[0],"is not a number"
 
 
     def getTFBSabsolute(self, arglist):
@@ -356,7 +360,7 @@ The default value for cutoff is 9.0"""
             Interface.getTFBSAbsolute(self, cutoff)
         except ValueError:
             print "arglist:",repr(arglist)
-            print arglist[0],"is not a number"
+            raise
             
     def showmatch(self,arglist):
         "Arguments: none\nprints the computed scores to stdout"

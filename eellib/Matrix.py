@@ -7,6 +7,9 @@ import math
 
 #
 # $Log$
+# Revision 1.4  2004/04/08 13:11:58  kpalin
+# InfoContent and CVS loging.
+#
 #
 
 from cStringIO import StringIO
@@ -26,7 +29,7 @@ class Matrix:
         self.backGround=None
         File=open(filename,'r')
         self.name=filename
-        self.__Matrix=filter(lambda x:len(x),[[string.atoi(entry)
+        self.LLMatrix=filter(lambda x:len(x),[[string.atoi(entry)
                         for entry in line.split()]
                        for line in File.read().split('\n')])
         File.close()
@@ -56,18 +59,18 @@ class Matrix:
 
     def __len__(self):
         """Return the number of columns in this matrix"""
-        return len(self.__Matrix[0])
+        return len(self.LLMatrix[0])
 
     def draw(self):
         "draws the matrix"
-        for line in self.__Matrix:
+        for line in self.LLMatrix:
             for entry in line:
                 print '%3.0f' % entry,
             print
 
     def drawWeights(self):
         "draws the matrix"
-        for line in self.__M:
+        for line in self.M_weight:
             for entry in line:
                 print '%6.2f' % entry,
             print
@@ -95,7 +98,7 @@ class Matrix:
 
     def initWeights(self):
         """Helper to initialize the matrix weights for 0- or higher order background models"""
-        self.__M=[]
+        self.M_weight=[]
         if self.backGround:
             self.positiveWeights()
         else:
@@ -107,26 +110,26 @@ class Matrix:
         Update weights only for positive probability.
         Background is taken care elsewhere"""
 
-        sum=reduce(lambda s,row:map(operator.add,s,row),self.__Matrix,[self.pseudoCount]*len(self.__Matrix[0]))
+        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[self.pseudoCount]*len(self.LLMatrix[0]))
 
 
-        self.__M.append(map(lambda x,tot: log2((x+(self.freqA*self.pseudoCount))/tot),
-                            self.__Matrix[0],sum))
-        self.__M.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/tot),
-                            self.__Matrix[1],sum))
-        self.__M.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/tot),
-                            self.__Matrix[2],sum))
-        self.__M.append(map(lambda x,tot: log2((x+(self.freqT*self.pseudoCount))/tot),
-                            self.__Matrix[3],sum))
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqA*self.pseudoCount))/tot),
+                            self.LLMatrix[0],sum))
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/tot),
+                            self.LLMatrix[1],sum))
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/tot),
+                            self.LLMatrix[2],sum))
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqT*self.pseudoCount))/tot),
+                            self.LLMatrix[3],sum))
 
         # Don't know how to compute maxscore with markov background. It varies.
         #maxscore is the highest reachable score (disregarding BG)
         #self.maxscore=0.0
-        #for i in range(len(self.__M[0])):
-        #    self.maxscore-=max(self.__M[0][i],
-        #                         self.__M[1][i],
-        #                         self.__M[2][i],
-        #                         self.__M[3][i])
+        #for i in range(len(self.M_weight[0])):
+        #    self.maxscore-=max(self.M_weight[0][i],
+        #                         self.M_weight[1][i],
+        #                         self.M_weight[2][i],
+        #                         self.M_weight[3][i])
 
         
 
@@ -134,12 +137,12 @@ class Matrix:
         """Update weights according to 0-order background"""
 
         # Sum of the columns.
-        sum=reduce(lambda s,row:map(operator.add,s,row),self.__Matrix,[self.pseudoCount]*len(self.__Matrix[0]))
+        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[self.pseudoCount]*len(self.LLMatrix[0]))
 
 
         # Frequencies of a nucleotide
         freq=[ [ (x+bgFreq*self.pseudoCount)/(tot) for x,tot in zip(matrix,sum) ] \
-               for matrix,bgFreq in zip(self.__Matrix,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
+               for matrix,bgFreq in zip(self.LLMatrix,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
 
         # Compute information content of the motif
         InfoContent=[[ f*log2(f/bgF) for f in fLine] for (fLine,bgF) in zip(freq,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
@@ -147,27 +150,27 @@ class Matrix:
 
         self.InfoContent=reduce(operator.add,reduce(lambda x,y:x+y,InfoContent,[]))
         # Compute weights.
-        self.__M.append(map(lambda x,tot: log2((x+(self.freqA*self.pseudoCount))/
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqA*self.pseudoCount))/
                                                (tot*self.freqA)),
-                            self.__Matrix[0],sum))
-        self.__M.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/
+                            self.LLMatrix[0],sum))
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/
                                                (tot*self.freqC)),
-                            self.__Matrix[1],sum))
-        self.__M.append(map(lambda x,tot: log2((x+(self.freqG*self.pseudoCount))/
+                            self.LLMatrix[1],sum))
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqG*self.pseudoCount))/
                                                (tot*self.freqG)),
-                            self.__Matrix[2],sum))
-        self.__M.append(map(lambda x,tot: log2((x+(self.freqT*self.pseudoCount))/
+                            self.LLMatrix[2],sum))
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqT*self.pseudoCount))/
                                                (tot*self.freqT)),
-                            self.__Matrix[3],sum))
+                            self.LLMatrix[3],sum))
 
 
         #maxscore is the highest reachable score (which respect to the BG)
         self.maxscore=0.0
-        for i in range(len(self.__M[0])):
-            self.maxscore+=max(self.__M[0][i],
-                                 self.__M[1][i],
-                                 self.__M[2][i],
-                                 self.__M[3][i])
+        for i in range(len(self.M_weight[0])):
+            self.maxscore+=max(self.M_weight[0][i],
+                                 self.M_weight[1][i],
+                                 self.M_weight[2][i],
+                                 self.M_weight[3][i])
 
 
 
@@ -175,7 +178,7 @@ class Matrix:
         "matches matrix on sequence DOES NOT CURRENTLY WORK"
         #self.setBG(sequence)
         print "Match does not currently work"
-        #return matrix.match(self.__M, sequence)
+        #return matrix.match(self.M_weight, sequence)
 
     def getTFBSbyAbsolute(self,sequence,cutoff):
         """Returns the hits that are better than cutoff"""
@@ -190,8 +193,8 @@ class Matrix:
         
         if self.maxscore>cutoff:
             #bg=matrix.BackGround(open("/home/kpalin/tyot/comparative/humanGenome/chr1.fa"))
-            ret=matrix.getTFBSwithBg(self.__M,sequence,cutoff,self.backGround)
-            #ret=matrix.getTFBS(self.__M,sequence,cutoff)
+            ret=matrix.getTFBSwithBg(self.M_weight,sequence,cutoff,self.backGround)
+            #ret=matrix.getTFBS(self.M_weight,sequence,cutoff)
             if ret.has_key("NEXT_SEQ"):
                 print "NEXT_SEQ",ret["NEXT_SEQ"]
                 del ret["NEXT_SEQ"]
@@ -211,7 +214,7 @@ class Matrix:
         #seqIO.seek(0)
         #seqIO=open("/home/kpalin/tyot/comparative/mabs/iso.tmp.fa")
         #seqIO.seek(1)
-        ret=matrix.getTFBSwithBg(self.__M, sequence, minscore+self.maxscore,self.backGround)
+        ret=matrix.getTFBSwithBg(self.M_weight, sequence, minscore+self.maxscore,self.backGround)
         if not ret:
             ret={}
         if ret.has_key("NEXT_SEQ"):
@@ -219,3 +222,24 @@ class Matrix:
             del ret["NEXT_SEQ"]
         return ret
     
+
+
+
+def getAllTFBS(sequence,cutoff,matlist,absOrRat=None):
+    "Get all TFBSs from one sequence."
+    
+    if absOrRat:
+        matlist=[x for x in matlist if x.maxscore>cutoff]
+
+    else:
+        cutoff=[log2(cutoff)+m.maxscore for m in matlist]
+
+    if len(matlist)==0:
+        ret={}
+    else:
+        Mat=matlist[:]
+        BG=matlist[0].backGround
+        ret=matrix.getAllTFBSwithBg(Mat,sequence,cutoff,BG)
+
+
+    return ret

@@ -1,8 +1,8 @@
-# -*- coding: UTF-8
 """Most of the Python functionality and gzip interface"""
+# -*- coding: UTF-8
 
 
-from Matrix import Matrix
+import Matrix
 from Sequence import Sequences
 import Output
 import os,shutil
@@ -18,6 +18,9 @@ except ImportError:
 
 #
 # $Log$
+# Revision 1.17  2004/12/17 12:20:44  kpalin
+# Changed the matrix dictionary key ordering
+#
 # Revision 1.16  2004/07/30 12:09:57  kpalin
 # Working commands for multiple alignment.
 #
@@ -268,7 +271,7 @@ If you use '.' as filename the local data are aligned."""
         "adds new matrices from given files"
         for f in filenames:
             try:
-                m=Matrix(f)
+                m=Matrix.Matrix(f)
                 print "adding %s, Info=%2.4g:"%(f,m.InfoContent)
                 self.matlist.append(m)
             except ValueError:
@@ -337,28 +340,22 @@ If you use '.' as filename the local data are aligned."""
             seqnumber +=1
             print "Matching Sequence.",seqnumber,"of",len(self.seq.getNames())
             self.__comp[name]={}
-            for m in self.matlist:
-                print "Matching matrix %s on sequence %s"%(m.getName(),name)
-                print "Progress: %2.2f %%" % (100*progress/duration)
-                progress +=1.0
-                if absCutoff:
-                    self.__comp[name][m]=m.getTFBSbyAbsolute(self.seq.sequence(name),
-                                                             bound)
-                else:
-                    self.__comp[name][m]=m.getTFBSbyRatio(self.seq.sequence(name),
-                                                          bound)
-                try:
-                    totalMatches+=len(self.__comp[name][m])
-                    print "Found %d matches\n"%(len(self.__comp[name][m]))
-                except TypeError:
-                    print "m=",m
-                    print "name=",name
-                    print "self.__comp=",self.__comp
-                    #self.__gff=Output.get(self.__comp).split('\n')
-                if totalMatches>50000:
-                    self.storeTmpGFF()
-                    self.__comp[name]={}
-                    totalMatches=0
+            self.__comp[name]=Matrix.getAllTFBS(self.seq.sequence(name),
+                                                  bound,self.matlist,absCutoff)
+#                self.__comp[name][m]=m.getTFBSbyRatio(self.seq.sequence(name),
+#                                                      bound)
+            try:
+                foundMatches=sum([len(x) for x in self.__comp[name].values()])
+                totalMatches+=foundMatches
+                print "Found %d matches\n"%(foundMatches)
+            except TypeError:
+                print "name=",name
+                print "self.__comp=",self.__comp
+                #self.__gff=Output.get(self.__comp).split('\n')
+            if totalMatches>50000:
+                self.storeTmpGFF()
+                self.__comp[name]={}
+                totalMatches=0
         if hasattr(self,"tempFileName"):
             self.finalTmpGFF()
 
