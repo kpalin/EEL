@@ -2,6 +2,9 @@
 
 #
 # $Log$
+# Revision 1.8  2004/04/08 13:03:12  kpalin
+# Output and stupid Greedy multiple alignment works.
+#
 # Revision 1.7  2004/04/06 12:18:34  kpalin
 # Looks a lot like the Prohaska way doesn't work. Trying something
 # nasty.
@@ -64,6 +67,9 @@ class PairModule:
 
         self.sNames=[sname1,sname2]
         self.sNames.sort()
+        # For greedy alignment.
+        self.used=-1
+        self.included=0
         
         self.DNApos={}
         self.DNApos[sname1]=(spos1,epos1)
@@ -311,7 +317,7 @@ class PairModule:
 
 class MultiOutModule:
     """Class to assist the output of multiple alignments"""
-    def __init__(self,aligns,sites,colCounts,id,alnLimit=2,score=0.0):
+    def __init__(self,aligns,sites,colCounts,id,alnLimit=2,score=0.0,pairCount=0):
         self.score=score
         self.align=aligns
         self.sites=sites
@@ -319,6 +325,7 @@ class MultiOutModule:
         self.id=id
         self.n=len(self.sites)
         self.alnLimit=alnLimit
+        self.pairCount=pairCount
 
         self.sb=None
         self.seqs=self.align.keys()
@@ -355,6 +362,8 @@ class MultiOutModule:
 
     def writePosAln(self):
         self.sb.write("Alignment Score: %g\n"%(self.score))
+        if self.pairCount>0:
+            self.sb.write("Used pairwise alignments: %d\n"%(self.pairCount))
         self.sb.write(" "*26+"  ".join(["%-10s"%(x[:10]) for x in self.seqs]))
         for i in range(self.n):
             #alnCount=(1+math.sqrt(1+8*self.colCount[i]))/2
@@ -384,13 +393,12 @@ class MultiOutModule:
         for (seq,i) in zip(self.seqs,range(len(self.seqs))):
             pos[seq]=self.seqCoords[seq][0]-self.seqContext
             aln[seq]=self.seqAln[seq].getvalue()
-            if seq=="ALIGN":continue
             self.sb.write("Sequence %d : %s\n"%(i,seq))
 
         alnLen=len(aln.values()[0])
         self.sb.write("\n")
         for p in range(0,alnLen,linelen):
-            for seq in self.seqs:
+            for seq in aln.keys():
                 try:
                     alnLine=aln[seq][p:p+linelen]
                 except KeyError:
@@ -486,7 +494,6 @@ class MultiOutModule:
 
         self.seqAln["ALIGN"]=StringIO("".join(alnList)+"."*(max(myAlnLen.values())-len(alnList)+self.seqContext))
         self.seqCoords["ALIGN"]=(self.seqContext,max(myAlnLen.values()))
-        self.seqs.append("ALIGN")
 
         self.writeAlnSeq()
                      
@@ -570,7 +577,14 @@ class MultiModule:
         offset=len(self._pairs)
         last=len(other._pairs)-1
 
-        self._pairs.extend(other._pairs[:-1])
+        self._pairs[-1].code=offset-1
+        #print "I  ",[x.code for x in self._pairs],[x.code for x in other._pairs]
+        #other._pairs[last].code=-1
+        for op in other._pairs[:-1]:
+            op.code=op.code+offset
+            self._pairs.append(op)
+        #self._pairs.extend(other._pairs[:-1])
+        #print "II ",[x.code for x in self._pairs],[x.code for x in other._pairs[:-1]]
         newIndForLast=self._pairs.index(other._pairs[last])
         for (s,t),v in other._overlaps.items():
             
@@ -600,7 +614,8 @@ class MultiModule:
                 self._pairsBySeq[name]=[]
             self._pairsBySeq[name].extend([(pair,n+offset) for (pair,n) in filter(lambda x:x[1]!=last,other._pairsBySeq[name])])
         
-            
+        #print "unite",[x.code for x in self._pairs]
+ 
         
     def __str__(self):
         return str(self._pairsBySeq.items())
@@ -640,6 +655,14 @@ class MultiModule:
                                 self._overlapsM[n][code]=[common]
                             else:
                                 self._overlapsM[n][code].append(common)
+                            if not hasattr(pair,"overlaps"):
+                                pair.overlaps=[code]
+                            else:
+                                pair.overlaps.append(code)
+                            if not hasattr(opair,"overlaps"):
+                                opair.overlaps=[n]
+                            else:
+                                opair.overlaps.append(n)
                                 
             if not intersects:
                 return 0
@@ -648,7 +671,12 @@ class MultiModule:
             if not self._pairsBySeq.has_key(name):
                 self._pairsBySeq[name]=[]
             self._pairsBySeq[name].append((pair,n))
+
+        pair.code=n
+        assert(len(self._pairs)==n)
         self._pairs.append(pair)
+        #print "add",[x.code for x in self._pairs],n
+        assert(len(self._pairs)==(n+1))
         
         return 1                
 
@@ -1139,13 +1167,36 @@ class MultiModule:
         extend2(range(N),0,N)
 
 
-    def makeGreedyAlign(self):
-        """Makes a greedy local alignment from this module. Very yacky method."""
+    def makeAllGreedyAligns(self,soCalledAll=20):
+        """Runs the makeGreedyAlign2 for all seeds"""
 
-        # Decreasing order of pairs.
-        self._pairs.sort(lambda x,y:cmp(y.score,x.score))
+        myPairs=self._pairs[:]
+        myPairs.sort(lambda x,y:cmp(x.score,y.score))
+        #a=[x.code for x in myPairs]
+        #a.sort()
+        print "AllGreedy",len(myPairs)
+        multiMods=[]
+        myPairsLim=max(len(myPairs)-soCalledAll,0)
+        while len(myPairs)>myPairsLim:
+            seed=myPairs.pop()
+            if not seed.included:
+                print "Seed %d:%g"%(seed.code,seed.score)
+                multiMods.append(self.makeGreedyAlign2(seed))
+                print "Result: %g"%(multiMods[-1].score)
+        return multiMods        
+
+    def makeGreedyAlign2(self,seed=None):
+        """Makes a greedy local alignment from this module.
+
+        Quite yacky method. Add overlapping pairwise alignments."""
+
+        if not seed:
+            # Decreasing order of pairs.
+            myPairs=self._pairs[:]
+            myPairs.sort(lambda x,y:cmp(x.score,y.score))
+            seed=myPairs.pop() # The best scoring.
+            
         mult={}
-        back={}
         sites=[]
         colCount=[]
 
@@ -1157,13 +1208,158 @@ class MultiModule:
 
         alnLen=0
         Score=0.0
-        for pair in self._pairs:
+        pairCount=0
+
+        class transact:
+            def __init__(self):
+                self.mult={}
+            pass
+
+        rollback=0
+        
+        pairMap={seed.code:seed}
+        myPairs=pairMap.items()
+        while len(myPairs)>0:
+            #print "myPairs",len(myPairs)
+            code,pair=myPairs.pop()
+            del(pairMap[code])
+            # Add pairs that intersects.
+
+
+
+            seq1,seq2=pair.sNames
+
+            # Prepare to back down from adding this pair
+            back=transact()
+            back.Sites=sites[:]
+            back.ColCount=colCount[:]
+            back.Score=Score
+            back.pairCount=pairCount
+
+            Score+=pair.score
+            pairCount+=1
+            for k,v in mult.items():
+                back.mult[k]=v[:]
+
+
+            for s in range(len(pair.sites)):
+                p=0
+
+                # Find new position
+##                while p<alnLen and mult[seq1][p]<pair.sitePos[seq1][s] and \
+##                      mult[seq2][p]<pair.sitePos[seq2][s]:
+                while p<alnLen and (mult[seq1][p]<pair.sitePos[seq1][s] and \
+                      mult[seq2][p]<pair.sitePos[seq2][s]):
+                    p+=1
+
+                # Verify location:
+                p1,p2=p,p
+                while p1<alnLen and mult[seq1][p1]==-1:
+                    p1+=1
+                while p2<alnLen and mult[seq2][p2]==-1:
+                    p2+=1
+                # Do not add this pair if the alignment would get busted.
+                #if (p1<alnLen and (pair.sitePos[seq1][s]+pair.sites[s].width)>mult[seq1][p1]) or \
+                #   (p2<alnLen and (pair.sitePos[seq2][s]+pair.sites[s].width)>mult[seq2][p2]):
+                if (p1<alnLen and (pair.sitePos[seq1][s])>mult[seq1][p1]) or \
+                   (p2<alnLen and (pair.sitePos[seq2][s])>mult[seq2][p2]):
+                    mult=back.mult.copy()
+                    colCount=back.ColCount
+                    sites=back.Sites
+                    Score=back.Score
+                    pairCount=back.pairCount
+                    alnLen=len(sites)
+                    rollback=1
+                    break
+                
+                
+                # New column if needed
+                if p==alnLen or ( (mult[seq1][p]>pair.sitePos[seq1][s] or \
+                                   mult[seq1][p]==-1) and 
+                                  (mult[seq2][p]>pair.sitePos[seq2][s] or \
+                                   mult[seq2][p]==-1) ):
+                    colCount.insert(p,0)
+                    sites.insert(p,pair.sites[s])
+                    alnLen+=1
+                    for key in mult.keys():
+                        mult[key].insert(p,-1)
+                        try:
+                            assert(alnLen==len(sites)==len(colCount)==len(mult[key]))
+                        except AssertionError:
+                            pdb.set_trace()
+                try:
+                    assert(mult[seq1][p] in (-1,pair.sitePos[seq1][s]))
+                    assert(mult[seq2][p] in (-1,pair.sitePos[seq2][s]))
+                except KeyError:
+                    pdb.set_trace()
+                    #print "Fitting %s (%g)"%(pair.id[-10:],pair.score)
+                except AssertionError:
+                    mult=back.mult.copy()
+                    colCount=back.ColCount
+                    sites=back.Sites
+                    Score=back.Score
+                    pairCount=back.pairCount
+                    rollback=1
+                    alnLen=len(sites)
+                    #print "AE: non fitting alignment %s (%g)"%(pair.id[-10:],pair.score)
+                    break
+
+                # Set the values
+                assert(mult[seq1][p] in (-1,pair.sitePos[seq1][s]))
+                assert(mult[seq2][p] in (-1,pair.sitePos[seq2][s]))
+                mult[seq1][p]=pair.sitePos[seq1][s]
+                mult[seq2][p]=pair.sitePos[seq2][s]
+                colCount[p]+=1
+
+            pair.used=seed.code
+            if rollback==0:
+                pair.included=1
+                [pairMap.setdefault(k,self._pairs[k]) for k in pair.overlaps if  abs(self._pairs[k].used)!=seed.code]
+##            #myPairs.extend([self._pairs[x] for x in pair.overlaps])
+
+##              Remove pairs that are already used.
+##            #myPairs=[x for x in myPairs if not hasattr(x,"used")]
+
+                myPairs=pairMap.items()
+##            # Sort then so that myPairs.pop() is the best.
+                myPairs.sort(lambda x,y:cmp(x[1].score,y[1].score))
+            else:
+                rollback=0
+
+                
+
+
+        return MultiOutModule(mult,sites,colCount,-1,0,Score,pairCount)
+
+    def makeGreedyAlign(self):
+        """Makes a greedy local alignment from this module.
+
+        Very yacky method. Always add the best scoring, not yet added
+        pairwise alignment."""
+
+        # Decreasing order of pairs.
+        myPairs=self._pairs[:]
+        myPairs.sort(lambda x,y:cmp(y.score,x.score))
+        mult={}
+        back={}
+        sites=[]
+        colCount=[]
+
+        # Make the initial empty vectors
+        for pair in myPairs:
+            for s in pair.sNames:
+                mult[s]=[]
+
+
+        alnLen=0
+        Score=0.0
+        for pair in myPairs:
             seq1,seq2=pair.sNames
             backSites=sites[:]
             backColCount=colCount[:]
             backScore=Score
-            #Score+=pair.score
-            Score+=1.0
+            Score+=pair.score
+            #Score+=1.0
             for k,v in mult.items():
                 back[k]=v[:]
                 try:
@@ -1564,12 +1760,16 @@ class MultipleAlignment:
 
             self._multiAlign=nAligns[:]
 
-        print len(self._multiAlign),
+##        print len(self._multiAlign),
         self._multiAlign=[x for x in self._multiAlign if len(x._pairs)>1 ]
-        print len(self._multiAlign)
+##        print len(self._multiAlign)
+##        print [len(x._pairs) for x in self._multiAlign]
         #self._multiAlign=filter(lambda x:len(x._pairs)>1,self._multiAlign)
         for mmod in self._multiAlign:
-            self.resAligns.append(mmod.makeGreedyAlign())
+##            self.resAligns.append(mmod.makeGreedyAlign2())
+            self.resAligns.extend(mmod.makeAllGreedyAligns())
+
+        self.resAligns.sort(lambda x,y:cmp(y.score,x.score))
 
     def DOESNTWORK(self):
         assert(None)
