@@ -13,6 +13,9 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.19  2005/02/24 11:37:43  kpalin
+# Site annotations.
+#
 # Revision 1.18  2005/02/22 11:08:56  kpalin
 # Initial working version for outputting results from
 # SNP scanning matrix matcher.
@@ -139,7 +142,7 @@ def get(data):
     """Returns the data as a string formated as GFF.
 
     data must have the following format:
-    dictionary from Sequence to Matrix to (position,strand,allele,snpPos) to Score"""
+    dictionary from Sequence to Matrix to (position,strand,[ambig,allele,snpPos,scoreDif]) to (Score,altScore)"""
     #output=''
 
     def flatten(mlist):
@@ -151,10 +154,10 @@ def get(data):
                 olist.append(i)
         return olist
     output="".join(flatten(map( \
-        lambda Seq:map(lambda Mat:map(lambda ((Ind,strand,snps),score):\
+        lambda Seq:map(lambda Mat:map(lambda ((Ind,strand,snps),(score,altScore)):\
         ("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\t%s\n"%(\
         Seq,Mat.getName(),Ind,Ind+len(Mat)-1,score,strand,\
-        "\t".join(["%s %d"%(snp[1],snp[2]) for snp in snps]))),\
+        "\t".join(["%s%s%d %g"%(snp[0],snp[1],snp[2],snp[3]) for snp in snps]))),\
         data[Seq][Mat].items()), data[Seq].keys()),data.keys())))
     return output
 
