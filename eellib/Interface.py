@@ -17,6 +17,9 @@ except ImportError:
 
 #
 # $Log$
+# Revision 1.13  2004/03/03 09:26:34  kpalin
+# Added interface for multiple alignment.
+#
 # Revision 1.12  2004/02/23 12:23:52  kpalin
 # Updates for per gene orthologous runs. Maybe litle multiple alignment.
 #
@@ -147,19 +150,27 @@ class Interface:
             if len(filenames)==0:
                 print "Can't find",fileGlob
             for fileName in filenames:
+                print "Reading",fileName
                 self.malignment.addGFFfile(fileName)
         print "All %d files added. Doing the alignment"%(len(filenames)),filenames
         self.malignment.multiAlign()
         
     def showMultiAlign(self,arglist):
-        """Arguments: none
-        Outputs the multiple alignment to standard output."""
+        """Arguments: [minPairs]
+        Outputs the multiple alignment to standard output.
+        If an integer minPairs is given, no sites aligned with less than that
+        number of pairwise alignments, is reported."""
         if not hasattr(self,"malignment"):
             return
+        if len(arglist)>0:
+            minPairs=int(arglist[0])
+        else:
+            minPairs=0
         #for i in [self.malignment[0]]:
         for i in self.malignment:
-            if len(i)<2:continue
-            if len(self.seq)>0:
+            i.setAlnLimit(minPairs)
+            if not i or len(i)<2:continue
+            if len([x for x in i.seqs if x in self.seq.getNames()])==len(i.seqs):
                 i.strAln(self.seq)
             print str(i)
             print "\n"
