@@ -16,6 +16,9 @@ except ImportError:
 
 #
 # $Log$
+# Revision 1.11  2004/02/13 09:40:19  kpalin
+# Corrected bugs
+#
 # Revision 1.10  2004/02/11 09:38:13  kpalin
 # Enabled memory saving features.
 #
@@ -34,6 +37,62 @@ import align
 import sys,math
 
 
+def memFormat(value):
+    if value<2048:
+        return "%dB"%(value)
+    elif value<(1024*2048):
+        return "%dkB"%(value/1024)
+    elif value<(1024*1024*2048):
+        return "%dMB"%(value/(1024*1024))
+    #if value<(1024*1024*1024*2048):
+    else:
+        return "%dGB"%(value/(1024*1024*1024))
+
+def timeFormat(value):
+    s="%ds"%(value%60)
+    value/=60
+    if value>0:
+        s="%dm %s"%(value%60,s)
+        value/=60
+    if value>0:
+        s="%dh %s"%(value%24,s)
+        value/=24
+    if value>0:
+        s="%dd %s"%(value,s)
+    return s
+    
+
+def statReport():
+    status={}
+    try:
+        statParts=open("/proc/self/stat").read().split()
+        #print zip(range(len(statParts)),statParts)
+        status["pid"]=int(statParts[0])
+        status["comm"]=statParts[1]
+        status["state"]=statParts[2]
+        status["ppid"]=int(statParts[3])
+        status["pgrp"]=int(statParts[4])
+        status["session"]=int(statParts[5])
+        status["tty_nr"]=int(statParts[6])
+        status["tpgid"]=int(statParts[7])
+        status["flags"]=long(statParts[8])
+        status["minflt"]=long(statParts[9])
+        status["majflt"]=long(statParts[10])
+        status["cmajflt"]=long(statParts[11])
+        status["utime"]=long(statParts[12])
+        status["stime"]=long(statParts[13])
+        status["cutime"]=long(statParts[14])
+        status["cstime"]=long(statParts[15])
+        status["priority"]=int(statParts[16])
+        status["nice"]=int(statParts[17])  # number 18 is a placeholder
+        status["itrealvalue"]=int(statParts[19])
+        status["starttime"]=long(statParts[20])
+        status["vsize"]=long(statParts[21])
+        ## And a lot more. See: man proc
+        return "Virtual memory size %s. Running time %s (%d seconds)."%(memFormat(status["vsize"]),timeFormat((status["cutime"]+status["cstime"])/100),(status["cutime"]+status["cstime"])/110.0)
+    except Exception,e:
+        pass
+
 def memReport():
     try:
         import re
@@ -45,8 +104,12 @@ def memReport():
             print "Couldn't figure out status:\n",statStr
     except Exception:
         pass
+def __sRep():
+    print statReport()
+
 
 atexit.register(memReport)
+#atexit.register(__sRep)
 
 try:
     from gc import collect
@@ -287,6 +350,7 @@ class Interface:
         if self.alignment:
             #Interface.showalignSTDO(self)
             assert self.alignment.x_name!=self.alignment.y_name
+            print "Used time %g sec."%(self.alignment.secs_to_align)
             return 1
         else:
             return None

@@ -11,6 +11,9 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.7  2004/01/23 12:52:00  kpalin
+# Some, no doubt vital, modifications
+#
 # Revision 1.6  2004/01/14 10:05:58  kpalin
 # Generated documentation
 #
@@ -190,7 +193,7 @@ def formatalignGFF(alignment):
     # This format should be OK for gff2aplot 2.0
     GFFalignFormat='%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\t\tTarget "%s";\tStart %d;\tEnd %d;\tStrand .;\tFrame .;\tCM %d;\n'
 
-    outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation))
+    outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f time=%g\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation,alignment.secs_to_align))
     xname,yname=alignment.x_name,alignment.y_name
 
     for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
