@@ -20,6 +20,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.20  2005/01/07 13:41:25  kpalin
+# Works with py2exe. (windows executables)
+#
 # Revision 1.19  2004/12/22 11:14:24  kpalin
 # Some fixes for better distributability
 #
@@ -71,9 +74,10 @@ from eellib import align
 ##     from eellib import multiAlign
 ## except ImportError:
 ##     pass
+from eellib import _c_matrix
 
 import sys,math
-
+import os.path
 
 def memFormat(value):
     if value<2048:
@@ -163,11 +167,19 @@ class Interface:
     Especially align and getTFBS functions are important."""
     def __init__(self):
         self.outputted=0
-        self.resetMatrices(self)
-        self.resetSequences(self)
+        self.resetMatrices()
+        self.resetSequences()
         self.__comp={}
         self.alignment=None
 
+
+    def showFileList(self,files):
+        for fileName in files:
+            print fileName
+
+    def show(self,text):
+        print text
+            
 
     def multiAlignGreedy(self,arglist):
         """Arguments: pairwiseGFFfiles
@@ -273,9 +285,10 @@ If you use '.' as filename the local data are aligned."""
             Output.savealign(str(i)+"\n",fname,m)
             m="a"
 
-    def resetMatrices(self):
-        "resets the list of matrices"
+    def resetMatrices(self,arglist=None):
+        "Arguments: none\nremoves all matrices"
         self.matlist=[]
+        self.matdict={}
         collect()
 
     def addMatrix(self, filenames):
@@ -283,13 +296,20 @@ If you use '.' as filename the local data are aligned."""
         for f in filenames:
             try:
                 m=Matrix.Matrix(f)
-                print "adding %s, Info=%2.4g:"%(f,m.InfoContent)
-                self.matlist.append(m)
+                if self.matdict.has_key(f):
+                    pass
+                else:
+                    print "adding %s, Info=%2.4g:"%(f,m.InfoContent)
+                    self.matlist.append(m)
+                    self.matdict[f]=m
             except ValueError:
                 print "could not read",f
             except IOError, (errno, strerror):
                 print "%s: %s" % (strerror, f)
-
+        # Make the matrix names nicer.
+        cpreflen=len(os.path.commonprefix([x.fname for x in self.matlist]))
+        for m in self.matlist: m.name=m.fname[cpreflen:]
+        
 
             
     def printMatrices(self):
@@ -297,6 +317,31 @@ If you use '.' as filename the local data are aligned."""
         for i in range(len(self.matlist)):
             print "Matrix No %d (info=%g) %s"%(i,self.matlist[i].InfoContent,self.matlist[i].name)
             self.matlist[i].draw()
+
+    def setBGFreq(self,arglist=None):
+        "Arguments: A C G T\nBackground nucleotide frequencies. Removes markov background."
+        if not arglist==None:
+            tot=reduce(lambda x,y:float(x)+float(y),arglist,0.0)*1.0
+            self.A,self.C,self.G,self.T=map(lambda x:float(x)/tot,arglist)
+            
+        for m in self.matlist:
+            m.setBGfreq(self.A,self.C,self.G,self.T)
+
+    def setMarkovBG(self,bgData,order=4):
+        "Arguments: bgSampleSequence [order]\nBackground sample sequence and order of the model or saved background file."
+        try:
+            sampleStr=self.seq.sequence(bgData)
+        except KeyError:
+            filename=glob(bgData)
+            sampleStr=eval(open(filename[0]).read())
+
+
+        self.bg=_c_matrix.BackGround(sampleStr,int(order))
+
+        for m in self.matlist:
+            m.setMarkovBackground(self.bg)
+            
+
 
     def printMatrixWeights(self):
         "prints matrix weights to standard out"
@@ -312,8 +357,8 @@ If you use '.' as filename the local data are aligned."""
         "removes matrix given by index"
         self.matlist.pop(index)
 
-    def resetSequences(self):
-        "resets the sequences"
+    def resetSequences(self, arglist=None):
+        "Arguments: none\nremoves all sequences"
         self.seq=Sequences()
         collect()
 
@@ -420,17 +465,24 @@ If you use '.' as filename the local data are aligned."""
         else:
             return Output.savematch(self.__comp, filename)
 
-    def showmatch(self):
-        "Prints the results to standard out"
+    def getmatchStr(self):
+        outStr=""
+
         if hasattr(self,"tempFileName"):
             try:
                 tempFile=GzipFile(self.tempFileName,"r")
             except NameError:
                 tempFile=open(self.tempFileName,"r")
-            print tempFile.read()
+            outStr=tempFile.read()
             tempFile.close()
         else:
-            Output.showmatch(self.__comp)
+            outStr=Output.get(self.__comp)
+        return outStr
+
+    def showmatch(self):
+        "Prints the results to standard out"
+        Output.showmatch(self.getmatchStr())
+
 
     def showMoreAlignments(self,count=1):
         """Gets more alignments but doesn't display them"""
@@ -443,6 +495,11 @@ If you use '.' as filename the local data are aligned."""
         print "Exiting the program"
         sys.exit()
 
+
+    def haveMatches(self):
+        "Return true, if we have stored TFBS matches"
+        return  len(self.__comp)>0 or hasattr(self,"tempFileName")
+            
 
     def moreAlignments(self,num_of_align=1):
         """Fetch more alignments from previously run alignment matrix"""

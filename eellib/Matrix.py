@@ -8,6 +8,9 @@ from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.7  2005/01/07 13:41:25  kpalin
+# Works with py2exe. (windows executables)
+#
 # Revision 1.6  2004/12/22 11:14:24  kpalin
 # Some fixes for better distributability
 #
@@ -35,6 +38,7 @@ class Matrix:
 
         self.backGround=None
         File=open(filename,'r')
+        self.fname=filename
         self.name=filename
         self.LLMatrix=filter(lambda x:len(x),[[string.atoi(entry)
                         for entry in line.split()]

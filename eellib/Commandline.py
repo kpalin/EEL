@@ -16,6 +16,9 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.13  2005/01/07 13:41:25  kpalin
+# Works with py2exe. (windows executables)
+#
 # Revision 1.12  2004/12/22 11:14:24  kpalin
 # Some fixes for better distributability
 #
@@ -77,6 +80,13 @@ except ImportError:
 except Exception:
     pass
 
+import glob
+try:
+    import os
+except ImportError:
+    pass
+
+
 
 
 
@@ -113,7 +123,7 @@ class Commandline(Interface):
                          'ress':               (self.resetSequences,0),
                          'reset':              (self.reset,0),
                          "setBGfreq":          (self.setBGFreq,4),
-                         "setMarkovBG":        (self.setMarkovBG,1),
+                         "setMarkovBG":        (self._setMarkovBG,1),
                          'printSeqNames':      (self.printSeqNames,0),
                          'ps':                 (self.printSeqNames,0),
                          'getTFBS':            (self.getTFBS,0),
@@ -136,7 +146,13 @@ class Commandline(Interface):
                          '__multipleAlignGreedy':      (self.multiAlignGreedy,1),
                          '__multipleAlign':      (self.multiAlign,0),
                          '__showMultiAlign':     (self.showMultiAlign,0),
-                         '__saveMultiAlign':     (self.saveMultiAlign,1)}
+                         '__saveMultiAlign':     (self.saveMultiAlign,1),
+                         'no-gui':               (self.no_gui,0)
+                         }
+        # Add directory commands if available.
+        if globals().has_key("os") and hasattr(os,"getcwd") and hasattr(os,"chdir"):
+            self.__commands.update({'dir':                  (self.dirlist,0),
+                                    'cd':                   (self.chgdir,0)})
 
     def run(self):
         "waits for std input and executes these commands"
@@ -203,14 +219,37 @@ class Commandline(Interface):
         return self.__commands.has_key(command)
 
 
-    def setBGFreq(self,arglist=None):
-        "Arguments: A C G T\nBackground nucleotide frequencies. Removes markov background."
-        if not arglist==None:
-            tot=reduce(lambda x,y:float(x)+float(y),arglist,0.0)*1.0
-            self.A,self.C,self.G,self.T=map(lambda x:float(x)/tot,arglist)
+    def no_gui(self,arglist=None):
+        "Arguments: none\nGives command line interface"
+        self.run()
+
+
+
+    def dirlist(self,arglist=None):
+        "Arguments: [path/pattern]\nList files matching the given pattern. Defaults to \"*\" in current working directory.\n"
+        try:
+            dirPath=arglist[0]
+        except IndexError:
+            dirPath="*"
+
+        
+        files=glob(dirPath)
+        self.showFileList(files)
+
+
+    def chgdir(self,arglist=None):
+        "Arguments: [path]\nChange or display the current working directory."
+        try:
+            if arglist:
+                os.chdir(arglist[0])
+        
+            newPath=os.getcwd()
+            self.show(newPath)
+        except OSError,e:
+            self.show(str(e))
             
-        for m in self.matlist:
-            m.setBGfreq(self.A,self.C,self.G,self.T)
+            
+
 
     def saveMarkovBackground(self,arglist=None):
         "Arguments: filename\nName of the file where to store the background model.\n"
@@ -234,27 +273,18 @@ class Commandline(Interface):
 
             
 
-    def setMarkovBG(self,arglist=None):
+    def _setMarkovBG(self,arglist=None):
         "Arguments: bgSampleSequence [order]\nBackground sample sequence and order of the model or saved background file."
-        try:
-            sampleStr=self.seq.sequence(arglist[0])
-        except KeyError:
-            filename=glob(arglist[0])
-            try:
-                sampleStr=eval(open(filename[0]).read())
-            except Exception,e:
-                print "No such sequence or saved background (%s). Markov background not set."%(str(e))
-                return
-                pass
-        order=4
         if len(arglist)>1:
-            order=int(arglist[1])
+            order=len(arglist[1])
+        else:
+            order=4
+        try:
+            self.setMarkovBG(arglist[0],order)
+        except Exception,e:
+            print "No such sequence or saved background (%s). Markov background not set."%(str(e))
+            return
 
-        self.bg=matrix.BackGround(sampleStr,order)
-
-        for m in self.matlist:
-            m.setMarkovBackground(self.bg)
-            
 
     def setPseudoCnt(self,arglist=("1.0")):
         "Arguments: [pseudocount]\nSet the amount of pseudocounts on matricies. Default 1.0"
@@ -414,13 +444,7 @@ e.g. eel_2003_8_27_15_48.gff"""
         if filename:
             print"results saved in", filename
 
-    def resetMatrices(self, arglist):
-        "Arguments: none\nremoves all matrices"
-        Interface.resetMatrices(self)
 
-    def resetSequences(self, arglist):
-        "Arguments: none\nremoves all sequences"
-        Interface.resetSequences(self)
 
     def reset(self,arglist):
         "Arguments: none\nremoves all matrices and sequences"

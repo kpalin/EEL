@@ -11,6 +11,9 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.15  2005/01/07 13:41:25  kpalin
+# Works with py2exe. (windows executables)
+#
 # Revision 1.14  2004/12/17 12:21:26  kpalin
 # Changed the matrix dictionary key ordering and made the GFF output
 # routines routine.
@@ -111,7 +114,10 @@ def showmatch(data):
 ##            for Pos,Strand in data[Matr][Seq].keys():
 ##                print "%s\teel\t%s\t%d\t%d\t%f\t%s\t."%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand)
 
-    print get(data)
+    if type(data)==type(""):
+        print data
+    else:
+        print get(data)
 
 import types
 
