@@ -15,6 +15,7 @@ all: src/matrix.cc src/align.cc src/editdist.c src/gzstream/libgzstream.a
 
 debug:src/matrix.cc src/align.cc src/editdist.c src/gzstream/libgzstream.a
 	python setup.py debug build
+	cp  build/lib*/*.so .
 
 modules/matrix.so: src/matrix.cc
 
