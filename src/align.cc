@@ -1,11 +1,3 @@
-/*
- * Local variables:
- *  compile-command: "../make -k"
- * End:
- */
-
-
-
 #include <Python.h>
 #include "structmember.h"
 
@@ -509,16 +501,24 @@ alignment_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
 double findMax(int &pos_x,int &pos_y,align_AlignmentObject *self)
 {
+  // Return maximum element that does not have a link to negative matrix position
   store max=-1.0;
   pos_x=-1;
   pos_y=-1;
  
   for (uint x=0; x< self->CP->matrix.size(); x++) {
     for(uint y=0; y<self->CP->matrix[x].size(); y++) {
-      if (self->CP->matrix[x][y].value > max) {
-	max= self->CP->matrix[x][y].value;
-	pos_x=x;
-	pos_y=y;
+
+      if(self->CP->matrix[x][y].value>0) {
+	int tmp_x=self->CP->matrix[x][y].x;
+	int tmp_y=self->CP->matrix[x][y].y;
+	if(tmp_x>=0 && tmp_y>=0 && self->CP->matrix[tmp_x][tmp_y].value<0.0) {
+	  self->CP->matrix[x][y].value*=-1.0;
+	} else if (self->CP->matrix[x][y].value > max) {
+	  max= self->CP->matrix[x][y].value;
+	  pos_x=x;
+	  pos_y=y;
+	}
       }
     }
   }
@@ -534,45 +534,13 @@ alignment_nextBest(align_AlignmentObject *self)
   int pos_x=0, pos_y=0;
   PyObject *ret=PyList_New(0);
 
-  do {  // Until find distinct new (sub)optimal alignment
-    int c=0;
-
-    if(findMax(pos_x,pos_y,self)<0.0) {  // No more alignments
-      Py_DECREF(ret);
-      Py_INCREF(Py_None);
-      return Py_None;
-    }
+  if(findMax(pos_x,pos_y,self)<0.0) {  // No more alignments
+    Py_DECREF(ret);
+    Py_INCREF(Py_None);
+    return Py_None;
+  }
   
-    // Do not return matches ending to same position.
-    if (pos_x>=0 && pos_y>=0 && pos_x<(int)self->CP->matrix.size() && pos_y<(int)self->CP->matrix[pos_x].size()){
-      int tmp_x=pos_x,tmp_y=pos_y,new_tmp_x;
-      do {
-	new_tmp_x=self->CP->matrix[tmp_x][tmp_y].x;
-	tmp_y=self->CP->matrix[tmp_x][tmp_y].y;
-	tmp_x=new_tmp_x;
-      } while(tmp_x>=0 && tmp_y>=0 && self->CP->matrix[tmp_x][tmp_y].value>0.0);
-      
-      if(tmp_x>=0 && tmp_y>=0 && self->CP->matrix[tmp_x][tmp_y].value<0.0) {
-	tmp_x=pos_x;
-	tmp_y=pos_y;
-	while(self->CP->matrix[tmp_x][tmp_y].value>0.0) {
-	  c++;
-	  self->CP->matrix[tmp_x][tmp_y].value *= -1.0;
-	  new_tmp_x=self->CP->matrix[tmp_x][tmp_y].x;
-	  tmp_y=self->CP->matrix[tmp_x][tmp_y].y;
-	  tmp_x=new_tmp_x;
-	} 
 
-      }
-    
-    }
-#ifdef EXTRADEBUG
-    cout<<"Going "<<c<<" steps from ("<<pos_x<<","<<pos_y<<")"<<endl;
-#endif
-
-  } while(pos_x>=0 && pos_y>=0 && self->CP->matrix[pos_x][pos_y].value<0.0);
-
-  // End overlap matching check.
     
 
   
