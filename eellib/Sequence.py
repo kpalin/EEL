@@ -11,6 +11,12 @@ except ImportError:
     print "No gzip available."
 
 
+#
+# $Log$
+#
+    
+
+
 class SingleSequence:
     """Interface for single sequence files.
 
@@ -47,7 +53,7 @@ class SingleSequence:
     def __getslice__(self,i,j):
         #print "Getting slice [%d:%d]"%(i,j)
         self.file.seek(i+self.start)
-        c=self.file.read(i-j)
+        c=self.file.read(j-i)
         self.file.seek(self.start)
 
         return c
@@ -156,6 +162,10 @@ class Sequences:
         "Return a list of sequence names"
         return self.__Seq.keys()
 
+    def keys(self):
+        """Synonym for getNames()"""
+        return self.getNames()
+    
     def has_key(self,key):
         "True if have sequence called key"
         return self.__Seq.has_key(key)
@@ -165,6 +175,11 @@ class Sequences:
 
         Returns actually a SigleSequence object"""
         return self.__Seq[key][0]
+
+
+    def __len__(self):
+        """Returns the number of loaded sequences"""
+        return len(self.__Seq)
 
     def sequence(self,name):
         "Returns the DNA sequence of sequence name"
