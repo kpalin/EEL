@@ -387,7 +387,7 @@ bg_init(matrix_bgObject *self, PyObject *args, PyObject *kwds)
   } else {  // Given file to read the grams
     Py_INCREF(self->bgSample);
     if(self->order>15 || self->order<1) {
-      printf("Too high or non positive order (%d). Can only handle up to order 15\n",self->order);
+      //printf("Too high or non positive order (%d). Can only handle up to order 15\n",self->order);
       PyErr_SetString(PyExc_ValueError,"Too high or non positive order. Can only handle up to order 15.");
       return -1;
     }
