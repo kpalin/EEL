@@ -45,6 +45,7 @@
  */
 
 
+#define CHECKING_DECREF(X) if((PyObject*)(X)==Py_None) printf("none decref line %d",__LINE__); Py_DECREF(X);
 
 
 /* The binding sites have to be less than MAX_BP_DIST apart */
@@ -416,10 +417,10 @@ static
 void
 alignment_dealloc(align_AlignmentObject* self)
 {
-    Py_XDECREF(self->x_name);
-    Py_XDECREF(self->y_name);
-    Py_XDECREF(self->output);
-    Py_XDECREF(self->bestAlignments);
+    CHECKING_DECREF(self->x_name);
+    CHECKING_DECREF(self->y_name);
+    CHECKING_DECREF(self->output);
+    CHECKING_DECREF(self->bestAlignments);
     
     delete self->CP;
     
@@ -445,20 +446,20 @@ alignment_init(align_AlignmentObject *self, PyObject *args, PyObject *kwds)
     self->secs_to_align = secs;
 
     if (x_name) {
-        Py_XDECREF(self->x_name);
+        CHECKING_DECREF(self->x_name);
         Py_INCREF(x_name);
         self->x_name = (PyStringObject*)x_name;
     }
 
     if (y_name) {
-        Py_XDECREF(self->y_name);
+        CHECKING_DECREF(self->y_name);
         Py_INCREF(y_name);
         self->y_name = (PyStringObject*)y_name;
     }
 
 
     if (output) {
-        Py_XDECREF(self->output);
+        CHECKING_DECREF(self->output);
         Py_INCREF(output);
         self->output = (PyStringObject*)output;
     }
@@ -485,26 +486,26 @@ alignment_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
       self->x_name = (PyStringObject*)PyString_FromString("");
       if (self->x_name == NULL)
 	{
-	  Py_DECREF(self);
+	  CHECKING_DECREF(self);
 	  return NULL;
 	}
       self->y_name = (PyStringObject*)PyString_FromString("");
       if (self->y_name == NULL)
 	{
-	  Py_DECREF(self);
+	  CHECKING_DECREF(self);
 	  return NULL;
 	}
       self->output = (PyStringObject*)PyString_FromString("");
       if (self->output == NULL)
 	{
-	  Py_DECREF(self);
+	  CHECKING_DECREF(self);
 	  return NULL;
 	}
         
       self->bestAlignments=PyList_New(0);
       if (self->bestAlignments == NULL)
 	{
-	  Py_DECREF(self);
+	  CHECKING_DECREF(self);
 	  return NULL;
 	}
 
@@ -559,7 +560,7 @@ alignment_nextBest(align_AlignmentObject *self)
   PyObject *ret=PyList_New(0);
 
   if(findMax(pos_x,pos_y,self)<0.0) {  // No more alignments
-    Py_DECREF(ret);
+    CHECKING_DECREF(ret);
     Py_INCREF(Py_None);
     return Py_None;
   }
@@ -592,7 +593,7 @@ alignment_nextBest(align_AlignmentObject *self)
 				       (int)self->CP->seq_x[pos_x].pos, (int)self->CP->seq_x[pos_x].epos,
 				       (int)self->CP->seq_y[real_y].pos, (int)self->CP->seq_y[real_y].epos, (char)self->CP->seq_y[real_y].strand);
       PyList_Append(ret,ret_item);
-      Py_XDECREF(ret_item);
+      CHECKING_DECREF(ret_item);
 		  
 // 	  snprintf(result,255,"D[%d][%d]=%.2f %s (%d,%d) <=> (%d,%d)\n",
 // 		   pos_x, real_y, abs(self->CP->matrix[pos_x][pos_y].value), 
@@ -1005,7 +1006,7 @@ alignObject(align_AlignmentObject *self)
   
 
 
-  Py_DECREF(self->output);
+  CHECKING_DECREF(self->output);
   self->output=(PyStringObject*)Py_BuildValue("s","No output. Use nextBest()");
 
 
@@ -1152,7 +1153,7 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
 
 
   align_AlignmentObject *ret_self=(align_AlignmentObject *)alignment_new(&align_AlignmentType,retargs,NULL);
-  Py_DECREF(retargs);
+  CHECKING_DECREF(retargs);
 
 
   ret_self->CP->ID_to_TF.resize(TF_to_ID.size());
@@ -1269,8 +1270,8 @@ align_aligndata(PyObject *self, PyObject *args)
   string firstSeqName,secondSeqName,sequence;
 
 
-  if (!PyArg_ParseTuple(args, "sdddd", &data,
-			&lambda, &xi, &mu, &nu,&nuc_per_rotation)){
+  if (!PyArg_ParseTuple(args, "sddddd", &data,
+			&lambda, &xi, &mu, &nu, &nuc_per_rotation)){
     return Py_BuildValue("s", "");
   }
   
