@@ -8,7 +8,9 @@ include gffSequenceChange.py
 include ensemblGFFchange.py
 include readline-0.0.0.withheaders.tgz
 recursive-include TFv1 *
-recursive-include doc *
+recursive-include doc *.html
+include doc/userAndDeveloperGuide.tex
+include doc/userAndDeveloperGuide.ps
 include src/gzstream/*
 exclude src/gzstream/libgzstream.a
 exclude src/gzstream/gzstream.o
