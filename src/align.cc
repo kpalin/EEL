@@ -34,6 +34,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.9  2004/02/13 09:40:25  kpalin
+ *  Corrected bugs
+ *
  *  Revision 1.8  2004/02/11 09:39:41  kpalin
  *  Enabled memory saving features.
  *  Breaks 'more' command but saves a lot of memory.
@@ -466,6 +469,134 @@ typedef struct {
 } align_AlignmentObject;
 
 
+//////////////////////////////////////////////////////////////////////
+// Aligned site object
+
+typedef struct {
+  PyObject_HEAD
+
+    /* Type-specific fields go here. */
+
+  char *motifName;
+  int seqX;
+  int seqY;
+  int beginX;
+  int endX;
+  int beginY;
+  int endY;
+  char strand;
+  double score;
+  double siteScoreX;
+  double siteScoreY;
+} align_siteObject;
+
+static PyMemberDef site_members[] = {
+    {"motif",T_STRING, offsetof(align_siteObject, motifName), 0,
+     "Name of the motif."},
+
+    {"seqX",T_INT, offsetof(align_siteObject, seqX), 0,
+     "Position on site sequence x."},
+    {"seqY",T_INT, offsetof(align_siteObject, seqY), 0,
+     "Position on site sequence y."},
+
+    {"beginX",T_INT, offsetof(align_siteObject, beginX), 0,
+     "Begin position on DNA sequence x."},
+
+    {"beginY",T_INT, offsetof(align_siteObject, beginY), 0,
+     "Begin position on DNA sequence y."},
+
+    {"endX",T_INT, offsetof(align_siteObject, endX), 0,
+     "End position on DNA sequence x."},
+
+    {"endY",T_INT, offsetof(align_siteObject, endY), 0,
+     "End position on DNA sequence y."},
+    {"strand",T_CHAR, offsetof(align_siteObject, strand), 0,
+
+     "Strand of the motif."},
+    {"score",T_DOUBLE, offsetof(align_siteObject, score), 0,
+     "Alignment score this far."},
+    {"siteScoreX",T_DOUBLE, offsetof(align_siteObject, siteScoreX), 0,
+     "Score of the site on sequence X."},
+    {"siteScoreY",T_DOUBLE, offsetof(align_siteObject, siteScoreY), 0,
+     "Score of the site on sequence Y."},
+    {NULL}  /* Sentinel */
+};
+
+
+static void site_dealloc(align_siteObject* self)
+{
+  delete [] self->motifName;
+
+  self->ob_type->tp_free((PyObject*)self);
+}
+
+static PyTypeObject align_siteType = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "align.SitePair",             /*tp_name*/
+    sizeof(align_siteObject), /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    (destructor)site_dealloc,                         /*tp_dealloc*/
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,        /*tp_flags*/
+    "Site pair object",           /* tp_doc */
+    0,		               /* tp_traverse */
+    0,		               /* tp_clear */
+    0,		               /* tp_richcompare */
+    0,		               /* tp_weaklistoffset */
+    0,		               /* tp_iter */
+    0,		               /* tp_iternext */
+    0,             /* tp_methods */
+    site_members,             /* tp_members */
+};
+
+static PyObject *
+site_new(const char *motifName,
+	 int seqX,
+	 int seqY,
+	 int beginX,
+	 int endX,
+	 int beginY,
+	 int endY,
+	 char strand,
+	 double score,
+	 double siteScoreX,
+	 double siteScoreY)
+{
+  align_siteObject *ret;
+  ret=(align_siteObject*)align_siteType.tp_alloc(&align_siteType,0);
+
+  ret->motifName=new char[strlen(motifName)+1];
+  strcpy(ret->motifName,motifName);
+
+  ret->seqX=seqX;
+  ret->seqY=seqY;
+  ret->beginX=beginX;
+  ret->endX=endX;
+  ret->beginY=beginY;
+  ret->endY=endY;
+  ret->strand=strand;
+  ret->score=score;
+  ret->siteScoreX=siteScoreX;
+  ret->siteScoreY=siteScoreY;
+
+  return (PyObject*)ret;
+}
+
+//////////////////////////////////////////////////////////////////////
 
 
 
@@ -609,6 +740,11 @@ double findMax(int &pos_x,int &pos_y,align_AlignmentObject *self)
 
   return max;
 }
+
+
+
+
+
 
 
 static PyObject*
@@ -1648,6 +1784,10 @@ initalign(void)
     align_AlignmentType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&align_AlignmentType) < 0)
       return;
+
+    align_siteType.tp_new = PyType_GenericNew;
+    if (PyType_Ready(&align_siteType) < 0)
+      return;
     
     m=Py_InitModule("align", alignMethods);
 
@@ -1656,6 +1796,9 @@ initalign(void)
 
     Py_INCREF(&align_AlignmentType);
     PyModule_AddObject(m, "Alignment", (PyObject *)&align_AlignmentType);
+
+    Py_INCREF(&align_siteType);
+    PyModule_AddObject(m, "SitePair", (PyObject *)&align_siteType);
 }
 
 
@@ -1666,35 +1809,11 @@ alignment_nextBest(align_AlignmentObject *self)
   // backtracing
   int pos_x=0, pos_y=0;
   int sx=0,sy=0,real_sy=0,real_ey=0;
-  //pair<matCoord,matCoord> bounds;
 
   PyObject *ret=PyList_New(0);
 
-//   for(map<store,pair<matCoord,matCoord> >::iterator it=self->CP->bestAligns.begin();it!=self->CP->bestAligns.end();it++) {
-//     cout<<"it score: "<<it->first<<endl;
-//   }
-
-
-#ifdef EXTRADEBUG
-//     cout<<"seq_x:"<<endl;
-//     for(int i=0;i<self->CP->seq_x.size();i++) 
-//       cout<<i<<":"<<self->CP->ID_to_TF[self->CP->seq_x[i].ID/2].c_str()<<":"<<self->CP->seq_x[i].pos<<endl;
-//     cout<<"\nseq_y:"<<endl;
-//     for(int i=0;i<self->CP->seq_y.size();i++) 
-//       cout<<i<<":"<<self->CP->ID_to_TF[self->CP->seq_y[i].ID/2].c_str()<<":"<<self->CP->seq_y[i].pos<<endl;
-#endif
 
   if(self->memSaveUsed) {
-    // Need to compute the actual alignments.
-//     map<store,pair<matCoord,matCoord> >::reverse_iterator iter=self->CP->bestAligns.rbegin();
-//     bounds=iter->second;
-//     cout<<"Giving: "<<iter->first <<" ("<<self->CP->bestAligns.size()<<")"<<endl; 
-
-//     // Stupid gludge needed for erase.
-//     map<store,pair<matCoord,matCoord> >::iterator iterF=iter.base();
-//     iterF--;
-//     //assert(&*iter==&*(iter.base()-1));
-//     self->CP->bestAligns.erase(iterF);
     
     MS_res bounds=self->CP->bestAligns.top();
     self->CP->bestAligns.pop();
@@ -1765,11 +1884,20 @@ alignment_nextBest(align_AlignmentObject *self)
       if(self->CP->seq_x[pos_x].strand!=self->CP->seq_y[real_y].strand)
 	printf("strand conflict %d%c %d%c\n",self->CP->seq_x[pos_x].ID,self->CP->seq_x[pos_x].strand,self->CP->seq_y[real_y].ID,self->CP->seq_y[real_y].strand);
 #endif
-      PyObject *ret_item=Py_BuildValue("(iids(ii)(ii)c)",
-				       pos_x, real_y, (double)abs((double)self->CP->matrix[pos_x-sx][pos_y].value), 
-				       self->CP->ID_to_TF[self->CP->seq_x[pos_x].ID/2].c_str(),
-				       (int)self->CP->seq_x[pos_x].pos, (int)self->CP->seq_x[pos_x].epos,
-				       (int)self->CP->seq_y[real_y].pos, (int)self->CP->seq_y[real_y].epos, (char)self->CP->seq_y[real_y].strand);
+
+
+      PyObject *ret_item=site_new(self->CP->ID_to_TF[self->CP->seq_x[pos_x].ID/2].c_str(), // motif name
+				  pos_x, // on site sequence X
+				  real_y, // on site sequence Y
+				  (int)self->CP->seq_x[pos_x].pos, 
+				  (int)self->CP->seq_x[pos_x].epos,
+				  (int)self->CP->seq_y[real_y].pos, // start DNA pos on Y
+				  (int)self->CP->seq_y[real_y].epos, //end DNA pos on Y
+				  (char)self->CP->seq_y[real_y].strand, //strand
+				  (double)abs((double)self->CP->matrix[pos_x-sx][pos_y].value), // Total align score this far
+				  (double)self->CP->seq_x[pos_x].weight,
+				  (double)self->CP->seq_y[real_y].weight);
+
       PyList_Append(ret,ret_item);
       CHECKING_DECREF(ret_item);
 		  
