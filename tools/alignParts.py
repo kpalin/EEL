@@ -4,6 +4,9 @@
 
 #
 # $Log$
+# Revision 1.1  2004/12/30 11:11:54  kpalin
+# Working version.
+#
 #
 
 import re,math
@@ -16,16 +19,89 @@ def trunc(val):
 
     return rval
 
+
+class alignedSite:
+    def __init__(self,settings,alnThis,alnPrev=None):
+        self.weight1,self.weight2=alnThis[0][3],alnThis[1][3]
+        self.d,self.D=-1,-1
+        self.report_score=alnThis[0][2]
+        self.param=settings
+
+        try:
+            self.d=alnThis[0][0]-alnPrev[0][1]-1
+            self.D=alnThis[1][0]-alnPrev[1][1]-1
+            try:
+                assert(self.d>=0 and self.D>=0)
+            except AssertionError:
+                print self.d,self.D
+                raise
+        except TypeError:
+            pass
+        
+        self.splitScore(alnThis,alnPrev)
+
+        
+    def squaremod(self,val):
+        f=abs(val)
+        f-=2*math.pi*trunc(f/(2*math.pi))
+
+        return f*f
+
+    def anglepenalty(self,d,D):
+        theta=(d-D)*2.0*math.pi/self.param.nuc_per_rot
+
+        ret=self.squaremod(theta)/(d+D)
+
+        return ret
+            
+
+    def splitScore(self,cur,prev):
+        "Split Score for one pair of sites"
+
+
+        self.lmbda_p=self.param.lmbda*(self.weight1+self.weight2)
+        self.xi_p,self.nu_p,self.mu_p=0,0,0
+
+        try:
+            self.mu_p=self.param.mu*(self.d+self.D)/2.0
+            try:
+                self.xi_p=self.param.xi*self.anglepenalty(self.d,self.D)
+                self.nu_p=self.param.nu*(self.d-self.D)**2/float(self.d+self.D)
+            except ZeroDivisionError:
+                pass
+        except TypeError:
+            pass
+        
+        self.score_delta=self.lmbda_p-self.xi_p-self.nu_p-self.mu_p
+
+        if abs(self.score_delta-self.report_score)>0.1:
+            print self.score_delta-self.report_score,self.d-self.D,(self.lmbda_p,self.xi_p,self.nu_p,self.mu_p)
+
+
+
+
 class cisMod:
-    def __init__(self,id,score):
+    def __init__(self,id,score,param):
         self.id=id
         self.score=score
+        self.param=param
 
     def setData(self,*dat):
-
         self.data=dict(dat)
         pass
     
+
+
+    def splitScores(self):
+        "Split scores for the module"
+        aligned=apply(zip,self.data.values())
+
+
+        self.splitted=[alignedSite(self.param,aligned[0],None)]
+        self.splitted.extend([alignedSite(self.param,aligned[i],aligned[i-1]) for i in range(1,len(aligned))])
+
+
+
 
 
 class alnScores:
@@ -48,100 +124,19 @@ class alnScores:
         "Split scores for all of the initialized cis modules"
 
         self.splits={}
-        for mID,mDat in self.cisMods.items():
+        for mod in self.cisMods:
             #print mID,
-            self.splits[mID]=self.splitScores(mDat[1])
+            mod.splitScores()
         
 
-    def splitScores(self,modData):
-        "Split scores for one module"
-        aligned=apply(zip,modData.values())
-
-
-        splitted=[self.splitScore(aligned[0],None)]
-        for i in range(1,len(aligned)):
-            splitted.append(self.splitScore(aligned[i],aligned[i-1]))
-
-        return splitted
-
-
-    def squaremod(self,val):
-        f=abs(val)
-        f-=2*math.pi*trunc(f/(2*math.pi))
-
-        return f*f
-
-    def anglepenalty(self,d,D):
-        theta=(d-D)*2.0*math.pi/self.nuc_per_rot
-
-        ret=self.squaremod(theta)/(d+D)
-
-        return ret
-            
-
-    def splitScore(self,cur,prev):
-        "Split Score for one pair of sites"
-
-
-        lmbda_p=self.lmbda*(cur[0][3]+cur[1][3])
-        xi_p,nu_p,mu_p=0,0,0
-        d,D=-1,-1
-
-        try:
-            d=cur[0][0]-prev[0][1]-1
-            D=cur[1][0]-prev[1][1]-1
-            try:
-                assert(d>=0)
-                assert(D>=0)
-            except AssertionError:
-                print d
-                print D
-                raise
-
-            mu_p=self.mu*(d+D)/2.0
-            try:
-                xi_p=self.xi*self.anglepenalty(d,D)
-                nu_p=self.nu*(d-D)**2/float(d+D)
-            except ZeroDivisionError:
-                pass
-        except TypeError:
-            pass
-        
-        score_delta=lmbda_p-xi_p-nu_p-mu_p
-
-        if abs(score_delta-cur[0][2])>0.1:
-            print score_delta-cur[0][2],d-D,(lmbda_p,xi_p,nu_p,mu_p)
-
-        return (lmbda_p,xi_p,nu_p,mu_p)
 
 
 
 
-
-    def parseLines2(self,lines):
-
-        # Get modules
-        l=[(x[-1].strip(";"),[float(x[5]),None]) for x in lines if x[2]=="CisModule"]
-        self.cisMods=dict(l)
-
-        # Get sequences
-        self.seqs={}.fromkeys([x[0] for x in lines]).keys()
-
-
-        # Get sites for each module
-        for mod in self.cisMods.keys():
-
-            # Site data:  (Begin,End,ScoreDelta,MatrixScore)
-            
-            cmod=dict([(seq, [(int(x[3]),int(x[4]),float(x[5]),float(x[9][3:])) for x in lines if x[2]!="CisModule" and x[0]==seq and x[8]==mod]) for seq in self.seqs])
-            self.cisMods[mod][1]=cmod
-            
-            #print mod,len(cmod),[sum([y[2] for y in x]) for x in cmod.values()]
-            
     def parseLines(self,lines):
 
         # Get modules
-        self.cisMods=[cisMod(x[-1].strip(";"),[float(x[5]),None]) for x in lines if x[2]=="CisModule"]
+        self.cisMods=[cisMod(x[-1].strip(";"),[float(x[5]),None],self) for x in lines if x[2]=="CisModule"]
 
         # Get sequences
         self.seqs={}.fromkeys([x[0] for x in lines]).keys()
@@ -151,8 +146,7 @@ class alnScores:
         for mod in self.cisMods:
 
             # Site data:  (Begin,End,ScoreDelta,MatrixScore)
-            
-            cmod=apply(mod.setData,[(seq, [(int(x[3]),int(x[4]),float(x[5]),float(x[9][3:])) for x in lines if x[2]!="CisModule" and x[0]==seq and x[8]==mod]) for seq in self.seqs])
+            cmod=apply(mod.setData,[(seq, [(int(x[3]),int(x[4]),float(x[5]),float(x[9][3:])) for x in lines if x[2]!="CisModule" and x[0]==seq and x[8]==mod.id]) for seq in self.seqs])
             
             #print mod,len(cmod),[sum([y[2] for y in x]) for x in cmod.values()]
             
