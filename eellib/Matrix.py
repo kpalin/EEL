@@ -1,12 +1,16 @@
+# -*- coding: UTF-8 -*-
 """Python interface and logic to TFBS matrix matching"""
 import operator
 import string
-import matrix
 import math
 
+from eellib import matrix
 
 #
 # $Log$
+# Revision 1.5  2004/12/22 08:02:59  kpalin
+# Hopefully more IO efficient TFBS search.
+#
 # Revision 1.4  2004/04/08 13:11:58  kpalin
 # InfoContent and CVS loging.
 #

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: UTF-8
+# -*- coding: UTF-8 -*- 
         
 """The basic command that starts up the commandline interface"""
 
@@ -9,6 +9,9 @@ import sys
 
 
 # $Log$
+# Revision 1.2  2004/12/14 14:06:32  kpalin
+# *** empty log message ***
+#
 # Revision 1.1  2004/12/14 13:07:52  kpalin
 #
 # Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun

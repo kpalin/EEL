@@ -9,7 +9,7 @@ all: src/matrix.cc src/align.cc src/editdist.c src/gzstream/libgzstream.a
 	@echo 
 	#make -C src/
 	python setup.py build
-	cp -u  build/lib*/*.so .
+	cp -u  build/lib*/*.so ./eellib/
 	#cp build/scripts*/eel .
 
 

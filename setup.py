@@ -11,6 +11,11 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.12  2004/12/14 13:07:52  kpalin
+##
+##   Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun
+##   "My hovercraft is full of EELs" )
+##
 ##   Revision 1.11  2004/07/30 12:22:10  kpalin
 ##   Exact multiple alignment and alignedCols.alnColumn
 ##
@@ -37,7 +42,7 @@ from distutils.core import setup, Extension
 
 
 
-modMatrix = Extension('matrix',
+modMatrix = Extension('eellib.matrix',
                     libraries = ["stdc++"],
                     sources = ['src/matrix.cc'],
                     extra_compile_args = common_compile_args+["-DSEQ_BUFFER_SIZE=5000000"],
@@ -55,25 +60,35 @@ alignCompileArgs = ["-DSAVE_MEM","-DSAVE_MEM_LIMIT=536870912"]
 
 alignLibDirs=[]
 alignLibs=["stdc++"]
+compileLibs=[]
 try:
     import gzip
     print "Looks like you have zlib! (It's a bad thing if you don't)"
     alignCompileArgs.extend(["-Isrc/gzstream","-DHAVE_GZSTREAM=1"])
     alignLibDirs.append("src/gzstream")
     alignLibs.extend(["gzstream","z","m"])
+
+    libgzSrcs= ["src/gzstream/gzstream.C"]
+    compileLibs.append(('gzstream',
+                     {'sources':libgzSrcs,
+                      'include_dirs':['./src/gzstream/'
+                                      ],
+                      'macros':[]},
+                     ))
+ 
 except ImportError:
     print "Looks like you don't have zlib! You will not be able to use gzip:ed files in alignment"
     pass
 
 
-modAlign = Extension('align',
+modAlign = Extension('eellib.align',
                      library_dirs = alignLibDirs,
                      libraries = alignLibs,
                      sources = ['src/align.cc'],
                      extra_compile_args=alignCompileArgs+common_compile_args,
                      extra_link_args = [])
 
-modAlignedCols=Extension('alignedCols',
+modAlignedCols=Extension('eellib.alignedCols',
                          library_dirs = alignLibDirs,
                          libraries = alignLibs,
                          sources = ['src/alignedCols.cc' ],
@@ -81,13 +96,13 @@ modAlignedCols=Extension('alignedCols',
                          extra_link_args = [])
                          
 
-modDist = Extension("editdist",
+modDist = Extension("eellib.editdist",
                     sources = ["src/editdist.c"],
                     extra_compile_args = common_compile_args
                     )
 
 
-modMultiAlign = Extension('multiAlign',
+modMultiAlign = Extension('eellib.multiAlign',
                      library_dirs = alignLibDirs,
                      libraries = alignLibs,
                      sources = ['src/multiAlign.cc'],
@@ -95,7 +110,8 @@ modMultiAlign = Extension('multiAlign',
                      extra_link_args = [])
 
 
-ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
+ext_modList= [modMatrix,modAlignedCols,modAlign,modDist]
+#ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
 #ext_modList= [modAlignedCols,modMultiAlign,modAlign]
 
 setup (name = 'EEL',
@@ -108,5 +124,6 @@ setup (name = 'EEL',
        license = "GPL (see file COPYING)",
        description = 'c++ extension modules:\na binding site matrix\nan alignment function',
        ext_modules = ext_modList,
+       libraries= compileLibs,
        packages = ["eellib"],
        scripts = [ "eel"] )

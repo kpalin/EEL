@@ -32,6 +32,9 @@
 /*
  *
  * $Log$
+ * Revision 1.6  2004/12/14 14:07:22  kpalin
+ * *** empty log message ***
+ *
  * Revision 1.5  2004/07/30 12:09:18  kpalin
  * Slow but presumably working version.
  *
@@ -1292,7 +1295,7 @@ initmultiAlign(void)
       return;
 
     
-    m=Py_InitModule("multiAlign", malignMethods);
+    m=Py_InitModule("eellib.multiAlign", malignMethods);
 
     if(m==NULL)
       return;

@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 """Support for commandline interface.
 
 This module takes care of the commandline history and parsing.
@@ -12,6 +14,9 @@ import string
 
 
 # $Log$
+# Revision 1.11  2004/12/22 08:02:59  kpalin
+# Hopefully more IO efficient TFBS search.
+#
 # Revision 1.10  2004/12/14 13:08:05  kpalin
 #
 # Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun
@@ -124,7 +129,7 @@ class Commandline(Interface):
                          'saveMarkovBackground':  (self.saveMarkovBackground,1),
                          'more':               (self.moreAlignment,0),
                          '__multipleAlignGreedy':      (self.multiAlignGreedy,1),
-                         'multipleAlign':      (self.multiAlign,0),
+                         '__multipleAlign':      (self.multiAlign,0),
                          '__showMultiAlign':     (self.showMultiAlign,0),
                          '__saveMultiAlign':     (self.saveMultiAlign,1)}
 
@@ -293,8 +298,7 @@ class Commandline(Interface):
 
 
     def addSingleSequence(self,arglist):
-        """Arguments: filelist
-        Gzipped and Fasta formated sequence files. One sequence in file."""
+        "Arguments: filelist\nGzipped and Fasta formated sequence files. One sequence in file."
         for filestring in arglist:
             filenames=glob(filestring)
             for filename in filenames:
@@ -370,7 +374,10 @@ The default value for cutoff is 9.0"""
         "Arguments: none\nprints this help"
         minus=''
         if arglist==['add -']: minus='-'
-        values=self.__commands.values()
+        if "full" in arglist:
+            values=self.__commands.values()
+        else:
+            values=[x[1] for x in self.__commands.items() if x[0][:2]!="__"]
         values.sort()
         for v in values:
             if values.count(v)>1:

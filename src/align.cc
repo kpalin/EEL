@@ -36,6 +36,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.13  2004/12/14 14:07:22  kpalin
+ *  *** empty log message ***
+ *
  *  Revision 1.12  2004/08/26 10:39:47  kpalin
  *  Improved documentation and proper return value from aligndata if
  *  incorrect number of arguments. i.e. if ParseTuple fails.
@@ -1678,7 +1681,7 @@ initalign(void)
     if (PyType_Ready(&align_AlignmentType) < 0)
       return;
 
-    m=Py_InitModule("align", alignMethods);
+    m=Py_InitModule("eellib.align", alignMethods);
 
     if(m==NULL)
       return;

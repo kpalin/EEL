@@ -1,5 +1,5 @@
 """Most of the Python functionality and gzip interface"""
-# -*- coding: UTF-8
+# -*- coding: UTF-8 -*-
 
 
 import Matrix
@@ -18,6 +18,9 @@ except ImportError:
 
 #
 # $Log$
+# Revision 1.18  2004/12/22 08:02:59  kpalin
+# Hopefully more IO efficient TFBS search.
+#
 # Revision 1.17  2004/12/17 12:20:44  kpalin
 # Changed the matrix dictionary key ordering
 #
@@ -53,13 +56,16 @@ except ImportError:
 if 0:
     print "NOW IMPORTING ALIGN module"
 
-import align
+from eellib import align
 
-# Greedy multiple alignment written in python
-import Multialign
+try:
+    # Greedy multiple alignment written in python
+    from eellib import Multialign
 
-# Exact multiD multiple alignment written in C
-import multiAlign
+    # Exact multiD multiple alignment written in C
+    from eellib import multiAlign
+except ImportError:
+    pass
 
 import sys,math
 
@@ -435,7 +441,8 @@ If you use '.' as filename the local data are aligned."""
 
     def moreAlignments(self,num_of_align=1):
         """Fetch more alignments from previously run alignment matrix"""
-        if not self.alignment:
+        if not self.alignment or not hasattr(self.alignment,"memSaveUsed"):
+            print self.alignment
             return
         for i in range(num_of_align):
             if self.alignment.memSaveUsed==1 and self.alignment.askedResults<=len(self.alignment.bestAlignments):
@@ -499,17 +506,14 @@ If you use '.' as filename the local data are aligned."""
 
     def about(self):
         "Information about the program"
-        return """Matthias Berg's alignment of binding sites
-Version 1.1
-Contact: Matthias Berg
-         Uni 18, Zi. 2220
-         D-66123 Saarbruecken
-         Germany
+        return """Enhancer Element Locator EEL
+Version $Version$
+Contact: Kimmo Palin (kimmo.palin@helsinki.fi)
 
-         email: bergm@web.de
-
-         More up-to-date information from Kimmo Palin:
-
-         kimmo.palin@helsinki.fi"""
+Big thanks to Matthias Berg (bergm@web.de) for coding.
+"""
+#         Uni 18, Zi. 2220
+#         D-66123 Saarbruecken
+#         Germany
 
 

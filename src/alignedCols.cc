@@ -6,6 +6,9 @@
 
 /*
  * $Log$
+ * Revision 1.1  2004/07/30 12:12:21  kpalin
+ * Workings for alnColumn objects. Mostly stolen from align.cc
+ *
  */
 
 
@@ -219,7 +222,7 @@ initalignedCols(void)
 
 
 
-  m=Py_InitModule("alignedCols", alnColMethods);
+  m=Py_InitModule("eellib.alignedCols", alnColMethods);
   
   if(m==NULL)
     return;

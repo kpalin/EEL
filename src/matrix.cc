@@ -1964,7 +1964,7 @@ initmatrix(void)
   if(PyType_Ready(&matrix_bgType)<0)
     return;
 
-  m=Py_InitModule("matrix", matrixMethods);
+  m=Py_InitModule("eellib.matrix", matrixMethods);
 
   if(m==NULL)
     return;
