@@ -1,13 +1,17 @@
 #!/usr/bin/python2.2 
 
-from mabslib.Commandline import Commandline
+from mabslib import Commandline
+#from Commandline import Commandline
 import sys
 
 
 # $Log$
+# Revision 1.2  2003/12/12 12:34:57  kpalin
+# Lisättiin loki ja tulostettava ID
+#
 
 
-cl=Commandline()
+cl=Commandline.Commandline()
 
 if len(sys.argv)==1:
     print "$Id$"
@@ -21,11 +25,11 @@ else:
         commands += ' '+sys.argv[i]
     commands=commands.split(' -')[1:]
 
-    error=False
+    error=0
     for c in commands:
         if not cl.isCommand(c.split()[0]):
             print 'unknown argument: -'+c.split()[0]
-            error=True
+            error=1
 
     if error or commands==[]:
         cl.help(['add -'])
