@@ -6,6 +6,9 @@
 
 /*
  * $Log$
+ * Revision 1.2  2004/12/22 11:14:34  kpalin
+ * Some fixes for better distributability
+ *
  * Revision 1.1  2004/07/30 12:12:21  kpalin
  * Workings for alnColumn objects. Mostly stolen from align.cc
  *
@@ -27,6 +30,7 @@ typedef struct {
   PyObject *beginEnd; // Tuple of 2-tuples of (begin,end) pairs
   PyObject *siteScore; // Tuple of site scores.
   PyObject *siteSeqPos; // Positions on the site sequence.
+  PyObject *annotation; // Additional annotations for the site.
   int seqX;
   int seqY;
   int beginX;
@@ -54,7 +58,8 @@ static PyMemberDef site_members[] = {
      "Scores of the sites"},
     {"siteSeqPos",T_OBJECT_EX, offsetof(align_siteObject,siteSeqPos),0,
      "Positions on the site sequence."},
-
+    {"annotation",T_OBJECT, offsetof(align_siteObject,annotation),0,
+     "Additional annotation for the sites."},
 
     {"seqX",T_INT, offsetof(align_siteObject, seqX), 0,
      "Position on site sequence x."},
@@ -133,7 +138,9 @@ site_new(const char *motifName,
 	 char strand,
 	 double score,
 	 double siteScoreX,
-	 double siteScoreY)
+	 double siteScoreY,
+	 const char *annotX,
+	 const char *annotY)
 {
   align_siteObject *ret;
   ret=(align_siteObject*)align_siteType.tp_alloc(&align_siteType,0);
@@ -146,6 +153,7 @@ site_new(const char *motifName,
   ret->beginEnd=Py_BuildValue("((ii)(ii))",beginX,endX,beginY,endY);
   ret->siteScore=Py_BuildValue("(dd)",siteScoreX,siteScoreY);
   ret->siteSeqPos=Py_BuildValue("(ii)",seqX,seqY);
+  ret->annotation=Py_BuildValue("(zz)",annotX,annotY);
   ret->seqX=seqX;
   ret->seqY=seqY;
   ret->beginX=beginX;
@@ -167,7 +175,8 @@ site_new_multi(const char *motifName,
 	       PyObject *beginEnd,
 	       char strand,
 	       double score,
-	       PyObject  *siteScore)
+	       PyObject  *siteScore,
+	       PyObject *annotation)
 {
   align_siteObject *ret;
   ret=(align_siteObject*)align_siteType.tp_alloc(&align_siteType,0);
@@ -182,6 +191,7 @@ site_new_multi(const char *motifName,
   ret->siteSeqPos=seqPos;
   ret->strand=strand;
   ret->score=score;
+  ret->annotation=annotation;
 
   ret->seqX=-1;
   ret->seqY=-1;

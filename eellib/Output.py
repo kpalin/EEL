@@ -13,6 +13,10 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.18  2005/02/22 11:08:56  kpalin
+# Initial working version for outputting results from
+# SNP scanning matrix matcher.
+#
 # Revision 1.17  2005/01/13 13:16:42  kpalin
 # Moved the requesting of sequences to be aligned to Python side
 # of stuff. Much better.
@@ -137,6 +141,7 @@ def get(data):
     data must have the following format:
     dictionary from Sequence to Matrix to (position,strand,allele,snpPos) to Score"""
     #output=''
+
     def flatten(mlist):
         olist=[]
         for i in mlist:
@@ -146,9 +151,10 @@ def get(data):
                 olist.append(i)
         return olist
     output="".join(flatten(map( \
-        lambda Seq:map(lambda Mat:map(lambda ((Ind,strand,allele,snpPos),score):\
-        ("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\t%s%d\n"%(\
-        Seq,Mat.getName(),Ind,Ind+len(Mat)-1,score,strand,allele,snpPos)),\
+        lambda Seq:map(lambda Mat:map(lambda ((Ind,strand,snps),score):\
+        ("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\t%s\n"%(\
+        Seq,Mat.getName(),Ind,Ind+len(Mat)-1,score,strand,\
+        "\t".join(["%s %d"%(snp[1],snp[2]) for snp in snps]))),\
         data[Seq][Mat].items()), data[Seq].keys()),data.keys())))
     return output
 
@@ -223,7 +229,7 @@ def formatMultiAlignGFF(alignment):
 
     outStrIO=StringIO()
     # CM= Cis Module, MW = Matrix weight, COL = Column code on module
-    GFFformat="%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\tCM %d\tMW %g\tCOL %d\n" 
+    GFFformat="%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\tCM %d\tMW %g\tCOL %d\t%s\n" 
 
     # the last %s is for inserting parameters for gff2aplot etc.
     GFFalignFormat='%s\tmalign\t%s\t%d\t%d\t%4.2f\t.\t.\t%sCM %d\n'
@@ -258,11 +264,11 @@ def formatMultiAlignGFF(alignment):
         prevScore=0.0
         for as,colCode in zip(goodAlign,range(len(goodAlign))):
             prevScore,score=as.score,as.score-prevScore
-            for seq,(begin,end),siteScore in zip(as.seqID,as.beginEnd,as.siteScore):
+            for seq,(begin,end),siteScore,annot in zip(as.seqID,as.beginEnd,as.siteScore,as.annotation):
                 outStrIO.write(GFFformat%(alignment.names[seq], \
                                           as.motif, \
                                           begin,end,score,as.strand,\
-                                          i,siteScore,colCode))
+                                          i,siteScore,colCode,annot.strip()))
 
     return outStrIO.getvalue()
 

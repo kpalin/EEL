@@ -4,6 +4,9 @@
 
 /*
  * $Log$
+ * Revision 1.1  2004/07/30 12:11:07  kpalin
+ * C api header file for alnColumn objects.
+ *
  */
 
 #define PyAln_New_NUM 0
@@ -18,7 +21,9 @@
 	 char strand,\
 	 double score,\
 	 double siteScoreX,\
-	 double siteScoreY)
+	 double siteScoreY, \
+	 const char *annotX, \
+         const char *annotY)
 
 #define PyAln_New_multi_NUM 1
 #define PyAln_New_multi_RETURN PyObject*
@@ -28,7 +33,8 @@
 	       PyObject *beginEnd,\
 	       char strand,\
 	       double score,\
-	       PyObject  *siteScore)
+	       PyObject  *siteScore, \
+	       PyObject *annotation)
 
 #define PyAln_API_pointers 2
 
