@@ -10,7 +10,8 @@
 #include <time.h>
 #include <stdio.h>
 #include <math.h>
-#include <values.h>
+#include <float.h>
+#include <algorithm>
 using namespace std;
 
 #include "matrix.h"
@@ -21,6 +22,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.6  2005/02/25 09:27:57  kpalin
+ * Little, just little, less inefficient SNP scanner.
+ *
  */
 
 unsigned long py_fileLikeTell(PyObject *py_file);
@@ -168,7 +172,7 @@ matrix_draw(PyObject *self, PyObject *args)
 
 
 
-void addMatch(PyObject *dict,int const pos,char const strand,double const score,PyObject *snps)
+void addMatch(PyObject *dict,int const pos,char const strand,double const score,PyObject *snps,double const altScore=0.0)
 {
   assert(snps!=NULL);
   PyObject *hitKey=Py_BuildValue("(icO)",pos,strand,snps);
@@ -176,12 +180,12 @@ void addMatch(PyObject *dict,int const pos,char const strand,double const score,
   assert(hitKey);
   assert(PyTuple_Check(hitKey));
   assert(PyDict_Check(dict));
-  PyDict_SetItem(dict, hitKey,PyFloat_FromDouble(score));
+  PyDict_SetItem(dict, hitKey,Py_BuildValue("(dd)",score,altScore));
 
 }
 
 
-void addMatchWithKey(PyObject *dict,PyObject *key,int const pos,char const strand,double const score,PyObject *snps)
+void addMatchWithKey(PyObject *dict,PyObject *key,int const pos,char const strand,double const score,PyObject *snps,double const altScore)
 {
   PyObject *subDict;
   if(!PyMapping_HasKey(dict,key)) {
@@ -195,7 +199,7 @@ void addMatchWithKey(PyObject *dict,PyObject *key,int const pos,char const stran
   }
   assert(snps);
   assert(subDict);
-  addMatch(subDict,pos,strand,score,snps);
+  addMatch(subDict,pos,strand,score,snps,altScore);
 }
 
 
@@ -605,6 +609,29 @@ double logPnextInStream(matrix_bgObject *self, char nucl)
 
 }
 
+double logBestP(matrix_bgObject *self)
+{   // Compute the best log P value possible with this background object.
+
+  double ret=0.0;
+  int qgramCnt,contextCnt;
+  static double const ln2=log(2.0);
+  char *nucls="ACGT";
+  bit32 gram;
+
+  for(bit32 context=0;context<(self->shiftMask>>2);context++) {
+    contextCnt=self->CP->shortCounts[context];
+    for(int i=0;i<4;i++) {
+      gram=addNucleotideToGram(context,nucls[i],self->shiftMask);
+      qgramCnt=self->CP->counts[gram];
+
+      ret=min(ret,(log((double)qgramCnt+0.25)-log((double)contextCnt+1.0))/ln2);
+      
+    }
+  }
+  return ret;
+
+}
+
 static PyObject*
 bg_logPnextInStream(matrix_bgObject *self, PyObject *args)
 {
@@ -883,7 +910,6 @@ matrix_computeBG(PyObject *self, PyObject *args)
     }
   }
   
-#define DEBUG_OUTPUT 1
 #ifdef DEBUG_OUTPUT
 
   cout<<"q: "<<qgram<<endl;
@@ -913,10 +939,10 @@ matrix_computeBG(PyObject *self, PyObject *args)
     cout<<i<<" "<<gram<<" "<<(*counts)[i]<<endl;
   }
 
+  free(gram);
 
 #endif
 
-  free(gram);
   delete counts;
 
   Py_INCREF(Py_None);
@@ -1338,13 +1364,18 @@ TFBShelper::TFBShelper(matrix_bgObject *bgIn,vector<TFBSscan*> &mat) : matricies
   this->maxLen=0;
 
   for(unsigned int i=0;i<this->matricies.size();i++) {
+#ifndef NDEBUG
     cout<<this->matricies[i]->length()<<endl;
+#endif
     this->maxLen=max(this->maxLen,this->matricies[i]->length());
   }
 
 
   this->haveBG=(bgIn!=NULL);
   if(this->haveBG) {
+#ifndef NDEBUG
+    printf("Best log2(p)=%g\n",logBestP(bgIn));
+#endif
     this->bg.push_back(*bgIn);  //Copy !!!
     this->maxLen+=this->bgOrder();
     this->probBuffer.push_back(deque<double>(this->maxLen,0.0));
@@ -1461,7 +1492,6 @@ void TFBShelper::nextACGT(char chr,unsigned int startFrom)
   for(unsigned int i=startFrom;i<this->probBuffer.size();i++) {  // ACG or T with previous snps
 
     double bgP=logPnextInStream(&this->bg[i],chr);
-
 
     // Iterate the buffer
     this->probBuffer[i].pop_back();
@@ -1659,7 +1689,7 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
       PyObject *snps=hits[i]->buildPySNPs();
       assert(PyTuple_Check(snps));
       assert(ret);
-      addMatchWithKey(ret,hits[i]->mat->py_matrix,hits[i]->pos,hits[i]->strand,hits[i]->score,snps);
+      addMatchWithKey(ret,hits[i]->mat->py_matrix,hits[i]->pos,hits[i]->strand,hits[i]->score,snps,hits[i]->minScore);
 
 #ifndef NDEBUG
       if((hits[i]->score-hits[i]->minScore)>1.0) {
