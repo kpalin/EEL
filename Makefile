@@ -8,7 +8,7 @@ all: src/matrix.cc src/align.cc src/editdist.c src/gzstream/libgzstream.a
 	@echo "******************************************************************"
 	@echo 
 	python2.2 setup.py build
-	cp  build/lib*/*.so .
+	#cp  build/lib*/*.so .
 	#cp build/scripts*/mabs .
 
 

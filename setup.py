@@ -5,7 +5,7 @@ python2.2 setup.py debug build
 """
 import sys
 
-
+print sys.argv
 
 common_compile_args=["-Wall","-O3"]
 if len(sys.argv)>1 and sys.argv[1]=='debug':
@@ -29,13 +29,15 @@ modMatrix = Extension('matrix',
 #alignCompileArgs = ["-Wall","-g","-UNDEBUG","-DEXTRADEBUG"]
 #alignCompileArgs = ["-fno-inline","-Wall","-g","-UNDEBUG"]
 #alignCompileArgs = ["-g","-Wall","-O3"]
+alignCompileArgs = []
+alignCompileArgs = ["-DSAVE_MEM"]
 
 alignLibDirs=[]
 alignLibs=["stdc++"]
 try:
     import gzip
     print "Looks like you have zlib! (It's a bad thing if you don't)"
-    alignCompileArgs=["-Isrc/gzstream","-DHAVE_GZSTREAM=1"]
+    alignCompileArgs.extend(["-Isrc/gzstream","-DHAVE_GZSTREAM=1"])
     alignLibDirs.append("src/gzstream")
     alignLibs.extend(["gzstream","z"])
 except ImportError:
