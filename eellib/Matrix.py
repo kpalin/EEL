@@ -8,6 +8,10 @@ from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.11  2005/03/08 10:37:29  kpalin
+# Fixed the use of markov Background, such that one background
+# takes care of all Matrix-objects.
+#
 # Revision 1.10  2005/02/21 09:31:33  kpalin
 # Tools to output matrices in alternative formats.
 #
@@ -142,7 +146,6 @@ class Matrix:
         Matrix.backGround=None
         Matrix.freqA,Matrix.freqC,Matrix.freqG,Matrix.freqT=a,c,g,t
         self.initWeights()
-        raise "HÄPY"
 
     def getName(self):
         """Gives the name of this matrix"""
