@@ -2,6 +2,10 @@
 
 #
 # $Log$
+# Revision 1.7  2004/04/06 12:18:34  kpalin
+# Looks a lot like the Prohaska way doesn't work. Trying something
+# nasty.
+#
 # Revision 1.6  2004/03/29 12:28:41  kpalin
 # Should work for three species but not more. Trying to fix
 # the more multiple stuff.
@@ -307,18 +311,38 @@ class PairModule:
 
 class MultiOutModule:
     """Class to assist the output of multiple alignments"""
-    def __init__(self,aligns,sites,colCounts,id):
+    def __init__(self,aligns,sites,colCounts,id,alnLimit=2,score=0.0):
+        self.score=score
         self.align=aligns
         self.sites=sites
         self.colCount=colCounts
         self.id=id
         self.n=len(self.sites)
+        self.alnLimit=alnLimit
 
-        self.sb=StringIO()
+        self.sb=None
         self.seqs=self.align.keys()
         self.seqContext=10
-        self.writeSeqNames()
-        self.writePosAln()
+        self.seqCoords={}
+        
+        self.findSeqCoords()
+
+    def setAlnLimit(self,alnLimit=0):
+        self.sb=None
+        self.alnLimit=alnLimit
+        
+    def findSeqCoords(self):
+        self.seqCoords={}
+        for seq,posses in self.align.items():
+            for i in posses:
+                if i>=0:
+                    start=i
+                    break
+            for j in range(len(posses)-1,0,-1):
+                if posses[j]>=0:
+                    stop=posses[j]+self.sites[j].width
+                    break
+            self.seqCoords[seq]=(start,stop)
        
     def __len__(self):
         return len(self.sites)
@@ -330,14 +354,26 @@ class MultiOutModule:
         self.sb.write("\n")
 
     def writePosAln(self):
+        self.sb.write("Alignment Score: %g\n"%(self.score))
         self.sb.write(" "*26+"  ".join(["%-10s"%(x[:10]) for x in self.seqs]))
         for i in range(self.n):
-            alnCount=(1+math.sqrt(1+8*self.colCount[i]))/2
+            #alnCount=(1+math.sqrt(1+8*self.colCount[i]))/2
+            alnCount=self.colCount[i]
+
+            if alnCount<self.alnLimit:
+                continue
             self.sb.write("\n%-20s %s %2d "%(self.sites[i].name[-20:],self.sites[i].strand,int(alnCount)))
             self.sb.write("  ".join(["%10d"%(self.align[x][i]) for x in self.seqs]))
         self.sb.write("\n")
 
+    def _readyToOutput(self):
+        if not self.sb:
+            self.sb=StringIO()
+            self.writeSeqNames()
+            self.writePosAln()
+            
     def __str__(self):
+        self._readyToOutput()
         return self.sb.getvalue()
 
 
@@ -346,8 +382,9 @@ class MultiOutModule:
         aln={}
         self.sb.write("\n")
         for (seq,i) in zip(self.seqs,range(len(self.seqs))):
-            pos[seq]=self.align[seq][0]-self.seqContext
+            pos[seq]=self.seqCoords[seq][0]-self.seqContext
             aln[seq]=self.seqAln[seq].getvalue()
+            if seq=="ALIGN":continue
             self.sb.write("Sequence %d : %s\n"%(i,seq))
 
         alnLen=len(aln.values()[0])
@@ -361,30 +398,128 @@ class MultiOutModule:
                     print self.sb.getvalue()
                     raise
                 self.sb.write("%7d : %s\n"%(pos[seq],alnLine))
-                pos[seq]=pos[seq]+linelen-alnLine.count("-")
+                pos[seq]=pos[seq]+len(alnLine)-alnLine.count("-")-alnLine.count(" ")
             self.sb.write("\n")
             
                 
             
-
     def strAln(self,fullSeqs):
+        """Format sequences with respect to the multiple alignment"""
+        self._readyToOutput()
+        prevPos={}
+        myAlnLen={}
+        self.seqAln={}
+        times={}
+
+        alnList=["."]
+        
+        for seq in self.seqs:
+            prevPos[seq]=self.seqCoords[seq][0]-self.seqContext
+            self.seqAln[seq]=StringIO()
+            myAlnLen[seq]=0
+            times[seq]=0
+
+        alnLen=0
+        for p in range(self.n):
+            newAlnLen=alnLen
+            #print p
+            for seq in self.seqs:
+                nextPos=self.align[seq][p]
+                
+                # Do nothing if this site is missing from this sequence
+                if nextPos<0:
+                    continue 
+
+                # Otherwise,
+                newAlnLen=max(newAlnLen,myAlnLen[seq]+nextPos-prevPos[seq])
+            for seq in self.seqs:
+                nextPos=self.align[seq][p]
+
+                # Do nothing if this site is missing from this sequence
+                if nextPos<0:
+                    continue 
+
+                # Otherwise,
+                myInterval=nextPos-prevPos[seq]
+                alnInterval=newAlnLen-myAlnLen[seq]
+
+                if myInterval>0:
+                    intSeq=fullSeqs[seq][prevPos[seq]:nextPos].lower()
+                else:
+                    intSeq=""
+
+                if alnInterval>0:
+                    if times[seq]>0:
+                        # Justify the first interval (context) to the rigth
+                        # others to the left.
+                        apu=intSeq[:myInterval/2].ljust(alnInterval/2)+intSeq[myInterval/2:].rjust(int(math.ceil(alnInterval/2.0)))
+                        intSeq=intSeq.ljust(alnInterval).replace(' ','-')
+                        assert(len(apu)==len(intSeq)==alnInterval)
+                        
+                        intSeq=apu.replace(' ','-')
+                    else:
+                        intSeq=intSeq.rjust(alnInterval)
+                    times[seq]+=1
+                    self.seqAln[seq].write(intSeq)
+                    myAlnLen[seq]+=len(intSeq)
+
+                # Condition for site p not being contained in larger site starting before it
+                if myInterval > -self.sites[p].width:
+                    siteSeq=fullSeqs[seq][nextPos-min(0,myInterval):nextPos+self.sites[p].width].upper()
+                    self.seqAln[seq].write(siteSeq)
+                    myAlnLen[seq]+=len(siteSeq)
+
+                    prevPos[seq]=nextPos+len(siteSeq)
+                    #print seq[:10],self.seqAln[seq].getvalue()
+
+            # Building alignment guide
+            alnList.extend(["."]*(newAlnLen-len(alnList)+1))
+            try:
+                alnList[newAlnLen]=str(self.colCount[p])
+            except Exception:
+                pdb.set_trace()
+
+
+        for seq in self.seqs:
+            self.seqAln[seq].write(fullSeqs[seq][prevPos[seq]:prevPos[seq]+self.seqContext].lower())
+        #raise "EHEI"
+
+        self.seqAln["ALIGN"]=StringIO("".join(alnList)+"."*(max(myAlnLen.values())-len(alnList)+self.seqContext))
+        self.seqCoords["ALIGN"]=(self.seqContext,max(myAlnLen.values()))
+        self.seqs.append("ALIGN")
+
+        self.writeAlnSeq()
+                     
+    def strAlnOld(self,fullSeqs):
         prevPos={}
         self.seqAln={}
         for seq in self.seqs:
-            prevPos[seq]=self.align[seq][0]-self.seqContext
+            prevPos[seq]=self.seqCoords[seq][0]-self.seqContext
             self.seqAln[seq]=StringIO()
 
         #Give 10 bp of context before alignments.
         intervals=[self.seqContext]
         for p in range(1,self.n):
-            intervals.append(0)
+            intervals.append(-100)
             for seq in self.seqs:
                 try:
-                    thisInt=self.align[seq][p]-(self.sites[p-1].width+self.align[seq][p-1])
-                    intervals[-1]=max(intervals[-1],thisInt)
+                    if self.align[seq][p]>=0 and self.align[seq][p-1]>=0:
+                        #                        if self.align[seq][p-1]>=0:
+                        #                            thisInt=self.align[seq][p]-(self.sites[p-1].width+self.align[seq][p-1])
+                        #                        else:
+                        thisInt=-1e99
+                        for j in range(p-1,-1,-1):
+                            if self.align[seq][j]>=0:
+                                thisInt=self.align[seq][p]-(self.sites[j].width+self.align[seq][j])
+                                break
+                        if thisInt<=0 or thisInt>1000:
+                            pdb.set_trace()
+                        intervals[-1]=max(intervals[-1],thisInt)
                 except TypeError:
+                    raise
                     pass
 
+        print intervals
         # Align the sites. The non-site positions are left justified.
         for p in range(self.n):
             for seq in self.seqs:
@@ -1004,6 +1139,105 @@ class MultiModule:
         extend2(range(N),0,N)
 
 
+    def makeGreedyAlign(self):
+        """Makes a greedy local alignment from this module. Very yacky method."""
+
+        # Decreasing order of pairs.
+        self._pairs.sort(lambda x,y:cmp(y.score,x.score))
+        mult={}
+        back={}
+        sites=[]
+        colCount=[]
+
+        # Make the initial empty vectors
+        for pair in self._pairs:
+            for s in pair.sNames:
+                mult[s]=[]
+
+
+        alnLen=0
+        Score=0.0
+        for pair in self._pairs:
+            seq1,seq2=pair.sNames
+            backSites=sites[:]
+            backColCount=colCount[:]
+            backScore=Score
+            #Score+=pair.score
+            Score+=1.0
+            for k,v in mult.items():
+                back[k]=v[:]
+                try:
+                    assert(alnLen==len(sites)==len(colCount)==len(mult[k]))
+                except AssertionError:
+                    print alnLen,len(sites),len(colCount),len(mult[k])
+                    raise
+            for s in range(len(pair.sites)):
+                p=0
+
+                # Find new position
+##                while p<alnLen and mult[seq1][p]<pair.sitePos[seq1][s] and \
+##                      mult[seq2][p]<pair.sitePos[seq2][s]:
+                while p<alnLen and (mult[seq1][p]<pair.sitePos[seq1][s] and \
+                      mult[seq2][p]<pair.sitePos[seq2][s]):
+                    p+=1
+
+                # Verify location:
+                p1,p2=p,p
+                while p1<alnLen and mult[seq1][p1]==-1:
+                    p1+=1
+                while p2<alnLen and mult[seq2][p2]==-1:
+                    p2+=1
+                # Do not add this if the alignment would get busted.
+                #if (p1<alnLen and (pair.sitePos[seq1][s]+pair.sites[s].width)>mult[seq1][p1]) or \
+                #   (p2<alnLen and (pair.sitePos[seq2][s]+pair.sites[s].width)>mult[seq2][p2]):
+                if (p1<alnLen and (pair.sitePos[seq1][s])>mult[seq1][p1]) or \
+                   (p2<alnLen and (pair.sitePos[seq2][s])>mult[seq2][p2]):
+                    mult=back.copy()
+                    colCount=backColCount
+                    sites=backSites
+                    Score=backScore
+                    alnLen=len(sites)
+                    break
+                
+                
+                # New column if needed
+                if p==alnLen or ( (mult[seq1][p]>pair.sitePos[seq1][s] or \
+                                   mult[seq1][p]==-1) and 
+                                  (mult[seq2][p]>pair.sitePos[seq2][s] or \
+                                   mult[seq2][p]==-1) ):
+                    colCount.insert(p,0)
+                    sites.insert(p,pair.sites[s])
+                    alnLen+=1
+                    for key in mult.keys():
+                        mult[key].insert(p,-1)
+                        try:
+                            assert(alnLen==len(sites)==len(colCount)==len(mult[key]))
+                        except AssertionError:
+                            pdb.set_trace()
+                try:
+                    assert(mult[seq1][p] in (-1,pair.sitePos[seq1][s]))
+                    assert(mult[seq2][p] in (-1,pair.sitePos[seq2][s]))
+                    #print "Fitting %s (%g)"%(pair.id[-10:],pair.score)
+                except AssertionError:
+                    mult=back.copy()
+                    colCount=backColCount
+                    sites=backSites
+                    Score=backScore
+                    alnLen=len(sites)
+                    #print "AE: non fitting alignment %s (%g)"%(pair.id[-10:],pair.score)
+                    break
+
+                # Set the values
+                assert(mult[seq1][p] in (-1,pair.sitePos[seq1][s]))
+                assert(mult[seq2][p] in (-1,pair.sitePos[seq2][s]))
+                mult[seq1][p]=pair.sitePos[seq1][s]
+                mult[seq2][p]=pair.sitePos[seq2][s]
+                colCount[p]+=1
+
+            #print str(MultiOutModule(mult,sites,colCount,-1))
+
+        return MultiOutModule(mult,sites,colCount,-1,0,Score)
+
     def makeMultiAlign(self,clqId):
         """Makes a dictionary of arrays representing the multiple alignment
         from clique clqId."""
@@ -1293,7 +1527,10 @@ class MultipleAlignment:
         return len(self.resAligns)
 
     def __getitem__(self,i):
-        return self.resAligns[i]
+        try:
+            return self.resAligns[i]
+        except AttributeError:
+            raise IndexError("Index out of bounds")
 
     
     def multiAlign(self):
@@ -1316,7 +1553,7 @@ class MultipleAlignment:
                         r=mmod
                         nAligns.append(r)
                     else:
-                        print "Uniting two multi modules"
+                        #print "Uniting two multi modules"
                         r.uniteButLast(mmod)
                 else:
                     nAligns.append(mmod)
@@ -1326,10 +1563,17 @@ class MultipleAlignment:
                 nAligns.append(nMulti)
 
             self._multiAlign=nAligns[:]
-        # Multiple alignment by Prohaska et.al.
 
+        print len(self._multiAlign),
         self._multiAlign=[x for x in self._multiAlign if len(x._pairs)>1 ]
+        print len(self._multiAlign)
         #self._multiAlign=filter(lambda x:len(x._pairs)>1,self._multiAlign)
+        for mmod in self._multiAlign:
+            self.resAligns.append(mmod.makeGreedyAlign())
+
+    def DOESNTWORK(self):
+        assert(None)
+        # Multiple alignment by Prohaska et.al.
         c=0
         for mmod in self._multiAlign:
             #mmod.TransitiveClosure()
@@ -1372,50 +1616,53 @@ def apu(datat=1):
         a.addGFFfile("/home/kpalin/tyot/comparative/mabs/mabslib/tmp/bestmyf5.gff")
     a.multiAlign()
 
-    for b in range(len(a._multiAlign)):
-        for c in range(len(a._multiAlign[b]._cliques)):
-            if len(a._multiAlign[b]._cliques[c])<2: continue
-            #print "Module",b,"clique",c
-            #print
-            try:
-                x=str(a._multiAlign[b].makeMultiAlign(c))
-                print x
-            except AssertionError:
-                raise
-                pass
-        open("tmp.%d.dot"%(b),"w").write(a._multiAlign[b].inconsistToDot())
-        #print "Module",b,"cliques",len(a._multiAlign[b]._cliques)
 
-    if datat==3:
-        goodOverlap=[(3, 2), (3, 1), (0, 1), (5, 1), (2, 7), (8, 4), (4, 1), (6, 1), (1, 6), (7, 2), (7, 1), (2, 1), (4, 8), (1, 0), (1, 3), (1, 2), (1, 5), (1, 4), (1, 7), (2, 3)]
-        goodOverlap.sort()
-        goodMap=['f5.gff.3.4', 'f5.gff.2.1', 'f5.gff.2.5', 'f5.gff.7.8', '5.gff.10.2', '5.gff.11.0', 'f5.gff.5.3', 'f5.gff.3.6', 'f5.gff.4.7']
+    for x in a:
+        print str(x)
+##    for b in range(len(a._multiAlign)):
+##        for c in range(len(a._multiAlign[b]._cliques)):
+##            if len(a._multiAlign[b]._cliques[c])<2: continue
+##            #print "Module",b,"clique",c
+##            #print
+##            try:
+##                x=str(a._multiAlign[b].makeMultiAlign(c))
+##                print x
+##            except AssertionError:
+##                raise
+##                pass
+##        open("tmp.%d.dot"%(b),"w").write(a._multiAlign[b].inconsistToDot())
+##        #print "Module",b,"cliques",len(a._multiAlign[b]._cliques)
 
-        b=a._multiAlign[0]
-        helpOverlap=[ (goodMap.index(b._pairs[x].id[-10:]),goodMap.index(b._pairs[y].id[-10:])) for (x,y) in b._overlaps.keys()]
-        helpOverlap.sort()
-        print helpOverlap
-        print goodOverlap
-        assert(helpOverlap==goodOverlap)
+##    if datat==3:
+##        goodOverlap=[(3, 2), (3, 1), (0, 1), (5, 1), (2, 7), (8, 4), (4, 1), (6, 1), (1, 6), (7, 2), (7, 1), (2, 1), (4, 8), (1, 0), (1, 3), (1, 2), (1, 5), (1, 4), (1, 7), (2, 3)]
+##        goodOverlap.sort()
+##        goodMap=['f5.gff.3.4', 'f5.gff.2.1', 'f5.gff.2.5', 'f5.gff.7.8', '5.gff.10.2', '5.gff.11.0', 'f5.gff.5.3', 'f5.gff.3.6', 'f5.gff.4.7']
 
-        goodIncons=[(1, 5), (2, 4), (3, 4), (4, 2), (4, 3), (5, 1)]
-        helpIncons=[ (goodMap.index(b._pairs[x].id[-10:]),goodMap.index(b._pairs[y].id[-10:])) for (x,y) in b._inconsist.keys()]
-        helpIncons2=[ (b._pairs[x].id[-10:],b._pairs[y].id[-10:]) for (x,y) in b._inconsist.keys()]
-        helpIncons.sort()
-        print helpIncons2
-        print 
-        print helpIncons
-        print goodIncons
-        assert(helpIncons==goodIncons)
+##        b=a._multiAlign[0]
+##        helpOverlap=[ (goodMap.index(b._pairs[x].id[-10:]),goodMap.index(b._pairs[y].id[-10:])) for (x,y) in b._overlaps.keys()]
+##        helpOverlap.sort()
+##        print helpOverlap
+##        print goodOverlap
+##        assert(helpOverlap==goodOverlap)
 
-    if datat==0:
-        print "Should be\n(cliques,inconsists,pairs,overlapsM) [(1, 0, 4, 4), (36, 94, 18, 50), (1, 0, 3, 3), (1, 0, 2, 1), (1, 0, 3, 2)]"
-    x=[ (len(x._cliques),len(x._inconsist),len(x._pairs),reduce(lambda z,y:z+y,map(len,x._overlapsM.values()))) for x in a._multiAlign]
-    #x.sort()
-    print "(cliques,inconsists,pairs,overlapsM)",x
-##    for b in range(len(a)):
-##        x=str(a[b])
-##        print "Align %d\n"%(b),x
+##        goodIncons=[(1, 5), (2, 4), (3, 4), (4, 2), (4, 3), (5, 1)]
+##        helpIncons=[ (goodMap.index(b._pairs[x].id[-10:]),goodMap.index(b._pairs[y].id[-10:])) for (x,y) in b._inconsist.keys()]
+##        helpIncons2=[ (b._pairs[x].id[-10:],b._pairs[y].id[-10:]) for (x,y) in b._inconsist.keys()]
+##        helpIncons.sort()
+##        print helpIncons2
+##        print 
+##        print helpIncons
+##        print goodIncons
+##        assert(helpIncons==goodIncons)
+
+##    if datat==0:
+##        print "Should be\n(cliques,inconsists,pairs,overlapsM) [(1, 0, 4, 4), (36, 94, 18, 50), (1, 0, 3, 3), (1, 0, 2, 1), (1, 0, 3, 2)]"
+##    x=[ (len(x._cliques),len(x._inconsist),len(x._pairs),reduce(lambda z,y:z+y,map(len,x._overlapsM.values()))) for x in a._multiAlign]
+##    #x.sort()
+##    print "(cliques,inconsists,pairs,overlapsM)",x
+####    for b in range(len(a)):
+####        x=str(a[b])
+####        print "Align %d\n"%(b),x
     
 
 if __name__=="__main__":
