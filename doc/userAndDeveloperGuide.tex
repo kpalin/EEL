@@ -1,0 +1,177 @@
+\begin{filecontents}{helpTable.tex}
+\begin{longtable}{l|>{\raggedright\hsize=0.3\hsize}X|>{\hsize=1.7\hsize}X<{\vspace{4pt}}}
+%\begin{longtable}{l|l|X<{\vspace{4pt}}}
+    \caption{Mabs commands.} \\
+    Command & Arguments & Description \\
+    \hline \endhead
+    \mcommand{?}, \mcommand{h}, \mcommand{help} & --- & Outputs help to
+    stdout \\
+    \mcommand{about} & --- & Outputs the 'about' information to
+    stdout \\
+    \mcommand{addMatrix},\mcommand{am} & \mparam{Files} & Include PSSMs from
+    files matching \mparam{Files}. \\
+    \mcommand{addSequence},\mcommand{as} & \mparam{Files} & Include all
+    sequences from FASTA formated files matching \mparam{Files}. \\
+    \mcommand{addSingleSequence}, \mcommand{ass} & \mparam{File} & Include the
+    only sequence in gzipped and FASTA formatted \mparam{File}. This might be
+    usefull for very large sequences.\\
+    \mcommand{align} &
+    \mparam{File}, \mparam{N}, \mparam{$\lambda$}, \mparam{$\xi$}, \mparam{$\mu$}, \mparam{$\nu$}, \mparam{nPR} &
+    Executes the pairwise alignment procedure. All of the parameters
+    are optional and value '.' gives the parameter its default
+    value. See section~\ref{sec:pairalign} for details. \\
+    \mcommand{more} & \mparam{N} & Fetch \mparam{N} more alignments
+    from the previous alignment. \\
+    \mcommand{getTFBS} & \mparam{Cutoff} & Search for transcription factor
+    binding sites with PSSMs from the included DNA sequences. The
+    scoring \mparam{Cutoff} is relative to the maximum score of each
+    PSSM. See sec.~\ref{sec:TFBSscan} for details.\\
+    \mcommand{getTFBSabsolute} & \mparam{Cutoff} & Search for transcription factor
+    binding sites with PSSMs from the included DNA sequences. The
+    scoring \mparam{Cutoff} is for absolute score independent of PSSM
+    or sequence. See sec.~\ref{sec:TFBSscan} for details.\\
+    \mcommand{printMatrices}, \mcommand{pm} & --- & Outputs the PSSM frequences
+    to stdout. \\
+    \mcommand{printMatrixWeights}, \mcommand{pmw} & --- & Outputs the
+    PSSM weights to stdout. \\
+    \mcommand{printSeqNames}, \mcommand{ps} & --- & Outputs the
+    names of the included sequences to stdout. \\
+    \mcommand{quit}, \mcommand{q} & --- & Quit mabs. \\
+    \mcommand{removeMatrix}, \mcommand{rm} & \mparam{k} & Removes
+    matrix number \mparam{k}. \\
+    \mcommand{removeSequence}, \mcommand{rs} & \mparam{name} & Removes
+    the sequence called \mparam{name}. \\
+    \mcommand{reset} & --- & Removes all matrices and sequences. \\
+    \mcommand{resetMatrices},\mcommand{resm} & --- & Removes all matrices. \\
+    \mcommand{resetSequences},\mcommand{ress} & --- & Removes all sequences. \\
+    \mcommand{setMarkovBG} & \mparam{bgSample}, \mparam{order} & If
+    \mparam{bgSample} is a sequence name, create new
+    \mparam{order}-order markov background
+    using that sequence as data. If \mparam{bgSample} is a previously
+    stored markov background datafile, use that.\\
+    \mcommand{setBGfreq} & \mparam{A}, \mparam{C}, \mparam{G}, \mparam{T}
+    & Set background nucleotide frequences. This is default and this
+    removes the markov background. \\
+    \mcommand{setpseudocount} & \mparam{C} & Sets the amount of
+    pseudocounts added to PSSMs when counting the weights. \\
+    \mcommand{showmatch}, \mcommand{sm} & --- & Outputs the results
+    from TFBS scan to stdout. \\
+    \mcommand{savematch} & \mparam{File} & Saves the results
+    from TFBS scan to \mparam{File}. \\
+    \mcommand{savealign} & \mparam{File} & Saves the fetched alignment
+    results to \mparam{File} in fancy human readable format. \\
+    \mcommand{savealignAnchor} & \mparam{File} & Saves the fetched alignment
+    results to \mparam{File} in anchor format understood by
+    DIALIGN2\cite{Morgenstern99}. \\
+    \mcommand{savealignGFF} & \mparam{File} & Saves the fetched alignment
+    results to \mparam{File} in simple machine readable format. \\
+    \mcommand{showalign}, \mcommand{sa} & --- & Outputs the fetched
+    alignment results in fancy human readable format to stdout. \\
+    \label{tab:commands}
+  \end{longtable}
+\end{filecontents}
+
+
+
+
+
+
+
+\documentclass[12pt,a4paper]{article}
+
+\title{Users and Developers Guide for MABS program}
+\author{Kimmo Palin}
+\date{\today}
+
+
+\newcommand{\mcommand}[1]{\emph{\sf #1}}
+\newcommand{\mparam}[1]{'\emph{#1}'}
+
+%\usepackage{tabularx}
+\usepackage{ltxtable}
+\usepackage{lscape}
+
+\begin{document}
+\maketitle
+
+
+\section{Introduction}
+\label{sec:intro}
+
+Mabs is a comparative genomics tool for detecting enhancer
+modules conserved in related species. The design goal for mabs has
+been its applicability for detecting mammalian enhancers, especially
+enhancers for human genes. The main feature posed by mammalian
+genome is that they have very long contigs with high percentage of
+``junk'' DNA.
+
+Mabs differs from traditional local alignment tools by consentrating
+its attention only to the functional sites on the DNA. These sites are
+detected with position specific scoring matrices\cite{Stormo00} (PSSMs) that are provided by
+the user. These PSSMs usually represent the binding affinity of
+a~transcription factor to a~particular DNA sequence. 
+The other data the user has to provide is obviously the paralogous DNA
+sequences themselves.
+
+\section{Usage}
+\label{sec:usage}
+
+Mabs has evolved to somewhat complex piece of software. The program is
+controlled by writen commands with additional information provided by
+parameters. The commands can be given either on commandline (prepended
+with '-') or on interactive command shell. The most up-to-date help
+about all available commands can be obtained with
+command~\mcommand{help}. The complete list of mabs commands along with
+brief description of each can be found in table~\ref{tab:commands}.
+
+The commands from the command line are read from left to right, such
+that the command%
+\begin{verbatim}!# mabs -as *.fa -am TFv1/*.pfm -setMarkovBG human.ChrI.O4.bg \\
+        -getTFBSabsolute -savematch \end{verbatim}%
+searches all '*.fa' files (\verb|-as *.fa|) for binding sites from
+directory 'TFv1' (\verb|-am TFv1/*.pfm|) with respect to a~markov
+background (\verb|-setMarkovBG human.ChrI.04.bg|). All sites scoring
+better than the default cutoff of 9, are searched
+(\verb|-getTFBSabsolute|) and stored to a~file with a~name similar to
+ 'mabs\_2003\_8\_27\_15\_48.gff' (\verb|-savematch|).
+
+
+
+\section{Finding Potential Binding Sites}
+\label{sec:TFBSscan}
+
+
+
+\section{Pairwise alignment}
+\label{sec:pairalign}
+
+
+
+
+\section{Acknowledgements}
+\label{sec:acknow}
+
+We thank Matthias Berg for coding the initial version of the mabs
+program and laying foundations for mabses user interface and core
+design.
+
+\bibliographystyle{apalike}
+\bibliography{medlinebib}
+
+
+\appendix
+
+\begin{landscape}
+\section{Commands}
+\label{sec:mabscommands}
+\begin{small}
+\LTXtable{\linewidth}{helpTable.tex}%
+\end{small}
+\end{landscape}
+
+
+\section{Version history}
+\begin{verbatim}
+$Log$
+\end{verbatim}
+\end{document}
