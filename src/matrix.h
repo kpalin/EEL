@@ -1,5 +1,8 @@
 //
 // $Log$
+// Revision 1.1  2005/02/23 13:40:25  kpalin
+// Initial Clean up.
+//
 // 
 
 
@@ -52,7 +55,8 @@ public:
   void halfHistories();
   vector<double> WatsonScore();
   vector<double> CrickScore();
-  int length() { return this->mat_length; }
+  unsigned int allelCount() {return this->history.size(); }
+  int const length() const { return this->mat_length; }
 };
 
 
@@ -76,7 +80,8 @@ private:
 public:
   TFBSscan *mat;
   unsigned int pos;
-  double score;
+  double score;  //Max score
+  double minScore;
   char strand;
   vector<class SNPdat> sigGenotype; // Significant genotype
 
@@ -98,7 +103,9 @@ class TFBShelper {
 
 
   void nextACGT(char chr,unsigned int startFrom=0);
+  void removeScannerHistories();
 public:
+  unsigned int bgOrder() { return (this->haveBG?this->bg[0].order:0); }
   deque<class SNPdat> SNPs;
   unsigned int matrixCount() {return this->matricies.size(); }
   unsigned int allelCount() {return this->probBuffer.size(); }
@@ -109,6 +116,6 @@ public:
   unsigned int seqPos() {return seqCount; }
 
   vector<TFBShit*> getMatches();
-  vector<SNPdat> getSNPs(int snpCode);
+  vector<SNPdat> getSNPs(int snpCode,int matInd=-1);
 };
 
