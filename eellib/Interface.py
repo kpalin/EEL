@@ -16,6 +16,9 @@ except ImportError:
 
 #
 # $Log$
+# Revision 1.9  2004/02/05 10:31:47  kpalin
+# Added extra garbage collection.
+#
 #
 
 
@@ -25,6 +28,20 @@ if 0:
 import align
 import sys,math
 
+
+def memReport():
+    try:
+        import re
+        statStr=open("/proc/self/status").read()
+        m=re.search(r"VmSize:\s*(.+)",statStr)
+        if m:
+            print "Virtual memory size",m.group(1)
+        else:
+            print "Couldn't figure out status:\n",statStr
+    except Exception:
+        pass
+
+atexit.register(memReport)
 
 try:
     from gc import collect
@@ -227,6 +244,9 @@ class Interface:
         if not self.alignment:
             return
         for i in range(num_of_align):
+            if self.alignment.memSaveUsed==1 and self.alginment.askedResults>=len(self.alignment.bestAlignments):
+                print "Can't give more alignments. Don't remember those"
+                break
             goodAlign=self.alignment.nextBest()
             if not goodAlign:
                 break
@@ -250,12 +270,12 @@ class Interface:
             if len(self.__comp)==0:
                 return "No binding sites"
             else:
-                self.alignment=align.aligndata(Output.get(self.__comp),
+                self.alignment=align.aligndata(Output.get(self.__comp),num_of_align,
                                                Lambda, xi,
                                                mu, nu,nuc_per_rotation)
 
         else:
-            self.alignment= align.alignfile(filename, Lambda,
+            self.alignment= align.alignfile(filename, num_of_align,Lambda,
                                             xi, mu, nu,nuc_per_rotation)
 
         self.moreAlignments(num_of_align)
