@@ -14,7 +14,7 @@
     sequences from FASTA formated files matching \mparam{Files}. \\
     \mcommand{addSingleSequence}, \mcommand{ass} & \mparam{File} & Include the
     only sequence in gzipped and FASTA formatted \mparam{File}. This might be
-    usefull for very large sequences.\\
+    useful for very large sequences.\\
     \mcommand{align} &
     \mparam{File}, \mparam{N}, \mparam{$\lambda$}, \mparam{$\xi$}, \mparam{$\mu$}, \mparam{$\nu$}, \mparam{nPR} &
     Executes the pairwise alignment procedure. All of the parameters
@@ -30,7 +30,7 @@
     binding sites with PSSMs from the included DNA sequences. The
     scoring \mparam{Cutoff} is for absolute score independent of PSSM
     or sequence. See sec.~\ref{sec:TFBSscan} for details.\\
-    \mcommand{printMatrices}, \mcommand{pm} & --- & Outputs the PSSM frequences
+    \mcommand{printMatrices}, \mcommand{pm} & --- & Outputs the PSSM frequencies
     to stdout. \\
     \mcommand{printMatrixWeights}, \mcommand{pmw} & --- & Outputs the
     PSSM weights to stdout. \\
@@ -46,14 +46,14 @@
     \mcommand{resetSequences},\mcommand{ress} & --- & Removes all sequences. \\
     \mcommand{setMarkovBG} & \mparam{bgSample}, \mparam{order} & If
     \mparam{bgSample} is a sequence name, create new
-    \mparam{order}-order markov background
+    \mparam{order}-order Markov background
     using that sequence as data. If \mparam{bgSample} is a previously
-    stored markov background datafile, use that.\\
+    stored Markov background datafile, use that.\\
     \mcommand{setBGfreq} & \mparam{A}, \mparam{C}, \mparam{G}, \mparam{T}
-    & Set background nucleotide frequences. This is default and this
-    removes the markov background. \\
+    & Set background nucleotide frequencies. This is default and this
+    removes the Markov background. \\
     \mcommand{setpseudocount} & \mparam{C} & Sets the amount of
-    pseudocounts added to PSSMs when counting the weights. \\
+    pseudo counts added to PSSMs when counting the weights. \\
     \mcommand{showmatch}, \mcommand{sm} & --- & Outputs the results
     from TFBS scan to stdout. \\
     \mcommand{savematch} & \mparam{File} & Saves the results
@@ -84,6 +84,13 @@
 \date{\today}
 
 \newcommand{\Prob}{\mathrm{P}}
+\newcommand{\DNAalpha}{\ensuremath{\Sigma}}
+\newcommand{\BSalpha}{\ensuremath{\Gamma}}
+\newcommand{\Score}[1]{\ensuremath{s({#1})}}
+\newcommand{\sPos}[1]{\ensuremath{p({#1})}}
+\newcommand{\ePos}[1]{\ensuremath{q({#1})}}
+\newcommand{\sdist}[2]{\ensuremath{\delta(#1,#2)}}
+\newcommand{\bsType}[1]{\ensuremath{c({#1})}}
 
 \newcommand{\mcommand}[1]{\emph{\sf #1}}
 \newcommand{\mparam}[1]{'\emph{#1}'}
@@ -106,7 +113,7 @@ enhancers for human genes. The main feature posed by mammalian
 genome is that they have very long contigs with high percentage of
 ``junk'' DNA.
 
-Mabs differs from traditional local alignment tools by consentrating
+Mabs differs from traditional local alignment tools by concentrating
 its attention only to the functional sites on the DNA. These sites are
 detected with position specific scoring matrices\cite{Stormo00} (PSSMs) that are provided by
 the user. These PSSMs usually represent the binding affinity of
@@ -118,8 +125,8 @@ sequences themselves.
 \label{sec:usage}
 
 Mabs has evolved to somewhat complex piece of software. The program is
-controlled by writen commands with additional information provided by
-parameters. The commands can be given either on commandline (prepended
+controlled by written commands with additional information provided by
+parameters. The commands can be given either on command line (prepended
 with '-') or on interactive command shell. The most up-to-date help
 about all available commands can be obtained with
 command~\mcommand{help}. The complete list of mabs commands along with
@@ -130,7 +137,7 @@ that the command%
 \begin{verbatim}!# mabs -as *.fa -am TFv1/*.pfm -setMarkovBG human.ChrI.O4.bg \\
         -getTFBSabsolute -savematch \end{verbatim}%
 searches all '*.fa' files (\mcommand{\mbox{-as} *.fa}) for binding sites from
-directory 'TFv1' (\mcommand{\mbox{-am} TFv1/*.pfm}) with respect to a~markov
+directory 'TFv1' (\mcommand{\mbox{-am} TFv1/*.pfm}) with respect to a~Markov
 background (\mcommand{\mbox{-setMarkovBG} human.ChrI.04.bg}). All sites scoring
 better than the default cutoff of 9, are searched
 (\mcommand{\mbox{-getTFBSabsolute}}) and stored to a~file with a~name similar to
@@ -143,9 +150,9 @@ better than the default cutoff of 9, are searched
 
 The \mcommand{getTFBS} and \mcommand{getTFBSabsolute} commands look
 for the sites whose nucleotide distribution differ the most from the
-background sequence towards the given position specific
+background sequence toward the given position specific
 frequencies. The user inputs the position specific counts $C[i,c]$,
-$1\le i \le m$ and $c\in\{A,C,G,T\}=\Sigma$ in
+$1\le i \le m$ and $c\in\{A,C,G,T\}=\DNAalpha$ in
 the PSSM files given with the \mcommand{addMatrix} command. The PSSM
 files should contain four rows of non negative integers, each number
 representing the count of the given nucleotide in that position of the
@@ -155,21 +162,21 @@ counts for 'A', the second row has counts for 'C', the third row for
 to be the same.
 
 
-Each character of~$\Sigma$ can occur in each position of the
+Each character of~$\DNAalpha$ can occur in each position of the
 background sequence with probability~$p_A$, $p_C$, $p_G$, $p_T$ (which
 can be set with \mcommand{setBGfreq}).  The position specific
 nucleotide distribution of the binding site motif ($M$)is biased toward the
-background with pseudocount~$s$ (set by \mcommand{setpseudocount})
+background with pseudo count~$s$ (set by \mcommand{setpseudocount})
 which can be seen as a~Dirichlet prior (see
-e.g.~\cite{durbin98}). This also leviates some technical difficulties
-with division by zero later on. The effect of the pseudocount
+e.g.~\cite{durbin98}). This also alleviates some technical difficulties
+with division by zero later on. The effect of the pseudo count
 diminishes when there are more observations on the correct motif,
 i.e. the counts $C[i,c]$ are larger. The probability, or the weighted
 frequency, of the binding site (Motif) position~$i$, $M_i$ having a
 character $c$ is
 \begin{equation}
   \label{eq:motifProb}
-  \Prob(M_i=c)=\frac{C[i,c]+p_cs}{\sum_{x\in\Sigma}C[i,x]+s}
+  \Prob(M_i=c)=\frac{C[i,c]+p_cs}{\sum_{x\in\DNAalpha}C[i,x]+s}
 \end{equation}
 
 The binding sites are searched with respect to two optional background
@@ -190,7 +197,7 @@ probability of character $B_i$.  This probability
 $\Prob(B_i|B_{i-1},\ldots,B_{i-k})$ is computed on-line during the
 search by using precomputed data (set by \mcommand{setMarkovBG}). The
 Mabs distribution includes a file 'human.ChrI.04.bg' which
-contains~4th order markov bakground model learned from human
+contains~4th order Markov background model learned from human
 chromosome one.
 
 For both types of background distribution the motif matching score is
@@ -221,11 +228,11 @@ character in the string.
 These weights can be precomputed so that the actual binding site scan
 over the sequence is only summing over a moving window.
 
-The higher order markov background is a bit trickier since the weights
+The higher order Markov background is a bit trickier since the weights
 depend on previous characters in the string. But still we can use the
 moving sum method for the probability of the motif and compute the
 background probability independently. After computing both of the log
-likelihoods, we can get the score by substracting
+likelihoods, we can get the score by subtracting
 \begin{equation}
   \label{eq:markovCounting}
   \sum_{i=1}^{m}\log_2
@@ -233,23 +240,174 @@ likelihoods, we can get the score by substracting
     \Prob(B_i=S_{l+i-1}|S_{l+i-2},\ldots,S_{l+i-k}).
 \end{equation}
 In the beginning of the sequence the background probability is
-computed with lower order markov chain.
+computed with lower order Markov chain.
 
 \section{Pairwise alignment}
 \label{sec:pairalign}
 
+The novel feature in mabs tool is the local binding site alignment. It
+shares ideas with the global binding site
+alignment of Blanco~et.al.~\cite{Blanco_etal03} and with the local
+sequence alignment of Smith and Waterman~\cite{SmithWaterman81}. our
+goal is to detect the evolutionary conserved gene enhancer elements
+from genomic DNA sequence.
+
+The \mcommand{align} command takes seven optional arguments, all of
+which can be omitted with character '.' (period) on its place. First
+parameter \mparam{File} is the GFF file \mparam{File} is the GFF file containing the binding site
+information produced with the
+\mcommand{savematch} command containing the binding site
+information. The file should contain at binding sites for at least two
+sequences. If more than two sequences are given in one file, the
+program asks two sequences that should be aligned (This can not be
+given directly with commands, parameters nor from command line). If
+the \mparam{File} parameter is omitted, the binding site data is
+obtained from the TFBS scan preceding the \mcommand{align} command.
+
+The second parameter~\mparam{N} gives the number of best local
+alignments to return after the alignment run. More suboptimal
+alignments can be requested with \mcommand{more} command.
+
+The last four parameters \mparam{$\lambda$}, \mparam{$\xi$},
+\mparam{$\mu$}, \mparam{$\nu$} and \mparam{nPR} control the alignments
+weighting function. The mabs local alignment attempts to estimate the
+energy provided and required by transcription factor proteins binding
+to DNA sequence. Some of the binding energy is transformed to work
+when the DNA is twisted and bent to correct conformation allowing
+proper binding.
+
+Lets consider the input for the alignment function as two strings $A=a_1
+\ldots a_n$ and~$B$ %= b_1 \ldots b_n$ 
+of binding sites represented as tuples $(\bsType{a_i}, \Score{a_i}, \sPos{a_i},
+\ePos{a_i})$. The $\bsType{a_i}$ is a character from the
+alphabet~$\BSalpha$ that represents all
+known binding site motifs.  Each individual tuple contains also the score
+$\Score{a_i}$ and the start and end positions $\sPos{a_i}$ and
+$\ePos{a_i}$ on the DNA sequence respectively. 
+%All of this data is
+%available in the GFF files produced with \mcommand{savematch} command
+%and required in aligning two binding site sequences $A$ and $B$.
 
 
+The score $\Score{a_i}$, obtained most likely with \mcommand{getTFBS}
+or \mcommand{getTFBSabsolute} commands, is our estimate for binding
+affinity of the transcription factor to binding site $a_i$. The
+estimated binding energy
+is obtained by multiplying the score by the parameter~$\lambda$. While
+aligning sites~$i$ and~$j$ from two sequences~$A$ and~$B$, we have
+\begin{equation}
+  \label{eq:scoreReward}
+  \lambda(\Score{a_i}+\Score{b_j}).
+\end{equation}
 
-\section{Acknowledgements}
+To estimate the energy consumed in the binding, we first assume that
+the synergy between two adjacent binding sites are linearly dependent
+on their distance from each other. To simplify the notation, when
+aligning $a_k$ and $a_i$ next to each other, we denote their distance
+\begin{equation}
+  \label{eq:deltaNotation}
+  \sdist{a_k}{a_i}=\sPos{a_i}-\ePos{a_k}.
+\end{equation}
+Now, when aligning $a_k$ and $a_i$ with $b_l$ and $b_j$, we subtract
+from the binding energy the estimate for ``synergy'' work
+\begin{equation}
+  \label{eq:linearPenalty}
+  \mu\frac{\sdist{a_k}{a_i}+\sdist{b_l}{b_j}}{2}.
+\end{equation}
+
+Since the binding sites in one particular enhancer region work
+synergisticly it would be conceivable that the distances between the
+binding sites within the enhancer should stay relatively the same. The
+difference in the distance between the two adjacent binding sites
+results in two different energy demanding tasks. For one, the binding
+sites have to be bent back to their optimal distance in space possibly
+forming a loop in the DNA. We estimate the energy required by this by
+the energy required to bend an elastic rod. This energy is dependent
+on the square of the distance bent and inverse of the distance over
+which the bending is done. In total, we estimate the energy by
+\begin{equation}
+  \label{eq:bendingPenalty}
+  \nu \frac{(\sdist{a_k}{a_i}-\sdist{b_l}{b_j})^2}{\sdist{a_k}{a_i}+\sdist{b_l}{b_j}}
+\end{equation}
+
+The second energy drain resulting from the altered distance is the
+helical structure of DNA~\cite{WatsonCrick53}. Since the protein binds
+to the major groove of the DNA, the protein binding site must be in
+correct~3D orientation if it simultaneously interacts with other
+proteins also bound to the same DNA. We estimate the energy required
+by the twisting of the DNA also with the model of elastic rod, and get
+a formula
+\begin{equation}
+  \label{eq:twistingPenalty}
+  \xi \phi^2/(\sdist{a_k}{a_i}+\sdist{b_l}{b_j})  
+\end{equation}
+where $\phi$ is the twisting angle in radians, assuming the DNA has
+\mparam{nPR} nucleotides per complete rotation.
+
+Our alignment method tries to find a common subsequence from two binding site
+sequences $A$ and $B$ such that the subsequence has maximal binding
+energy, computed by summing~(\ref{eq:scoreReward}) and
+subtracting~(\ref{eq:linearPenalty}), (\ref{eq:bendingPenalty})
+and~(\ref{eq:twistingPenalty}) for each aligned binding site pair
+$a_i$, $b_j$. This subsequence can be found by dynamic programming
+with using recurrence formula
+\begin{equation}
+  \label{eq:recurrence}
+  \begin{array}{ll}
+D_{i,j} = \max_{ 0\le k <i, 0\le l<j} \left\{ 0,\right. & %
+    D_{k,l}+\lambda(\Score{a_i}+\Score{b_j}) -  \\%
+    &  \mu\frac{\sdist{a_k}{a_i}+\sdist{b_l}{b_j}}{2} - %
+    \nu
+    \frac{(\sdist{a_k}{a_i}-\sdist{b_l}{b_j})^2}{\sdist{a_k}{a_i}+\sdist{b_l}{b_j}} - \\
+    
+    & \left.  \xi \phi^2/(\sdist{a_k}{a_i}+\sdist{b_l}{b_j})\right\}.
+  \end{array}
+\end{equation}
+for $i$ and $j$ such that $\bsType{a_i}=\bsType{b_j}$. If $a_i$ are $b_j$ sites
+for different transcription factor, the $D_{i,j}$ is infinite and can
+thus be disregarded in the alignment computation.
+The maximum energy subsequence is found by backtracking from the matrix
+position obtaining the highest value.
+
+The brute force implementation of recursion
+formula~(\ref{eq:recurrence}) would result an algorithm with time
+complexity~$O(n^4)$ and space complexity~$O(n^2)$ where~$n$ is the
+average length of the binding site sequences. These quite high
+complexities can be avoided by careful implementation. Since we are
+only interested on $D_{i,j}$ such that $a_i$ and $b_j$ are for the
+same transcription factor, we can implement~$D$ as a sparse matrix
+storing only matching positions. This decreases the expected space complexity
+to $O(n^2/|\BSalpha|^2)$ if we assume uniform distribution of binding
+sites. The worst case complexity is not affected.
+
+The time complexity can be decreased by restricting the attention to
+adjacent sites with limited distance between them. While this
+restriction does alter the scoring function~(\ref{eq:recurrence}) it
+is biologically plausible to assume that binding sites very far apart
+in the genome do not interact. This biological assumption limits the
+work done for each filled cell of~$D$ by a~constant thus bringing the
+time complexity down to optimum with respect to the space
+requirement. In expectation that is $O(n^2/|\BSalpha|^2)$.
+
+The significance of the mabs alignment scores is somewhat a
+guestion. We recomend to search for reasonable alignment score cutoff
+values by pairwise aligning non related sequences, for example two
+sequences from the same organism. The best local alignment of this
+kind of ``dummy'' alignment procedure can be used as lower bound of
+alignment score significance.
+
+\section{Acknowledgments}
 \label{sec:acknow}
+
+The problem and the weighting function is provided by Jussi Taipale
+along with the biological background of mabs methods.
 
 We thank Matthias Berg for coding the initial version of the mabs
 program and laying foundations for mabses user interface and core
 design.
 
 \bibliographystyle{apalike}
-\bibliography{medlinebib,ml}
+\bibliography{all}
 
 
 \appendix
@@ -266,6 +424,9 @@ design.
 \section{Version history}
 \begin{verbatim}
 $Log$
+Revision 1.2  2004/01/29 09:14:45  kpalin
+Binding site scanning section added.
+
 Revision 1.1  2004/01/28 08:43:38  kpalin
 Initial introduction and command help.
 
