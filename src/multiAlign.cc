@@ -25,10 +25,13 @@
 
 
 
-
 /*
  *
  * $Log$
+ * Revision 1.2  2004/06/22 12:29:05  kpalin
+ * Presumably working. No return values back to python
+ * but the alignment looks like working as planned.
+ *
  * Revision 1.1  2004/06/22 08:41:18  kpalin
  * A full version that compiles. Doesn't probably work
  * and is totally untested and slow but it's just a first trial.
@@ -47,94 +50,13 @@
 #include <assert.h>
 
 
+
+
 using namespace std;
 
-typedef unsigned int uint;
 
-typedef double posind;
+#include "multiAlign.h"
 
-typedef double store;
-
-struct id_triple
-{
-  uint ID;
-  posind pos;
-  posind epos;
-  //uint pos;
-  double weight;
-  char strand;
-};
-
-class PointerVec {
-  vector<int> p;
-  vector<int> dimlen;
-  vector<char> bound;  //Bit vector
-  uint m;
-  int ok;
-
-  vector<int> *dimFactors;
-  int matrix_p;
-
-  class Inputs *limData;
-  int limitBP;
-  int dataPoint();
-
-public:
-  PointerVec() {ok=0; limData=NULL; }
-  PointerVec(vector<int> &,vector<int> &,vector<int>*);
-  void setValue(vector<int> &np);
-
-  int isOK() { return ok; }
-  vector<int> &getValue() { return p; }
-  const PointerVec&  operator++(int);
-  const PointerVec & operator--(int);
-  PointerVec project(vector<int> &);
-  PointerVec projectAndLimit(vector<int> &,Inputs *,int maxbp);
-  posind difference(int i);
-  void clearProject();
-  int operator[](int i) {return p[i]; }
-
-  int getMatrixCoord() { assert(matrix_p==dataPoint()); return matrix_p; }
-
-  void output() {
-    for(uint i=0;i<m;i++) {
-      cout<<p[i]<<",";
-    } cout<<endl; }
-};
-
-class ABset {
-  vector<int> A; // Set of characters over limit
-  vector<vector<int> > B; // Set of sequences for given character
-  int limit;
-  int pointer;
-
-public:
-  ABset(int dim,int limit=2) { B.resize(dim*2); this->limit=limit; pointer=0; }
-  void addChar(int seq,int chr,char strand);
-  int moreAlphas();
-  vector<int> nextB();
-};
-
-
-class Inputs {
-  vector< vector<id_triple> > seq;
-  map<string,uint> TF_to_id;
-  map<string,uint> SEQ_to_id;
-
-public:
-  Inputs() { return; }
-  Inputs(PyObject* data);
-  int addSite(PyObject* item);
-  int sequences() { return SEQ_to_id.size(); }
-  int factors() { return TF_to_id.size(); }
-  vector<int> sequenceLens();
-
-  vector<id_triple>  getSites(PointerVec &here);
-
-  id_triple getSite(PointerVec &p,int i) { return seq[i][p[i]]; }
-  id_triple getSite(int pos,int i) { return seq[i][pos]; }
-  ABset getAB(PointerVec &p,int limit=2);
-};
 
 
 void ABset::addChar(int seq,int chr,char strand)
@@ -257,38 +179,7 @@ const PointerVec& PointerVec::operator++(int dummy)
   return *this;
 }
 
-class matrixentry
-{
-  store value;
 
-  //following values are for the backtracing
-  PointerVec backTrack;
-public:
-  matrixentry() { return ;}
-  matrixentry(store,PointerVec&);
-  store getValue();
-  PointerVec &getBacktrace();
-};
-
-class Matrix {
-
-  int dim,matSize;
-  vector<int> dimLen;
-
-  vector<int> dimFactors;
-
-  vector<matrixentry> data;
-
-
-public:
-  Matrix() {return; }
-  Matrix(vector<int> &);
-  PointerVec getOrigin();
-  matrixentry getValue(PointerVec &);
-  void setValue(PointerVec &,matrixentry &);
-  matrixentry &operator[](PointerVec &p) { return data[p.getMatrixCoord()]; }
-  int size() { return data.size(); }
-};
 
 
 Matrix::Matrix(vector<int> &dims)
@@ -309,7 +200,14 @@ Matrix::Matrix(vector<int> &dims)
       dimFactors[i]=dimLen[i-1]*dimFactors[i-1];
     }
   }
-  data.resize(matSize);
+  try {
+    data.resize(matSize);
+  }
+  catch (std::bad_alloc const&) {
+    cout << "Memory allocation fail!" << endl;
+    PyErr_SetString(PyExc_MemoryError,"Out of memory!");
+  }
+
 }
 
 PointerVec Matrix::getOrigin()
@@ -593,42 +491,6 @@ bool operator>(const MS_res& t1,const MS_res& t2){
 }
 
 
-struct __CPSTUF {
-  __CPSTUF() { return; }
-
-  Inputs indata;
-
-  Matrix dynmat;
-
-
-  priority_queue<MS_res> bestAligns;
-
-  //map<store,pair<matCoord,matCoord> > bestAlignsTmp;
-}  ;
-
-typedef struct {
-  PyObject_HEAD
-
-    /* Type-specific fields go here. */
-  PyTupleObject *names;
-
-  PyObject *bestAlignments;
-
-  double secs_to_align;
-  double lambda;
-  double xi;
-  double mu;
-  double nu;
-  double nuc_per_rotation;
-  int askedresults;
-
-  int item_count;
-
-  struct __CPSTUF *CP;
-
-} malign_AlignmentObject;
-
-
 //////////////////////////////////////////////////////////////////////
 // Aligned site object
 
@@ -778,8 +640,39 @@ extern "C" int
 malignment_init(malign_AlignmentObject *self, PyObject *args, PyObject *kwds)
 {
 
-  PyErr_SetString(PyExc_NotImplementedError,"Use factor function instead!");
-  return -1;
+
+  double lambda, xi, mu, nuc_per_rotation,nu;
+  string firstSeqName,secondSeqName,sequence;
+  int result_ask;
+  PyObject *data;
+  static char *kwlist[] = {"data","results_ask","lambda","xi","mu","nu","nuc_per_rotation",NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiddddd", kwlist, 
+				  &data,&result_ask,
+			&lambda, &xi, &mu, &nu, &nuc_per_rotation)){
+    return -1;
+  }
+
+  //cout<<"NYT AJETAAN INIT_IÄ"<<endl;
+  self->CP=new struct __CPSTUF;
+  if(!self->CP) {
+    PyErr_SetString(PyExc_MemoryError,"Out of memory!");
+    return -1;
+  }
+  assert(self->CP!=NULL);
+
+  if(PySequence_Check(data)==0) {
+    PyErr_SetString(PyExc_ValueError,"First parameter must be sequence!");
+    return -1;
+  }
+
+  malign_alignCommon(self,data,result_ask,lambda,xi,mu,nu,nuc_per_rotation);
+
+  if(PyErr_Occurred()) {
+    Py_XDECREF(self);
+    return -1;
+  }
+
+  return 0;
 }
 
 static 
@@ -807,14 +700,17 @@ malignment_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	}
 
       self->CP=new struct __CPSTUF;
+      cout<<"ASETETAAN CP UUTEEN MALIGN OBJEKTIIN!"<<endl<<flush;
+
       if (self->CP==NULL) {
 	return NULL;
       }
     }
 
+    
     self->item_count=0;
-    //malignment_init(self,args,kwds);
-
+    assert(self->CP!=NULL);
+    cout<<"CP ON EPÄNULL"<<endl<<flush;
     return (PyObject *)self;
 }
 
@@ -954,13 +850,13 @@ malignObject(malign_AlignmentObject *self)
 
   int Empty=0,nonEmpty=0;
 
-  for(PointerVec entry=self->CP->dynmat.getOrigin();entry.isOK();entry++) {
+  for(PointerVec entry=self->CP->dynmat->getOrigin();entry.isOK();entry++) {
 #ifndef NDEBUG
     //entry.output();
 #endif
-    ABset AB=self->CP->indata.getAB(entry);
+    ABset AB=self->CP->indata->getAB(entry);
 
-    vector<id_triple> sites=self->CP->indata.getSites(entry);
+    vector<id_triple> sites=self->CP->indata->getSites(entry);
 
     if(AB.moreAlphas()) {
       nonEmpty++;
@@ -986,10 +882,10 @@ malignObject(malign_AlignmentObject *self)
       base*=self->lambda*n*(n-1)/2;
 
 
-      for(PointerVec k=entry.projectAndLimit(Bak,&self->CP->indata,MAX_BP_DIST);
+      for(PointerVec k=entry.projectAndLimit(Bak,self->CP->indata,MAX_BP_DIST);
 	  k.isOK(); k--) {  // Exponential loop
 
-	Score=base+self->CP->dynmat[k].getValue();
+	Score=base+(*self->CP->dynmat)[k].getValue();
 	for(uint i=0;i<Bak.size();i++) {
 	  for(uint j=i+1;j<Bak.size();j++) {
 	    Score=Score - penalty(self,k.difference(i),k.difference(j));
@@ -1008,15 +904,21 @@ malignObject(malign_AlignmentObject *self)
 
 
     }
-    self->CP->dynmat[entry]=matrixentry(maxScore,maxSource);
+    (*self->CP->dynmat)[entry]=matrixentry(maxScore,maxSource);
 
   }
 
-#ifndef NDEBUG
-  cout<<"Empty:     "<<Empty<<endl
-      <<"Non empty: "<<nonEmpty<<endl
-      <<"percentage of non empty: "<<nonEmpty/(1.0*Empty+nonEmpty)<<endl
-      <<"Using matrix of "<<self->CP->dynmat.size()<<" items."<<endl;
+#ifdef DEBUG_OUTPUT
+  cout<<"Matrix dimensions: ";
+  for(int i=0;i<self->CP->dynmat->dims();i++) {
+    cout<<" "<<self->CP->dynmat->dims(i);
+  }
+  cout<<endl
+      <<"Matrix size: "<<self->CP->dynmat->maxSize()<<endl
+      <<"Empty:       "<<Empty<<endl 
+      <<"Non empty:   "<<nonEmpty<<endl 
+      <<"share of non empty: "<<nonEmpty/(1.0*Empty+nonEmpty)<<endl
+      <<"Using matrix of "<<self->CP->dynmat->size()<<" items."<<endl;
 #endif
   return (PyObject*)self;
 }
@@ -1026,41 +928,37 @@ malignObject(malign_AlignmentObject *self)
 ////////////////////////////////////////////////////////////
 
 static PyObject *
-malign_alignCommon(PyObject *self,PyObject *data,int result_ask,
+malign_alignCommon( malign_AlignmentObject *self,PyObject *data,int result_ask,
 		   double lambda,double xi,double mu,double nu,
 		   double nuc_per_rotation)
 {
   PyObject *ret_obj;
-  Inputs indata=Inputs(data);
+  self->CP->indata=new Inputs(data);
 
   if(PyErr_Occurred()) return NULL;
 
 
-  if(indata.sequences()<3) {
+  if(self->CP->indata->sequences()<3) {
     PyErr_SetString(PyExc_EOFError,"Too few sequences in input");
     return NULL;
   }
 
 
-  malign_AlignmentObject *ret_self=(malign_AlignmentObject *)
-    malignment_new(&malign_AlignmentType,NULL,NULL);
 
+
+  vector<int> dimensions=self->CP->indata->sequenceLens();
+  self->CP->dynmat=new Matrix(dimensions);
 
   if(PyErr_Occurred()) return NULL;
+  
 
-
-  ret_self->CP->indata=indata;
-
-  vector<int> dimensions=indata.sequenceLens();
-  ret_self->CP->dynmat=Matrix(dimensions);
-
-  ret_self->lambda=lambda;
-  ret_self->xi=xi;
-  ret_self->mu=mu;
-  ret_self->nu=nu;
-  ret_self->nuc_per_rotation=nuc_per_rotation;
-  ret_self->askedresults=result_ask;
-  ret_self->secs_to_align=0;
+  self->lambda=lambda;
+  self->xi=xi;
+  self->mu=mu;
+  self->nu=nu;
+  self->nuc_per_rotation=nuc_per_rotation;
+  self->askedresults=result_ask;
+  self->secs_to_align=0;
 
 
   tms before,after;
@@ -1070,8 +968,7 @@ malign_alignCommon(PyObject *self,PyObject *data,int result_ask,
   times(&before);
 
 
-  ret_obj=(PyObject*)malignObject(ret_self);
-
+  ret_obj=(PyObject*)malignObject(self);
 
 
   // End timing
@@ -1079,7 +976,7 @@ malign_alignCommon(PyObject *self,PyObject *data,int result_ask,
 
   ticks_to_align=((after.tms_utime-before.tms_utime)+
 		 (after.tms_stime-before.tms_stime));
-  ret_self->secs_to_align+=((double)ticks_to_align)/ticks_per_sec;
+  self->secs_to_align+=((double)ticks_to_align)/ticks_per_sec;
   
 
 
@@ -1099,6 +996,11 @@ malign_aligndata(PyObject *self, PyObject *args)
   int result_ask;
   PyObject *data;
 
+  PyErr_SetString(PyExc_ValueError,"First parameter must be sequence!");
+  return NULL;
+
+
+  // Trying to avoid this.
   if (!PyArg_ParseTuple(args, "Oiddddd", &data,&result_ask,
 			&lambda, &xi, &mu, &nu, &nuc_per_rotation)){
     return Py_BuildValue("s", "");
@@ -1109,7 +1011,7 @@ malign_aligndata(PyObject *self, PyObject *args)
   }
   
 
-  return malign_alignCommon(self,data,result_ask,lambda,xi,mu,nu,nuc_per_rotation);
+  return malign_alignCommon((malign_AlignmentObject*)self,data,result_ask,lambda,xi,mu,nu,nuc_per_rotation);
 }
 
 
