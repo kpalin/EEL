@@ -1,3 +1,4 @@
+# -*- coding: UTF-8
 """Most of the Python functionality and gzip interface"""
 
 
@@ -17,6 +18,9 @@ except ImportError:
 
 #
 # $Log$
+# Revision 1.16  2004/07/30 12:09:57  kpalin
+# Working commands for multiple alignment.
+#
 # Revision 1.15  2004/04/14 07:48:07  kpalin
 # Fixes to output and commands for MultiAlign
 #
@@ -328,24 +332,24 @@ If you use '.' as filename the local data are aligned."""
         duration = len(self.matlist) * len(self.seq.getNames())
         progress= 0.0
         totalMatches=0
-        matrixnumber=0
-        for m in self.matlist:
-            matrixnumber +=1
-            print "Matching matrix no.",matrixnumber,"of",len(self.matlist)
-            self.__comp[m]={}
-            for name in self.seq.getNames():
+        seqnumber=0
+        for name in self.seq.getNames():
+            seqnumber +=1
+            print "Matching Sequence.",seqnumber,"of",len(self.seq.getNames())
+            self.__comp[name]={}
+            for m in self.matlist:
                 print "Matching matrix %s on sequence %s"%(m.getName(),name)
                 print "Progress: %2.2f %%" % (100*progress/duration)
                 progress +=1.0
                 if absCutoff:
-                    self.__comp[m][name]=m.getTFBSbyAbsolute(self.seq.sequence(name),
+                    self.__comp[name][m]=m.getTFBSbyAbsolute(self.seq.sequence(name),
                                                              bound)
                 else:
-                    self.__comp[m][name]=m.getTFBSbyRatio(self.seq.sequence(name),
+                    self.__comp[name][m]=m.getTFBSbyRatio(self.seq.sequence(name),
                                                           bound)
                 try:
-                    totalMatches+=len(self.__comp[m][name])
-                    print "Found %d matches\n"%(len(self.__comp[m][name]))
+                    totalMatches+=len(self.__comp[name][m])
+                    print "Found %d matches\n"%(len(self.__comp[name][m]))
                 except TypeError:
                     print "m=",m
                     print "name=",name
@@ -353,7 +357,7 @@ If you use '.' as filename the local data are aligned."""
                     #self.__gff=Output.get(self.__comp).split('\n')
                 if totalMatches>50000:
                     self.storeTmpGFF()
-                    self.__comp[m]={}
+                    self.__comp[name]={}
                     totalMatches=0
         if hasattr(self,"tempFileName"):
             self.finalTmpGFF()
