@@ -15,6 +15,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.7  2005/01/07 13:41:25  kpalin
+# Works with py2exe. (windows executables)
+#
 # Revision 1.6  2004/12/17 12:17:21  kpalin
 # Fixed depreciated xreadline
 #
@@ -71,6 +74,9 @@ class SingleSequence:
         return self.len
 
 
+class UnsupportedTypeException(Exception):
+    pass
+
 class Sequences:
     "represents DNA-Sequences"
     def __init__(self,filename=0):
@@ -115,7 +121,41 @@ class Sequences:
             print filename,"in not in FASTA format!"
 
 
+
+    def readFasta(self,fastaStr):
+        toGetValue={}
+        for line in fastaStr.split("\n"):
+            line=line.strip()
+            if line:
+                if line[0]=='>':
+                    name=string.split(line[1:].strip())[0]
+                    toGetValue[name]=1
+                    self.__Seq[name]=StringIO()
+                else:
+                    self.__Seq[name].write(line.strip())
+        self.__Seq[name].seek(0)
+        return toGetValue.keys()
+
+
+    def readEMBL(self,emblStr):
+        lines=emblStr.split("XX")
+
+        try:
+            accession=[x.strip()[2:].strip() for x in lines if x.strip()[:2]=='AC'][0]
+            accession=accession.split(";")[0].split(",")[0]
+            seq=[x for x in lines if x.strip()[:2]=='SQ']
+            seq=seq[0]
+            seq="".join(seq.strip().split("\n")[1:])
+        except IndexError:
+            raise UnsupportedTypeException()
+
+        seq=seq.translate(string.maketrans("",""),"/\n\r\t 0123456789")
+        self.__Seq[accession]=StringIO(seq)
+
+        return [accession]
         
+        
+    
     def addSequence(self, filename):
         "adds Sequences from file"
         try:
@@ -126,17 +166,17 @@ class Sequences:
             except (NameError,IOError):
                 File=open(filename,"r")
             name=''
-            toGetValue={}
-            for line in File:
-                if line and line[0]=='>':
-                    name=string.split(line[1:].strip())[0]
-                    toGetValue[name]=1
-                    #name=line[1:].strip()
-                    self.__Seq[name]=StringIO()
-                else:
-                    self.__Seq[name].write(line.strip())
+            fileStr=File.read()
             File.close()
-            for name in toGetValue.keys():
+            if fileStr:
+                if fileStr[0]=='>':
+                    toGetValue=self.readFasta(fileStr)
+                elif len(fileStr)>1 and fileStr[:2]=='ID':
+                    toGetValue=self.readEMBL(fileStr)
+                else:
+                    raise UnsupportedTypeException()
+
+            for name in toGetValue:
                 self.__Seq[name].seek(0)
                 self.__Seq[name]=(SingleSequence(self.__Seq[name]),0)
 
@@ -144,8 +184,8 @@ class Sequences:
             print filename, "added" 
         except IOError, (errno, strerror):
             print "I/O error(%s): %s" % (errno, strerror)
-        except KeyError:
-            print filename,"in not in FASTA format!"
+        except UnsupportedTypeException:
+            print filename,"in not in supported format!"
 
     def __str__(self):
         """returns the names of the sequences"""
