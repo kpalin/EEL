@@ -23,11 +23,16 @@
 #include <queue>
 #include <limits>
 
-
+// GDB command for breaking after importing dynamic module:
+//   br _PyImport_LoadDynamicModule
 
 /*
  *
  * $Log$
+ * Revision 1.3  2004/07/12 12:49:25  kpalin
+ * Now a working connection *FROM* python2.2. TODO: Sparse matrix and
+ * connection *TO* python.
+ *
  * Revision 1.2  2004/06/22 12:29:05  kpalin
  * Presumably working. No return values back to python
  * but the alignment looks like working as planned.
@@ -66,6 +71,7 @@ void ABset::addChar(int seq,int chr,char strand)
   } else if(strand=='-') {
     chr=chr*2+1;
   } else {
+    cerr<<"Invalid strand "<<chr<<endl;
     abort();
   }
   B[chr].push_back(seq);
@@ -91,10 +97,12 @@ ABset Inputs::getAB(PointerVec &p,int limit)
 {
   ABset out=ABset(factors(),limit);
 
+
+  //p.output();
   for(int i=0;i<sequences();i++) {
     out.addChar(i,seq[i][p[i]].ID,seq[i][p[i]].strand);
   }
-
+  //cout<<(out.moreAlphas()?"more alphas":"no more alphas")<<endl;
   return out;
 }
 
@@ -114,8 +122,8 @@ PointerVec::PointerVec(vector<int> &p, vector<int> &dims,vector<int> *dimFactors
 
 posind PointerVec::difference(int i) {
   assert(limData!=NULL);
-  return limData->getSite(dimlen[i],i).pos-
-    limData->getSite(*this,i).epos;
+  return abs(limData->getSite(dimlen[i],i).pos-
+    limData->getSite(*this,i).epos);
 }
 
 
@@ -123,29 +131,35 @@ posind PointerVec::difference(int i) {
 const PointerVec& PointerVec::operator--(int dummy)
 {
   uint i=0;
+  posind ero=-1;
 
   do {
-    if(bound[i]==0) {
+    ero=difference(i);
+    if(bound[i]==0) { // if the dimension is free
       if( p[i]>0 &&
 	  ( limData==NULL ||  // Bound decreasing to box within limitBP
 	    difference(i)<limitBP) ) {
 	p[i]--;
 	matrix_p-=(*dimFactors)[i];
+// 	cout<<"("<<i<<":"<<ero<<")"<<flush;
 	break;
-      } else {
-	p[i]=dimlen[i]-1;
-	matrix_p+=p[i]*(*dimFactors)[i];
+      } else{
+	int delta_p=max((dimlen[i]-1)-p[i]-1,0);
+	p[i]+=delta_p;
+	matrix_p+=delta_p*(*dimFactors)[i];
 	i++;
-      }
+      } 
     } else {
       i++;
     }
+    assert(i==m|| p[i]>=0 );
+    assert(i==m|| p[i]<dimlen[i]);
   } while(i<m);
 
+  //this->output();
   if(i>=m) {
     ok=0;
   }
-
   assert(matrix_p==dataPoint());
 
   return *this;
@@ -156,7 +170,7 @@ const PointerVec& PointerVec::operator++(int dummy)
   uint i=0;
 
   do {
-    if(bound[i]==0) {
+    if(bound[i]==0) {  // If the dimension is free
       p[i]++;
       matrix_p+=(*dimFactors)[i];
       if(p[i]>=dimlen[i]) {
@@ -217,6 +231,28 @@ PointerVec Matrix::getOrigin()
   return PointerVec(zeros,dimLen,&dimFactors);
 }
 
+PointerVec Matrix::argMax()
+{
+  PointerVec p=this->getOrigin();
+  PointerVec maxstore;
+  store maxval=0.0;
+
+  while(p.isOK()) {
+    if(this->getValue(p).getValue()>maxval) {
+      maxstore=p;
+      maxval=this->getValue(p).getValue();
+    }
+    p++;
+  }
+#ifndef NDEBUG
+  if(!maxstore.isOK()) {
+    cout<<"Busted matrix, all zeros"<<endl;
+  }
+#endif
+    
+  return maxstore;
+}
+
 
 int PointerVec::dataPoint()
 { // Compute the mapping from multi to single dimensional array
@@ -225,13 +261,17 @@ int PointerVec::dataPoint()
 
   for(uint i=0;i<m;i++) {
     pos+=p[i]*(*dimFactors)[i];
-    assert(p[i]<dimlen[i]);
+    if(p[i]>=dimlen[i]) {
+      cout<<"p[i] = "<<p[i]<<endl<<dimlen[i]<<endl;
+      assert(p[i]<dimlen[i]);
+    }
   }
+  assert(pos>=0);
   return pos;
 }
 
 
-matrixentry Matrix::getValue(PointerVec &p)
+matrixentry &Matrix::getValue(PointerVec &p)
 {
   int pos=p.getMatrixCoord();
 
@@ -246,7 +286,10 @@ void Matrix::setValue(PointerVec &p,matrixentry &val)
 
 }
 
-
+matrixentry &Matrix::operator[](PointerVec &p)
+{ 
+  return data[p.getMatrixCoord()]; 
+}
 
 Inputs::Inputs(PyObject *inpSeq)
 {
@@ -264,7 +307,18 @@ Inputs::Inputs(PyObject *inpSeq)
     if(addSite(inSite)==0 || PyErr_Occurred()) {
       return;
     }
+    Py_DECREF(inSite);
   }
+  Py_DECREF(inpIter);
+  
+  map<string,uint>::iterator seqName=sequenceNames();
+  for(int i=0;i<sequences();i++) {
+    cout<<seqName->first<<",";
+    seqName++;
+    sort(seq[i].begin(),seq[i].end());
+  }
+  cout<<endl;
+
 
 
 }
@@ -360,7 +414,20 @@ vector<int> Inputs::sequenceLens()
 
 matrixentry::matrixentry(store v,PointerVec &p)
 {
-  backTrack=p;
+  if(p.isOK()) {
+    backTrack=new PointerVec(p);
+  } else {
+    backTrack=NULL;
+  }
+  value=v;
+}
+matrixentry::matrixentry(store v,PointerVec *p)
+{
+  if(p && p->isOK()) {
+    backTrack=new PointerVec(*p);
+  } else {
+    backTrack=NULL;
+  }
   value=v;
 }
 
@@ -371,35 +438,69 @@ store matrixentry::getValue()
 
 PointerVec& matrixentry::getBacktrace()
 {
-  return backTrack;
+  abort();
+  //return (backTrack?*backTrack:PointerVec());
+}
+void PointerVec::output()
+{
+  if(this->isOK()) {
+    cout<<"valid("<<m<<"): ";
+    for(uint i=0;i<m;i++) {
+      cout<<p[i]<<(bound[i]?"b":"f")<<dimlen[i]<<",";
+    } } else { cout<<"Invalid!"; }
+  cout<<endl; 
+
 }
 
 
+
+/* Projections:
+
+   A dimension is "free" if we wish to explore the cube in that
+   dimension. 
+   The "bound" dimensions are irrelevant and are not explored
+   because they have no effect on the scoring.
+*/
 PointerVec PointerVec::project(vector<int> &boundDims)
 {
   PointerVec ret=PointerVec();
 
-  if(boundDims.size()>=m) {
+  if(p[0]==3 && p[1]==5 && p[2]==0) {
+    cerr<<"JOTAIN JÄNNÄÄ"<<endl;
+  }
+
+
+  if(boundDims.size()>m) {  
     return ret;
   }
 
   ret.dimlen=dimlen;
+
+//   for(uint i=0;i<dimlen.size();i++) {
+//     cout<<dimlen[i]<<"="<<ret.dimlen[i]<<endl;
+//   }
+
+
   ret.dimFactors=dimFactors;
-  ret.bound.resize(m,0);
-  ret.p=p;
+  ret.bound.resize(m,1);
+  ret.p.resize(p.size());
+  ret.m=m;
 
   for(uint i=0;i<m;i++) {
-    ret.p[i]=ret.p[i]-1;
+    ret.p[i]=max(0,p[i]-1);
   }
+// #ifndef NDEBUG
+//   ret.ok=1;ret.output();
+// #endif
 
   for(uint i=0;i<boundDims.size();i++) {
-    ret.bound[boundDims[i]]=1;
-    ret.p[boundDims[i]]=p[boundDims[i]];    
+    ret.bound[boundDims[i]]=0;
+    //    ret.p[boundDims[i]]=p[boundDims[i]];    
   }
 
 
-  matrix_p=dataPoint();
-  ok=1;
+  ret.matrix_p=ret.dataPoint();
+  ret.ok=1;
   return ret;
 }
 
@@ -407,11 +508,19 @@ PointerVec PointerVec::project(vector<int> &boundDims)
 PointerVec PointerVec::projectAndLimit(vector<int> &boundDims,Inputs *indata,
 				       int maxbp)
 {
-  PointerVec ret=project(boundDims);
+  PointerVec ret=this->project(boundDims);
+  if(!ret.isOK()) {
+    cout<<"IHMEJAKUMMA"<<endl;
+    assert(ret.isOK());
+  }
   ret.limData=indata;
-  ret.dimlen=p;
+  for(uint i=0;i<ret.dimlen.size();i++) {
+    ret.dimlen[i]=min(this->dimlen[i],p[i]+1);
+  }
   ret.limitBP=maxbp;
 
+  //cout<<"not proj";this->output();
+  //cout<<"projected";ret.output();
   return ret;
 }
   
@@ -424,6 +533,7 @@ void PointerVec::setValue(vector<int> &np)
   ok=1;
 }
 
+
 void PointerVec::clearProject()
 {
   for(uint i=0;i<m;i++) {
@@ -433,23 +543,23 @@ void PointerVec::clearProject()
 
 
 //returns the square of a mod 2 PI double
-inline double squaremod(double val)
+inline double squaremodpi(double val)
 {
   double f=fabs(val);
-  f-=2*PI*trunc(f/(2*PI));
+  f-=2*PI*round(f/(2*PI));
 
 #ifndef NDEBUG
-  double apuf=fabs(val);
-  apuf-=2*PI*round(apuf/(2*PI));
-  if(apuf>PI) apuf-= 2*PI;
-
-  if(f>(PI+1e9) || f<(-PI-1e9)) {
+  if(f>(PI+1e-6) || f<(-PI-1e-6)) {
     printf("f=%g!=%g=PI\n",f,PI);
   }
 #endif
-  assert(fabs(f-apuf)<1e9);
-  assert(f<(PI+1e9));
-  assert(f>(-PI-1e9));
+
+  if(fabs(val-round(val))>1.0) {
+    cout<<"round error: abs("<<fabs(val)<<"-"<<round(val)<<")=~"<<
+      abs(fabs(val)-round(val))<<"<1.0"<<endl;
+  }
+  assert(f<(PI+1e-9));
+  assert(f>(-PI-1e-9));
   return f * f;
 }
 
@@ -500,52 +610,35 @@ typedef struct {
     /* Type-specific fields go here. */
 
   char *motifName;
-  int seqX;
-  int seqY;
-  int beginX;
-  int endX;
-  int beginY;
-  int endY;
+  PyObject *pos;      // PyTuple
+  int motifLen;
   char strand;
-  double score;
-  double siteScoreX;
-  double siteScoreY;
-} align_siteObject;
+  double colscore;
+  PyObject *siteScores;  // PyTuple
+} malign_columnObject;
 
 static PyMemberDef column_members[] = {
-    {"motif",T_STRING, offsetof(align_siteObject, motifName), 0,
+    {"motif",T_STRING, offsetof(malign_columnObject, motifName), 0,
      "Name of the motif."},
 
-    {"seqX",T_INT, offsetof(align_siteObject, seqX), 0,
-     "Position on site sequence x."},
-    {"seqY",T_INT, offsetof(align_siteObject, seqY), 0,
-     "Position on site sequence y."},
+    {"pos",T_OBJECT_EX, offsetof(malign_columnObject, pos), 0,
+     "Site positions on each of the sequences (or None for missing)."},
 
-    {"beginX",T_INT, offsetof(align_siteObject, beginX), 0,
-     "Begin position on DNA sequence x."},
+    {"len",T_INT, offsetof(malign_columnObject, motifLen), 0,
+     "Width of the site on this column."},
 
-    {"beginY",T_INT, offsetof(align_siteObject, beginY), 0,
-     "Begin position on DNA sequence y."},
-
-    {"endX",T_INT, offsetof(align_siteObject, endX), 0,
-     "End position on DNA sequence x."},
-
-    {"endY",T_INT, offsetof(align_siteObject, endY), 0,
-     "End position on DNA sequence y."},
-    {"strand",T_CHAR, offsetof(align_siteObject, strand), 0,
+    {"strand",T_CHAR, offsetof(malign_columnObject, strand), 0,
 
      "Strand of the motif."},
-    {"score",T_DOUBLE, offsetof(align_siteObject, score), 0,
+    {"score",T_DOUBLE, offsetof(malign_columnObject, colscore), 0,
      "Alignment score this far."},
-    {"siteScoreX",T_DOUBLE, offsetof(align_siteObject, siteScoreX), 0,
-     "Score of the site on sequence X."},
-    {"siteScoreY",T_DOUBLE, offsetof(align_siteObject, siteScoreY), 0,
-     "Score of the site on sequence Y."},
+    {"siteScores",T_OBJECT_EX, offsetof(malign_columnObject, siteScores), 0,
+     "Scores of the sites on each sequence."},
     {NULL}  /* Sentinel */
 };
 
 
-static void column_dealloc(align_siteObject* self)
+static void column_dealloc(malign_columnObject* self)
 {
   delete [] self->motifName;
 
@@ -555,8 +648,8 @@ static void column_dealloc(align_siteObject* self)
 static PyTypeObject malign_colType = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
-    "align.SitePair",             /*tp_name*/
-    sizeof(align_siteObject), /*tp_basicsize*/
+    "multiAlign.SiteColumn",             /*tp_name*/
+    sizeof(malign_columnObject), /*tp_basicsize*/
     0,                         /*tp_itemsize*/
     (destructor)column_dealloc,                         /*tp_dealloc*/
     0,                         /*tp_print*/
@@ -574,7 +667,7 @@ static PyTypeObject malign_colType = {
     0,                         /*tp_setattro*/
     0,                         /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT,        /*tp_flags*/
-    "Site pair object",           /* tp_doc */
+    "Column of aligned binding sites",           /* tp_doc */
     0,		               /* tp_traverse */
     0,		               /* tp_clear */
     0,		               /* tp_richcompare */
@@ -598,22 +691,22 @@ column_new(const char *motifName,
 	 double siteScoreX,
 	 double siteScoreY)
 {
-  align_siteObject *ret;
-  ret=(align_siteObject*)malign_colType.tp_alloc(&malign_colType,0);
+  malign_columnObject *ret;
+  ret=(malign_columnObject*)malign_colType.tp_alloc(&malign_colType,0);
 
   ret->motifName=new char[strlen(motifName)+1];
   strcpy(ret->motifName,motifName);
 
-  ret->seqX=seqX;
-  ret->seqY=seqY;
-  ret->beginX=beginX;
-  ret->endX=endX;
-  ret->beginY=beginY;
-  ret->endY=endY;
-  ret->strand=strand;
-  ret->score=score;
-  ret->siteScoreX=siteScoreX;
-  ret->siteScoreY=siteScoreY;
+//   ret->seqX=seqX;
+//   ret->seqY=seqY;
+//   ret->beginX=beginX;
+//   ret->endX=endX;
+//   ret->beginY=beginY;
+//   ret->endY=endY;
+//   ret->strand=strand;
+//   ret->score=score;
+//   ret->siteScoreX=siteScoreX;
+//   ret->siteScoreY=siteScoreY;
 
   return (PyObject*)ret;
 }
@@ -685,7 +778,7 @@ malignment_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     if (self != NULL) {
       self->secs_to_align = 0.0;
       self->nu=0.0;
-      self->names = (PyTupleObject*)PyTuple_New(0);
+      self->names = PyTuple_New(0);
       if (self->names == NULL)
 	{
 	  CHECKING_DECREF(self);
@@ -722,16 +815,17 @@ malignment_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
 
 
+
 static PyMethodDef malignment_methods[] = {
-//     {"nextBest", (PyCFunction)malignment_nextBest, METH_NOARGS,
-//      "Return the next best alignment from the matrix."
-//     },
+      {"nextBest", (PyCFunction)malignment_nextBest, METH_NOARGS,
+       "Return the next best alignment from the matrix."
+      },
     {NULL}  /* Sentinel */
 };
 
 static PyMemberDef malignment_members[] = {
-    {"bestAlignments",T_OBJECT_EX, offsetof(malign_AlignmentObject, bestAlignments), 0,
-     "List of best alignments"},
+//     {"bestAlignments",T_OBJECT_EX, offsetof(malign_AlignmentObject, bestAlignments), 0,
+//      "List of best alignments"},
     {"secs_to_align",T_DOUBLE, offsetof(malign_AlignmentObject, secs_to_align), 0,
      "CPU time for Alignment"},
     {"names",T_OBJECT_EX, offsetof(malign_AlignmentObject, names), 0,
@@ -757,7 +851,7 @@ static PyMemberDef malignment_members[] = {
 static PyTypeObject malign_AlignmentType = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
-    "multiAlign.MAlignment",             /*tp_name*/
+    "multiAlign.MultiAlignment",             /*tp_name*/
     sizeof(malign_AlignmentObject), /*tp_basicsize*/
     0,                         /*tp_itemsize*/
     (destructor)malignment_dealloc,                         /*tp_dealloc*/
@@ -805,12 +899,40 @@ static PyTypeObject malign_AlignmentType = {
 
 
 
+static PyObject*
+malignment_nextBest(malign_AlignmentObject *self)
+{
+
+  PointerVec *p,start=self->CP->dynmat->argMax();
+
+  p=&start;
+
+  cout<<"eka:"<<flush;
+  start.output();
+  for(p=&start;p->isOK();p=self->CP->dynmat->getValue(*p).getBacktraceP()) {
+    self->CP->dynmat->getValue(*p).negate();
+
+    cout<<"Kierretään :"<<flush;
+    cout<<self->CP->dynmat->getValue(*p).getValue();
+    p->output();
+  }
+  Py_INCREF(Py_None);
+  return Py_None;
+
+}
+
 
 
 inline double anglepenalty(double const d,double const D,double const nucl_per_rotation)
 {
   double const theta=(d-D)*2.0*PI/nucl_per_rotation;
-  return squaremod(theta)/(d+D);
+  double const totlen=d+D;
+
+  if(((PI*PI)/totlen)<FLT_EPSILON) { // Check that we can compute it.
+    return 0.0;
+  } else {
+    return squaremodpi(theta)/totlen;
+  }
 }
 
 
@@ -869,8 +991,8 @@ malignObject(malign_AlignmentObject *self)
       Empty++;
     }
 
-    store maxScore=0;
-    PointerVec maxSource=PointerVec();
+    store maxScore=-DBL_MAX;
+    PointerVec *maxSourceP=NULL;
     while(AB.moreAlphas()) {
       vector<int> Bak=AB.nextB();
 
@@ -882,10 +1004,20 @@ malignObject(malign_AlignmentObject *self)
       base*=self->lambda*n*(n-1)/2;
 
 
+      cout<<"."<<flush;
       for(PointerVec k=entry.projectAndLimit(Bak,self->CP->indata,MAX_BP_DIST);
 	  k.isOK(); k--) {  // Exponential loop
 
+	assert(k.getMatrixCoord()>=0);
+	cout<<"*"<<flush;
 	Score=base+(*self->CP->dynmat)[k].getValue();
+	if(Score>maxScore) {
+	  maxScore=Score;
+	  delete maxSourceP;
+	  maxSourceP=NULL;
+	}
+
+
 	for(uint i=0;i<Bak.size();i++) {
 	  for(uint j=i+1;j<Bak.size();j++) {
 	    Score=Score - penalty(self,k.difference(i),k.difference(j));
@@ -893,10 +1025,11 @@ malignObject(malign_AlignmentObject *self)
 	}
 
 
-
 	if(Score>maxScore) {
 	  maxScore=Score;
-	  maxSource=k;
+	  delete maxSourceP;
+	  maxSourceP=new PointerVec(k);
+	  //k.output();
 	}
 
 	if(PyErr_Occurred()) return NULL;
@@ -904,8 +1037,17 @@ malignObject(malign_AlignmentObject *self)
 
 
     }
-    (*self->CP->dynmat)[entry]=matrixentry(maxScore,maxSource);
 
+    if(maxScore>0.0) {
+      cout<<maxScore;entry.output();
+      if(maxSourceP) {
+	maxSourceP->output();
+      }else { cout<<"NULL"; 
+      }
+      (*self->CP->dynmat)[entry]=matrixentry(maxScore,maxSourceP);
+    } else {
+      (*self->CP->dynmat)[entry]=matrixentry(0.0,NULL);
+    }
   }
 
 #ifdef DEBUG_OUTPUT
@@ -926,6 +1068,24 @@ malignObject(malign_AlignmentObject *self)
 
 
 ////////////////////////////////////////////////////////////
+
+int setSeqNames(malign_AlignmentObject *self,Inputs &data)
+{
+  int n=data.sequences();
+  map<string,uint>::iterator iter=data.sequenceNames();
+
+  self->names=PyTuple_New(n);
+
+  if(PyErr_Occurred()) return 0;
+
+  for(int i=0;i<n;i++,iter++) {
+    PyTuple_SET_ITEM(self->names,i,
+		       PyString_FromString(iter->first.c_str()));
+    if(PyErr_Occurred()) return 0;
+  }
+  return 1;
+
+}
 
 static PyObject *
 malign_alignCommon( malign_AlignmentObject *self,PyObject *data,int result_ask,
@@ -960,6 +1120,9 @@ malign_alignCommon( malign_AlignmentObject *self,PyObject *data,int result_ask,
   self->askedresults=result_ask;
   self->secs_to_align=0;
 
+  if(!setSeqNames(self,*self->CP->indata)){
+    return NULL;
+  }
 
   tms before,after;
   long ticks_per_sec=sysconf(_SC_CLK_TCK);
