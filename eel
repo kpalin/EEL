@@ -1,5 +1,6 @@
 #!/usr/bin/python
-
+# -*- coding: UTF-8
+        
 """The basic command that starts up the commandline interface"""
 
 from eellib import Commandline
@@ -8,6 +9,11 @@ import sys
 
 
 # $Log$
+# Revision 1.1  2004/12/14 13:07:52  kpalin
+#
+# Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun
+# "My hovercraft is full of EELs" )
+#
 # Revision 1.5  2004/10/21 12:46:31  kpalin
 # Removed reference to a specific version of python (2.2)
 #

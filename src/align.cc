@@ -36,6 +36,10 @@
 /*
  *
  *  $Log$
+ *  Revision 1.12  2004/08/26 10:39:47  kpalin
+ *  Improved documentation and proper return value from aligndata if
+ *  incorrect number of arguments. i.e. if ParseTuple fails.
+ *
  *  Revision 1.11  2004/07/30 12:07:50  kpalin
  *  Output changed to use alnColumn objects.
  *
@@ -1252,7 +1256,7 @@ alignMemorySaveObject(align_AlignmentObject *self)
 	if(localBestAligns.size()>(unsigned int)self->askedresults) {
 	  MS_res maybeWorst=localBestAligns.top();
 	  map<matCoord,pair<matCoord,store> >::iterator maybeBetter=maxses.find(maybeWorst.bgin);
-	  while(abs(maybeBetter->second.second-maybeWorst.value) > numeric_limits<store>::epsilon()) {
+	  while(fabsl(maybeBetter->second.second-maybeWorst.value) > numeric_limits<store>::epsilon()) {
 	    // priority queue and maxses do not match.
 	    maybeWorst.value=maybeBetter->second.second;
 	    maybeWorst.end=maybeBetter->second.first;
@@ -1781,7 +1785,7 @@ alignment_nextBest(align_AlignmentObject *self)
 				  (int)self->CP->seq_y[real_y].pos, // start DNA pos on Y
 				  (int)self->CP->seq_y[real_y].epos, //end DNA pos on Y
 				  (char)self->CP->seq_y[real_y].strand, //strand
-				  (double)abs((double)self->CP->matrix[pos_x-sx][pos_y].value), // Total align score this far
+				  (double)fabs((double)self->CP->matrix[pos_x-sx][pos_y].value), // Total align score this far
 				  (double)self->CP->seq_x[pos_x].weight,
 				  (double)self->CP->seq_y[real_y].weight);
 

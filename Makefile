@@ -3,14 +3,14 @@ CFLAGS=-Wall
 
 all: src/matrix.cc src/align.cc src/editdist.c src/gzstream/libgzstream.a
 	@echo "******************************************************************"
-	@echo "This is the wrong way to install mabs. The correct way is to say: "
+	@echo "This is the wrong way to install EEL. The correct way is to say: "
 	@echo "# python setup.py install" 
 	@echo "******************************************************************"
 	@echo 
 	#make -C src/
 	python setup.py build
-	#cp -u  build/lib*/*.so .
-	#cp build/scripts*/mabs .
+	cp -u  build/lib*/*.so .
+	#cp build/scripts*/eel .
 
 
 debug:src/matrix.cc src/align.cc src/editdist.c src/gzstream/libgzstream.a
@@ -26,4 +26,4 @@ src/gzstream/libgzstream.a:
 	make -C src/gzstream/
 
 clean:
-	rm -rf modules/matrix.so modules/align.so modules/*.pyc *.pyc build
+	rm -rf matrix.so align.so eellib/*.pyc *.pyc build

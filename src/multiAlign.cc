@@ -32,6 +32,9 @@
 /*
  *
  * $Log$
+ * Revision 1.5  2004/07/30 12:09:18  kpalin
+ * Slow but presumably working version.
+ *
  * Revision 1.4  2004/07/23 11:53:31  kpalin
  * Compiles, but I don't think it works. The projection stuff seems more
  * difficult than I expected.
@@ -155,8 +158,8 @@ PointerVec::PointerVec(vector<int> &p, vector<int> &dims,vector<int> *dimFactors
 
 posind PointerVec::difference(int i) const {
   assert(limData!=NULL);
-  return abs(limData->getSite(dimlen[i],i).pos-
-    limData->getSite(*this,i).epos);
+  return abs((int)(limData->getSite(dimlen[i],i).pos-
+    limData->getSite(*this,i).epos));
 }
 
 
@@ -632,7 +635,7 @@ inline double squaremodpi(double val)
 
   if(fabs(val-round(val))>1.0) {
     cout<<"round error: abs("<<fabs(val)<<"-"<<round(val)<<")=~"<<
-      abs(fabs(val)-round(val))<<"<1.0"<<endl;
+      fabs(fabs(val)-round(val))<<"<1.0"<<endl;
   }
   assert(f<(PI+1e-9));
   assert(f>(-PI-1e-9));
