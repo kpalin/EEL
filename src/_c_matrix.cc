@@ -22,6 +22,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.9  2005/03/03 09:01:45  kpalin
+ * Presumably working with proper output.
+ *
  * Revision 1.8  2005/03/02 13:36:58  kpalin
  * Just a little bit of testing. Slow but (again ;) working ;) version.
  *
@@ -399,7 +402,6 @@ bg_init(matrix_bgObject *self, PyObject *args, PyObject *kwds)
     Py_DECREF(self->bgSample);
 
   self->order=4;
-
   if (! PyArg_ParseTupleAndKeywords(args, kwds, "O|i", kwlist,
 				    &self->bgSample,&self->order))
     return -1; 
@@ -568,6 +570,7 @@ double logPnextInStream(matrix_bgObject *self, char nucl)
 
   if(self->streamHistory>self->shiftMask) {
     ret=2000.0;
+    self->streamCount=0; // Reset the context if got 'N'
   } else {
     if(self->streamCount>self->order) {
       qgramCnt=self->CP->counts[self->streamHistory];
