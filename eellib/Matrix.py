@@ -8,6 +8,9 @@ from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.10  2005/02/21 09:31:33  kpalin
+# Tools to output matrices in alternative formats.
+#
 # Revision 1.9  2005/01/27 09:12:05  kpalin
 # Added functions to format the matrix in string good
 # for AHAB and as list of string scoring more than given limit
@@ -40,11 +43,13 @@ def log2(x):
 
 class Matrix:
     "represents a binding site matrix"
+
+    backGround=None
+    freqA,freqC,freqG,freqT=0.25,0.25,0.25,0.25
     def __init__(self,filename):
         "reads matrix from file"
         self.pseudoCount=1.0
 
-        self.backGround=None
         File=open(filename,'r')
         self.fname=filename
         self.name=filename
@@ -52,7 +57,7 @@ class Matrix:
                         for entry in line.split()]
                        for line in File.read().split('\n')])
         File.close()
-        self.setBGfreq(0.25,0.25,0.25,0.25)
+        self.initWeights()
         #self.draw()
 
 
@@ -91,7 +96,7 @@ class Matrix:
 
     def seqsBetterThan(self,limit):
         "Return sequences scoring better than limit"
-        if self.backGround:
+        if Matrix.backGround:
             raise ValueError("Can't use markov background")
         self.initWeights()
         ret=[] # Found sequences better than limit
@@ -129,21 +134,15 @@ class Matrix:
         return ret
         
 
-    def setMarkovBackground(self,bg):
-        """Set a markov Background.
-
-        Markov background of k-order is represented as counts of (k+1)-grams
-        in the background sequence"""
-        self.backGround=bg
-        self.initWeights()
 
     def setBGfreq(self,a,c,g,t):
         """Sets 0-order background.
 
         The parameters are frequences of a,c,g and t in the background sequence"""
-        self.backGround=None
-        self.freqA,self.freqC,self.freqG,self.freqT=a,c,g,t
+        Matrix.backGround=None
+        Matrix.freqA,Matrix.freqC,Matrix.freqG,Matrix.freqT=a,c,g,t
         self.initWeights()
+        raise "HÄPY"
 
     def getName(self):
         """Gives the name of this matrix"""
@@ -191,10 +190,12 @@ class Matrix:
     def initWeights(self):
         """Helper to initialize the matrix weights for 0- or higher order background models"""
         self.M_weight=[]
-        if self.backGround:
+        self.computeInfoContent()
+        self.trivialWeights()
+        if Matrix.backGround:
+            self.M_weight=[]
             self.positiveWeights()
-        else:
-            self.trivialWeights()
+
 
     def positiveWeights(self):
         """Update weights for higher order markov background.
@@ -225,9 +226,9 @@ class Matrix:
 
         
 
-    def trivialWeights(self):
-        """Update weights according to 0-order background"""
 
+    def computeInfoContent(self):
+        "Computes and sets the information content for this matrix."
         # Sum of the columns.
         sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[self.pseudoCount]*len(self.LLMatrix[0]))
 
@@ -241,6 +242,20 @@ class Matrix:
 
 
         self.InfoContent=reduce(operator.add,reduce(lambda x,y:x+y,InfoContent,[]))
+    def trivialWeights(self):
+        """Update weights according to 0-order background"""
+
+
+        # Sum of the columns.
+        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[self.pseudoCount]*len(self.LLMatrix[0]))
+
+
+        # Frequencies of a nucleotide
+        freq=[ [ (x+bgFreq*self.pseudoCount)/(tot) for x,tot in zip(matrix,sum) ] \
+               for matrix,bgFreq in zip(self.LLMatrix,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
+
+
+
         # Compute weights.
         self.M_weight.append(map(lambda x,tot: log2((x+(self.freqA*self.pseudoCount))/
                                                (tot*self.freqA)),
@@ -285,7 +300,7 @@ class Matrix:
         
         if self.maxscore>cutoff:
             #bg=matrix.BackGround(open("/home/kpalin/tyot/comparative/humanGenome/chr1.fa"))
-            ret=_c_matrix.getTFBSwithBg(self.M_weight,sequence,cutoff,self.backGround)
+            ret=_c_matrix.getTFBSwithBg(self.M_weight,sequence,cutoff,Matrix.backGround)
             #ret=matrix.getTFBS(self.M_weight,sequence,cutoff)
             if ret.has_key("NEXT_SEQ"):
                 print "NEXT_SEQ",ret["NEXT_SEQ"]
@@ -306,7 +321,7 @@ class Matrix:
         #seqIO.seek(0)
         #seqIO=open("/home/kpalin/tyot/comparative/mabs/iso.tmp.fa")
         #seqIO.seek(1)
-        ret=_c_matrix.getTFBSwithBg(self.M_weight, sequence, minscore+self.maxscore,self.backGround)
+        ret=_c_matrix.getTFBSwithBg(self.M_weight, sequence, minscore+self.maxscore,Matrix.backGround)
         if not ret:
             ret={}
         if ret.has_key("NEXT_SEQ"):
@@ -316,22 +331,24 @@ class Matrix:
     
 
 
+def setMarkovBackground(bg):
+    """Set a markov Background.
 
-def getAllTFBS(sequence,cutoff,matlist,absOrRat=None):
+    Markov background of k-order is represented as counts of (k+1)-grams
+    in the background sequence"""
+    Matrix.backGround=bg
+
+def getAllTFBS(sequence,cutoff,matlist,absoluteCutoff=None):
     "Get all TFBSs from one sequence."
     
-    if absOrRat:
-        matlist=[x for x in matlist if x.maxscore>cutoff]
-
-    else:
+    if not absoluteCutoff:
         cutoff=[log2(cutoff)+m.maxscore for m in matlist]
 
     if len(matlist)==0:
         ret={}
     else:
         Mat=matlist[:]
-        BG=matlist[0].backGround
-        ret=_c_matrix.getAllTFBSwithBg(Mat,sequence,cutoff,BG)
+        ret=_c_matrix.getAllTFBSwithBg(Mat,sequence,cutoff,Matrix.backGround)
 
 
     return ret
