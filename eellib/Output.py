@@ -11,6 +11,10 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.9  2004/02/26 11:28:22  kpalin
+# Changed the output routines to handle the new output from alignment
+# bestAlignments
+#
 # Revision 1.8  2004/02/23 12:23:52  kpalin
 # Updates for per gene orthologous runs. Maybe litle multiple alignment.
 #
@@ -70,14 +74,6 @@ def savematch(data, filename=''):
             for Seq in data[Matr].keys():
                 for Pos,Strand in data[Matr][Seq].keys():
                     F.write("%s\tmabs\t%s\t%d\t%d\t%f\t%s\t.\n"%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand))
-##                    F.write(Seq                    +'\t'+  #seqname
-##                            'mabs'               +'\t'+  #Add program name here
-##                            M.getName()          +'\t'+  #feature
-##                            str(Pos)               +'\t'+  #start
-##                            str(Pos+len(Matr)-1)      +'\t'+  #end
-##                            str(data[Matr][Seq][(Pos,Strand)])+'\t'+  #score
-##                            str(Strand)+'\t'+  #strand
-##                            '.'                  +'\n')  #frame
         F.close()
         return filename
         
@@ -92,26 +88,6 @@ def showmatch(data):
         for Seq in data[Matr].keys():
             for Pos,Strand in data[Matr][Seq].keys():
                 print "%s\tmabs\t%s\t%d\t%d\t%f\t%s\t."%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand)
-##                print Seq                    +'\t'+  #seqname
-##                        'mabs'               +'\t'+  #Add program name here
-##                        M.getName()          +'\t'+  #feature
-##                        str(Pos)               +'\t'+  #start
-##                        str(Pos+len(Matr)-1)      +'\t'+  #end
-##                        str(data[Matr][Seq][(Pos,Strand)])+'\t'+  #score
-##                        str(Strand)+'\t'+  #strand
-##                            '.'                  +'\n') #frame
-
-##    for M in data.keys():
-##        for S in data[M].keys():
-##            for I in data[M][S].keys():
-##                print(S                    +'\t'+  #seqname
-##                      'mabs'               +'\t'+  #Add Program Name here
-##                      M.getName()          +'\t'+  #feature
-##                      str(I)               +'\t'+  #start
-##                      str(I+len(M)-1)      +'\t'+  #end
-##                      str(data[M][S][I][0])+'\t'+  #score
-##                      str(data[M][S][I][1])+'\t'+  #strand
-##                      '.'                  )  #frame
 
 import types
 
@@ -132,27 +108,15 @@ def get(data):
     output="".join(flatten(map(lambda Mat:map(lambda Seq:map(lambda ((Ind,strand),score):\
         ("%s\tmabs\t%s\t%d\t%d\t%f\t%s\t.\n"%(Seq,Mat.getName(),Ind,Ind+len(Mat)-1,score,strand)),\
         data[Mat][Seq].items()), data[Mat].keys()),data.keys())))
-##    for M in data.keys():
-##        for S in data[M].keys():
-##            for I in data[M][S].keys():
-##                output+=(S                    +'\t'+  #seqname
-##                         'mabs'               +'\t'+  #Add Program Name here
-##                         M.getName()          +'\t'+  #feature
-##                         str(I)               +'\t'+  #start
-##                         str(I+len(M)-1)      +'\t'+  #end
-##                         str(data[M][S][I][0])+'\t'+  #score
-##                         str(data[M][S][I][1])+'\t'+  #strand
-##                         '.'                  +'\n')  #frame
     return output
 
 
 
 
-def savealign(alignment, filename=''):
+def savealign(alignment, filename,mode="w"):
     "saves the alignment"
     try:
-        #print filename
-        F=open(filename,'w')
+        F=open(filename,mode)
         F.write(alignment)
         F.close()
         return filename
@@ -278,8 +242,8 @@ def formatalign(alignment,seq=None):
         for as in goodAlign:
             outStrIO.write("D[%d][%d]=%.2f %s (%d,%d) <=> (%d,%d) %s\n"%(as.seqX,as.seqY,as.score,as.motif,as.beginX,as.endX,as.beginY,as.endY,as.strand))
             if seq:
-                y2add=yseq[yadded-ystart:ycoord[0]-1-ystart].lower()
-                x2add=xseq[xadded-xstart:xcoord[0]-1-xstart].lower()
+                y2add=yseq[yadded-ystart:as.beginY-1-ystart].lower()
+                x2add=xseq[xadded-xstart:as.beginX-1-xstart].lower()
                 #alnFmt="%%s%%-%ds%%s"%(max(len(y2add),len(x2add)))
                 alnFmt="%s%s%s"
                 distYX,y2add,x2add=alignSeq(y2add,x2add)
