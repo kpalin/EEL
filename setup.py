@@ -11,6 +11,9 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.9  2004/04/14 07:54:10  kpalin
+##   Checking in new version code for distribution.
+##
 ##
 
 
@@ -72,7 +75,7 @@ modDist = Extension("editdist",
 
 
 setup (name = 'mabs',
-       version = '1_beta13',
+       version = '1_beta14',
        url = "http://www.cs.helsinki.fi/u/kpalin/",
        author = "Kimmo Palin, Matthias Berg",
        author_email = "kimmo.palin@helsinki.fi",
