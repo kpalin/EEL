@@ -16,6 +16,10 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.14  2005/01/12 13:34:55  kpalin
+# Added Tkinter/Tix Graphical user interface and command -no-gui to
+# avoid it.
+#
 # Revision 1.13  2005/01/07 13:41:25  kpalin
 # Works with py2exe. (windows executables)
 #
@@ -221,7 +225,10 @@ class Commandline(Interface):
 
     def no_gui(self,arglist=None):
         "Arguments: none\nGives command line interface"
-        self.run()
+        try:
+            self.run()
+        except EOFError:
+            pass
 
 
 
