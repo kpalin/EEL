@@ -19,7 +19,8 @@
 #include <vector>
 #include <map>
 #include <algorithm>
-
+#include <queue>
+#include <limits>
 
 
 #define HAVE_GZSTREAM 1
@@ -30,10 +31,12 @@
 
 
 
-
 /*
  *
  *  $Log$
+ *  Revision 1.7  2004/02/04 10:29:46  kpalin
+ *  Corrected memory usage reporting for large inputs.
+ *
  *  Revision 1.6  2004/01/14 10:06:31  kpalin
  *  Checkings for decref:ing Py_None
  *
@@ -57,7 +60,7 @@
 #endif
 
 #ifndef OUTPUTFREQ
-#define OUTPUTFREQ 3000
+#define OUTPUTFREQ 30000
 #endif
 
 #undef SMALLX   /* Define SMALLX if you want smaller sequence to be x. 
@@ -66,8 +69,12 @@
 
 // #define SAVE_MEM 1
 
+#ifndef SAVE_MEM_LIMIT
+#define SAVE_MEM_LIMIT 1024*1024*1024  // Memory limit after which we use (slower) memory frugal algorithm.
+#endif
+
 #ifdef SAVE_MEM        // Under memory constraints, define SAVE_MEM. Only a tiny speed loss.
-typedef float store;
+typedef double store;
 #else
 typedef double store;
 #endif
@@ -119,7 +126,6 @@ struct matrixentry
   int x;
   int y;
 };
-
 
 
 
@@ -376,6 +382,38 @@ inline int indexBeforeOrAtBp(vector<int> const ind,vector<id_triple> const seq, 
 }
 
 
+typedef struct {
+  unsigned long int x;
+  unsigned long int y;
+} matCoord;
+
+bool operator<(const pair<matCoord,store> &t1,store& t2) {
+  return t1.second<t2;
+}
+
+bool operator<(const matCoord& t1,const matCoord& t2){
+  return t1.x < t2.x || (t1.x==t2.x && t1.y < t2.y);
+}
+
+typedef struct {
+  store value;
+  matCoord bgin;
+  matCoord end;
+} MS_res;  // Memory Save Result
+
+
+
+
+bool operator<(const MS_res& t1,const MS_res& t2){
+  return t1.value < t2.value || (t1.value==t2.value && t1.bgin < t2.bgin) ||
+   (t1.value==t2.value && t1.bgin.x==t2.bgin.x  && t1.bgin.y==t2.bgin.y && t1.end < t2.end) ;
+}
+
+
+
+bool operator>(const MS_res& t1,const MS_res& t2){
+  return !(t1<t2);  // Not really, but I'm too lazy to do it correctly for now
+}
 
 
 struct __CPSTUF {
@@ -387,6 +425,10 @@ struct __CPSTUF {
 
   vector<int> prevYindex;
   vector<double> prevPos;
+
+  priority_queue<MS_res> bestAligns;
+
+  //map<store,pair<matCoord,matCoord> > bestAlignsTmp;
 }  ;
 
 typedef struct {
@@ -403,9 +445,12 @@ typedef struct {
   double mu;
   double nu;
   double nuc_per_rotation;
+  int askedresults;
   int mem_usage;
   int item_count;
+  unsigned int expectedMemUsage;
   double fill_factor;
+  int memSaveUsed;
 
   struct __CPSTUF *CP;
 
@@ -473,6 +518,7 @@ alignment_init(align_AlignmentObject *self, PyObject *args, PyObject *kwds)
     self->mu=1.0;
     self->lambda=0.5;
     self->xi=1.0;
+    self->expectedMemUsage=0;
     return 0;
 }
 
@@ -516,6 +562,7 @@ alignment_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
       if (self->CP==NULL) {
 	return NULL;
       }
+      self->memSaveUsed=0;
 
     }
 
@@ -554,68 +601,9 @@ double findMax(int &pos_x,int &pos_y,align_AlignmentObject *self)
   return max;
 }
 
+
 static PyObject*
-alignment_nextBest(align_AlignmentObject *self)
-{
-
-  // backtracing
-  int pos_x=0, pos_y=0;
-  PyObject *ret=PyList_New(0);
-
-  if(findMax(pos_x,pos_y,self)<0.0) {  // No more alignments
-    CHECKING_DECREF(ret);
-    Py_INCREF(Py_None);
-    return Py_None;
-  }
-  
-
-    
-
-  
-  
-  // Format the output.
-  //string ret;
-  if (pos_x>=0 && pos_y>=0 && pos_x<(int)self->CP->matrix.size() && pos_y<(int)self->CP->matrix[pos_x].size()){
-    //while (matrix[pos_x][pos_y].x || matrix[pos_x][pos_y].y)
-    do {
-      uint const real_y= self->CP->index[self->CP->seq_x[pos_x].ID][pos_y];
-      
-      // don't look at this position again
-      if (self->CP->matrix[pos_x][pos_y].value >0.0) {
-	self->CP->matrix[pos_x][pos_y].value *= -1.0;
-      }
-      
-
-#ifndef NDEBUG
-      if(self->CP->seq_x[pos_x].strand!=self->CP->seq_y[real_y].strand)
-	printf("strand conflict %d%c %d%c\n",self->CP->seq_x[pos_x].ID,self->CP->seq_x[pos_x].strand,self->CP->seq_y[real_y].ID,self->CP->seq_y[real_y].strand);
-#endif
-      PyObject *ret_item=Py_BuildValue("(iids(ii)(ii)c)",
-				       pos_x, real_y, (double)abs((double)self->CP->matrix[pos_x][pos_y].value), 
-				       self->CP->ID_to_TF[self->CP->seq_x[pos_x].ID/2].c_str(),
-				       (int)self->CP->seq_x[pos_x].pos, (int)self->CP->seq_x[pos_x].epos,
-				       (int)self->CP->seq_y[real_y].pos, (int)self->CP->seq_y[real_y].epos, (char)self->CP->seq_y[real_y].strand);
-      PyList_Append(ret,ret_item);
-      CHECKING_DECREF(ret_item);
-		  
-// 	  snprintf(result,255,"D[%d][%d]=%.2f %s (%d,%d) <=> (%d,%d)\n",
-// 		   pos_x, real_y, abs(self->CP->matrix[pos_x][pos_y].value), 
-// 		   self->CP->ID_to_TF[self->CP->seq_x[pos_x].ID].c_str(),
-// 		   (uint)self->CP->seq_x[pos_x].pos, (uint)self->CP->seq_x[pos_x].epos,
-// 		   (uint)self->CP->seq_y[real_y].pos, (uint)self->CP->seq_y[real_y].epos);
-      
-      //ret=result + ret;
-
-      int new_pos_x= self->CP->matrix[pos_x][pos_y].x;
-      pos_y= self->CP->matrix[pos_x][pos_y].y;
-      pos_x= new_pos_x;
-    } while (pos_x>=0 && pos_y>=0); 
-  }
-    
-  return ret;
-
-}
-
+alignment_nextBest(align_AlignmentObject *self);
 
 
 static PyMethodDef alignment_methods[] = {
@@ -650,7 +638,11 @@ static PyMemberDef alignment_members[] = {
      "Factor of filled cells out of all possible"},
     {"mem_usage",T_INT, offsetof(align_AlignmentObject,mem_usage), 0,
      "Mem usage of alignment matrix in bytes."},
+    {"memSaveUsed",T_INT, offsetof(align_AlignmentObject,memSaveUsed), 0,
+     "True if alignment used low memory feature."},
     {"item_count",T_INT, offsetof(align_AlignmentObject,item_count), 0,
+     "Number of filled cells."},
+    {"askedResults",T_INT, offsetof(align_AlignmentObject,askedresults), 0,
      "Number of filled cells."},
     {NULL}  /* Sentinel */
 };
@@ -778,55 +770,323 @@ inline int indexYBeforeOrAtBp(int xx,struct __CPSTUF *CP, double const pos)
   return yy;
 }
 
-static PyObject *
-alignObject(align_AlignmentObject *self)
-{ 
- 
-  tms before,after;
-  long ticks_per_sec=sysconf(_SC_CLK_TCK);
-  long ticks_to_align;
-  uint mem_usage=0;
+
+
+void outputMemory(double bytes)
+{
+  if(bytes>(1024*1024)) {
+    cout<<(bytes/(1024*1024.0))<<" megabytes";
+  } else {
+    cout<<(bytes/(1024))<<" kilobytes";
+  }
   
+}
 
-  // Start timing
-  times(&before);
-
-
-  // building the index map
-  self->CP->index.resize(self->CP->ID_to_TF.size()*2);
-
-  for(uint id=0; id<self->CP->index.size(); id++){
-    for(uint y=0; y<self->CP->seq_y.size(); y++) {
-      if (id == self->CP->seq_y[y].ID){
-	self->CP->index[id].push_back(y);
-	mem_usage += sizeof(int);
-      }
-    }
-  }
-
-  // allocating the matrix
-  for (uint i=0; i<self->CP->seq_x.size(); i++){
-    self->CP->matrix.push_back(vector<matrixentry> (self->CP->index[self->CP->seq_x[i].ID].size()));
-    self->item_count+=self->CP->index[self->CP->seq_x[i].ID].size();
-    mem_usage += self->CP->index[self->CP->seq_x[i].ID].size()*sizeof(matrixentry);	
-  }
-  self->mem_usage=mem_usage;
+void memReport(align_AlignmentObject *self)
+{
   self->fill_factor=(self->item_count*1.0/(self->CP->seq_x.size() *1.0* self->CP->seq_y.size()));
 
 
   double normSize=((self->CP->seq_x.size() * 1.0)*self->CP->seq_y.size() * sizeof(matrixentry));
 		   
   cout <<"Sequence length: x: "<<self->CP->seq_x.size()<<", y: "<<self->CP->seq_y.size()<<endl
-       <<"used memory ~ "<< (mem_usage/(1024*1024.0))  <<" megabytes"<<endl
-       <<"normal matrix size would be ~ "
-		   //<< (unsigned long)(((self->CP->seq_x.size() * 1.0)*self->CP->seq_y.size() * sizeof(matrixentry))/1024.0) 
-       << (unsigned long)(normSize/(1024.0*1024.0))
-       <<" megabytes"<<endl
+       <<"Expected memory usage ";
+  outputMemory(self->expectedMemUsage);
+  
+  cout<<endl<<"used memory ~ ";
+  outputMemory(self->mem_usage);
+  cout<<endl<<"normal matrix size would be ~ ";
+     //<< (unsigned long)(((self->CP->seq_x.size() * 1.0)*self->CP->seq_y.size() * sizeof(matrixentry))/1024.0) 
 
-       <<"So using only "<<(100.0*(mem_usage/normSize))<<" percent of the matrix"<<endl
-       <<"Filling only "<<(self->fill_factor*100.0) <<" percent of the cells"<<endl;
+  outputMemory(normSize);
+  cout<<endl<<"So using only "<<(100.0*(self->mem_usage/normSize))<<" percent of the matrix"<<endl
+      <<"Filling only "<<(self->fill_factor*100.0) <<" percent of the cells"<<endl;
   
       
+}
+
+int indexYafterOrAtRealY(int sx, int x,struct __CPSTUF *CP,int real_y)
+{
+  int s=0,m,e=CP->matrix[x].size()-1;
+  int real_m,ret;
+
+  if(real_y==0) { //Quick escape
+    return 0;
+  }
+  while((e-s)>1){
+    m=(s+e)>>1;
+    real_m=CP->index[CP->seq_x[sx+x].ID][m];
+    if(real_m<real_y){
+      s=m;
+    } else if(real_m>real_y) {
+      e=m;
+    } else {
+      break;
+    }
+  };
+  
+  ret=CP->matrix[x].size(); 
+  if(e>=s && CP->index[CP->seq_x[sx+x].ID][e]>=real_y) {
+    ret=e;
+  } 
+  if(e>=s && CP->index[CP->seq_x[sx+x].ID][m]>=real_y) {
+    ret=m;
+  } 
+  if(e>=s && CP->index[CP->seq_x[sx+x].ID][s]>=real_y) {
+    ret=s;
+  } 
+
+  return ret;
+
+}
+
+
+static PyObject *
+alignObject(align_AlignmentObject *self,unsigned long int const sx, unsigned long int const sy,unsigned long int const ex, unsigned long int const ey)
+{ 
+  /* Compute the alignment matrix in rectangle (sx,sy) -> (ex,ey)  ((ey,ex) exclusive) */
+
+  assert(sx<ex);
+  assert(ex<=self->CP->seq_x.size());
+  assert(sy<ey);
+  assert(ey<=self->CP->seq_y.size());
+
+  // allocating the matrix
+  for (uint i=sx; i<ex; i++){
+    //cout<<"row:"<<i<<" len:"<<self->CP->index[self->CP->seq_x[i].ID].size()<<endl;
+    self->CP->matrix.push_back(vector<matrixentry> (self->CP->index[self->CP->seq_x[i].ID].size()));
+    self->item_count+=self->CP->index[self->CP->seq_x[i].ID].size();
+    self->mem_usage += self->CP->index[self->CP->seq_x[i].ID].size()*sizeof(matrixentry);	
+  }
+
+  memReport(self);
+
+
+//   for(int i=0;i<self->CP->matrix.size();i++) {
+//     cout<<"matrix["<<i<<"].size()="<<self->CP->matrix[i].size()<<endl;
+//   }
+      
+
+  // filling the matrix using dynamic programming
+  matrixentry entry;
+  int x, y;
+
+  int cells_filled=0;
+  double help;
+
+  for (x=0; x<(int)(ex-sx); x++) {
+
+    cells_filled+=1+self->CP->matrix[x].size();
+    if(cells_filled>OUTPUTFREQ) {
+      cout<< "filling line "<<x+1<<" of "<<(ex-sx) << " of length "<<self->CP->matrix[x].size()
+#ifndef NDEBUG
+	  <<" ("<<self->CP->ID_to_TF[self->CP->seq_x[sx+x].ID/2].c_str()<<")"
+#endif
+	  <<endl;
+      cells_filled-=OUTPUTFREQ;
+    }
+
+    //for(y=0; y<(int)self->CP->matrix[x].size(); y++){
+    for(y=indexYafterOrAtRealY(sx,x,self->CP,sy); y<(int)self->CP->matrix[x].size(); y++){
+      int const real_y= self->CP->index[self->CP->seq_x[sx+x].ID][y];
+//        if((unsigned int)real_y<sy || (unsigned int)real_y>=ey) {
+// 	 cout<<"skipping "<<y<<endl;
+//  	continue;
+//        }
+      if((unsigned int)real_y>=ey) {
+      	break;
+      }
+      entry.value= (store)self->lambda*(self->CP->seq_x[sx+x].weight + self->CP->seq_y[real_y].weight);
+      if(entry.value<0.0) entry.value=0.0;
+      entry.x=-1;
+      entry.y=-1;
+      //if(x>250) cout<<x<<","<<y<<endl;
+      int xx=x-1;
+      while(xx>=0 && self->CP->seq_x[sx+x].pos<(self->CP->seq_x[sx+xx].epos+0.5)) {
+	xx--;
+	
+      }
+
+      //printf("x,y=%d,%d (val=%g=%g*(%g+%g))\n",x,real_y,entry.value,self->lambda,self->CP->seq_x[x].weight,self->CP->seq_y[real_y].weight);
+
+//       cout<<"Before:"<<x<<"x"<<y<<":"<<entry.value<<endl;
+
+      int real_yy;
+      double delta_x,delta_y;
+      for(; 
+	  xx>=0 && 
+	    (delta_x=(self->CP->seq_x[sx+x].pos-self->CP->seq_x[sx+xx].epos-1.0))<MAX_BP_DIST; 
+	  xx--){
+#ifdef HEAVY_DEBUG
+	assert(indexBeforeOrAtBp(self->CP->index[self->CP->seq_x[sx+xx].ID],self->CP->seq_y,self->CP->seq_y[real_y].pos-0.5) ==
+	       indexYBeforeOrAtBp(sx+xx,self->CP,self->CP->seq_y[real_y].pos-0.5));
+#endif
+	//for (int yy=indexBeforeOrAtBp(self->CP->index[self->CP->seq_x[xx].ID],self->CP->seq_y,self->CP->seq_y[real_y].pos-0.5);
+	for (int yy=indexYBeforeOrAtBp(sx+xx,self->CP,self->CP->seq_y[real_y].pos-0.5);
+	     yy>=0 && 
+	       (delta_y=(self->CP->seq_y[real_y].pos - self->CP->seq_y[(real_yy=self->CP->index[self->CP->seq_x[sx+xx].ID][yy])].epos-1.0))<MAX_BP_DIST 
+	       && real_yy>=(int)sy; 
+	     yy--){
+
+	  assert(delta_x>-0.5);
+	  assert(delta_y>-0.5);
+	  assert(xx<x);
+	  //if(delta_y<0.5)
+	  //  printf("delta_x %g, delta_y %g\n",delta_x,delta_y);
+	  assert((int)real_yy<(int)real_y);
+
+	  // The actual recursion formula
+	  /* TEX SYNTAX */
+	  /*
+	    \STATE $ D_{i,j}=\max_{0\le k <i, 0\le l<j} \left\{0,%
+	    D_{k,l}+\lambda(w_i+v_j)-\mu \frac{\delta p+\delta q}{2}-
+	    \nu \frac{(\delta p-\delta q)^2}{\delta p + \delta q}-
+	    \xi \phi^2/(\delta p+\delta q)
+	    \right\}$
+	    
+	  */
+
+
+	  /* 
+	  // This formula gives non finite results due to division by zero.
+	  help= self->CP->matrix[xx][yy].value +
+	    self->lambda *(self->CP->seq_x[x].weight + self->CP->seq_y[real_y].weight) -
+	    self->mu *(delta_x + delta_y)/2.0-
+	    self->nu * (delta_x-delta_y)*(delta_x-delta_y)/(delta_x+delta_y)-
+	    self->xi *anglepenalty(delta_x,delta_y,self->nuc_per_rotation);
+	  */
+
+	  // Be carefull for correctness and speed!!!
+	  //if(delta_x==0.0 && delta_y==0.0) {  // Security check for division by zero
+// 	  if(real_yy<sy || real_yy>=ey) 
+// 	    cout<<xx<<"=xx:yy="<<yy<<":[xx].size()="<<self->CP->matrix[xx].size()<<endl;
+	  if((delta_x+delta_y)==0.0) {
+	    help=(double)self->CP->matrix[xx][yy].value +
+	      self->lambda *(self->CP->seq_x[sx+x].weight + self->CP->seq_y[real_y].weight) -
+	      self->mu *(delta_x + delta_y)/2.0;
+	  } else {
+	    help=(double)self->CP->matrix[xx][yy].value +
+	      self->lambda *(self->CP->seq_x[sx+x].weight + self->CP->seq_y[real_y].weight) -
+	      self->mu *(delta_x + delta_y)/2.0 -
+	      self->nu * (delta_x-delta_y)*(delta_x-delta_y)/(delta_x+delta_y)-
+	      self->xi *anglepenalty(delta_x,delta_y,self->nuc_per_rotation);
+	  }
+	  
+	  assert(finite(help));
+
+	    //xi *squaremod((delta_x - delta_y) * 2.0 * PI/nuc_per_rotation) / 
+	    //(delta_x + delta_y);
+	  
+
+	  //if(help>entry.value && xx!=x && yy!=y){
+	  //if(help>entry.value && xx<x && real_yy<real_y){
+	  if(help>entry.value){
+	    entry.value= (store)help;
+	    //if((sx+xx)>0 && yy>0) {  // Make sure that the local alignment ending at (0,0) is properly terminated
+	      entry.x=sx+xx;
+	      entry.y=yy;
+	      //}
+	  }
+	}
+      }
+      
+//       cout<<"After:"<<x<<"x"<<y<<":"<<entry.value<<endl;
+      self->CP->matrix[x][y]= entry;
+    }
+  }
+  
+
+
+
+
+  
+
+
+  CHECKING_DECREF(self->output);
+  self->output=(PyStringObject*)Py_BuildValue("s","No output. Use nextBest()");
+
+
+
+  return (PyObject*)self;
+}
+
+
+////////////////////////////////////////////////////////////
+
+unsigned long maxSitesInLimitedDNA(vector<id_triple> &seq,double const limit)
+{
+  // Returns the maximum number of binding sites on seq
+  // that fall within limit of each other.
+
+  unsigned int s=0,e=0;
+  unsigned long maxSites=0,curSites=0;
+
+  while(e<seq.size()) {
+    if( (seq[e].pos-seq[s].epos)<=limit) {
+      e++;
+      curSites++;
+    } else {
+      maxSites=(maxSites>curSites?maxSites:curSites);
+      s++;
+      curSites--;
+    } 
+  }
+
+  return maxSites;
+}
+
+
+void clearMatrix(align_AlignmentObject *self)
+{
+  // Need to clear matrix. It's temporary if we use memory saving.
+  for(vector<vector<matrixentry> >::iterator iter=self->CP->matrix.begin();
+      iter!=self->CP->matrix.end();iter++) {
+    self->item_count-=(*iter).size();
+    self->mem_usage-=(*iter).size()*sizeof(matrixentry);
+    (*iter).clear();
+      
+  }
+  self->CP->matrix.clear();
+}
+
+static PyObject *
+alignMemorySaveObject(align_AlignmentObject *self)
+{ 
+ 
+  unsigned long maxRowLen=0;
+  double storingLimit=0.0;
+  map<matCoord,pair<matCoord,store> > maxses;
+  priority_queue<MS_res,vector<MS_res>,greater<MS_res> > localBestAligns;
+
+
+
+  self->memSaveUsed=1;
+
+
+  for(vector<vector<int> >::iterator iter=self->CP->index.begin();
+      iter!=self->CP->index.end();iter++) {
+    maxRowLen=(maxRowLen>(*iter).size()?maxRowLen:(*iter).size());
+  }
+
+  // allocating the matrix (only constant number of rows maximum)
+  // constant = all sites on all posible bases.
+
+  // unsigned long const slizeWidth=MAX_BP_DIST*self->CP->index.size()/2;
+
+  // Better have it more strict:
+  unsigned long const slizeWidth=maxSitesInLimitedDNA(self->CP->seq_x,MAX_BP_DIST+0.5)+1;
+  
+  for (uint i=0; i<slizeWidth; i++){
+    self->CP->matrix.push_back(vector<matrixentry> (maxRowLen));
+    self->item_count+=maxRowLen;
+    self->mem_usage += maxRowLen*sizeof(matrixentry);	
+  }
+  
+#ifndef NDEBUG
+  cout<<"Matrix size: "<<slizeWidth<<"x"<<maxRowLen<<endl;
+#endif
+
+  memReport(self);
 
   // filling the matrix using dynamic programming
   matrixentry entry;
@@ -837,20 +1097,22 @@ alignObject(align_AlignmentObject *self)
 
   for (x=0; x<(int)self->CP->seq_x.size(); x++) {
 
-    cells_filled+=1+self->CP->matrix[x].size();
+    cells_filled+=1+self->CP->matrix[x%slizeWidth].size();
     if(cells_filled>OUTPUTFREQ) {
-      cout<< "filling line "<<x+1<<" of "<<self->CP->seq_x.size() << " of length "<<self->CP->matrix[x].size()<<endl;
+      cout<< "filling line "<<x+1<<" of "<<self->CP->seq_x.size() << " of length "<<self->CP->index[self->CP->seq_x[x].ID].size()<<endl;
       cells_filled-=OUTPUTFREQ;
     }
 
 
-    for(y=0; y<(int)self->CP->matrix[x].size(); y++){
+    for(y=0; y<(int)self->CP->index[self->CP->seq_x[x].ID].size(); y++){
       int const real_y= self->CP->index[self->CP->seq_x[x].ID][y];
+
+      assert((unsigned int)real_y<self->CP->seq_y.size());
 
       entry.value= (store)self->lambda*(self->CP->seq_x[x].weight + self->CP->seq_y[real_y].weight);
       if(entry.value<0.0) entry.value=0.0;
-      entry.x=-1;
-      entry.y=-1;
+      entry.x=x;
+      entry.y=y;
       //if(x>250) cout<<x<<","<<y<<endl;
       int xx=x-1;
       while(xx>=0 && self->CP->seq_x[x].pos<(self->CP->seq_x[xx].epos+0.5)) {
@@ -870,7 +1132,7 @@ alignObject(align_AlignmentObject *self)
 	assert(indexBeforeOrAtBp(self->CP->index[self->CP->seq_x[xx].ID],self->CP->seq_y,self->CP->seq_y[real_y].pos-0.5) ==
 	       indexYBeforeOrAtBp(xx,self->CP,self->CP->seq_y[real_y].pos-0.5));
 #endif
-	//for (int yy=indexBeforeOrAtBp(self->CP->index[self->CP->seq_x[xx].ID],self->CP->seq_y,self->CP->seq_y[real_y].pos-0.5);
+
 	for (int yy=indexYBeforeOrAtBp(xx,self->CP,self->CP->seq_y[real_y].pos-0.5);
 	     yy>=0 && 
 	       (delta_y=(self->CP->seq_y[real_y].pos - self->CP->seq_y[(real_yy=self->CP->index[self->CP->seq_x[xx].ID][yy])].epos-1.0))<MAX_BP_DIST; 
@@ -907,11 +1169,11 @@ alignObject(align_AlignmentObject *self)
 	  // Be carefull for correctness and speed!!!
 	  //if(delta_x==0.0 && delta_y==0.0) {  // Security check for division by zero
 	  if((delta_x+delta_y)==0.0) {
-	    help=(double)self->CP->matrix[xx][yy].value +
+	    help=(double)self->CP->matrix[xx%slizeWidth][yy].value +
 	      self->lambda *(self->CP->seq_x[x].weight + self->CP->seq_y[real_y].weight) -
 	      self->mu *(delta_x + delta_y)/2.0;
 	  } else {
-	    help=(double)self->CP->matrix[xx][yy].value +
+	    help=(double)self->CP->matrix[xx%slizeWidth][yy].value +
 	      self->lambda *(self->CP->seq_x[x].weight + self->CP->seq_y[real_y].weight) -
 	      self->mu *(delta_x + delta_y)/2.0 -
 	      self->nu * (delta_x-delta_y)*(delta_x-delta_y)/(delta_x+delta_y)-
@@ -924,95 +1186,90 @@ alignObject(align_AlignmentObject *self)
 	    //(delta_x + delta_y);
 	  
 
-	  //if(help>entry.value && xx!=x && yy!=y){
-	  //if(help>entry.value && xx<x && real_yy<real_y){
 	  if(help>entry.value){
 	    entry.value= (store)help;
-	    entry.x=xx;
-	    entry.y=yy;
+	    entry.x=self->CP->matrix[xx%slizeWidth][yy].x;
+	    entry.y=self->CP->matrix[xx%slizeWidth][yy].y;
+
+	    // Now the entry.(x,y) contains the _starting_ coordinate of
+	    // the best local alignment ending here.
 	  }
 	}
       }
       
-      self->CP->matrix[x][y]= entry;
-    }
-  }
-  
+      self->CP->matrix[x%slizeWidth][y] = entry;
+      // The best local alignment ending to (x,y) starts at (entry.x,entry.y).
+      // add the current maximum to MAXSES if getting better alignment
+      // ending at that position
 
-
-
-  /*
-  // Output preparation
-  string alignment;
-  char result[255];
-  snprintf(result,255,"### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f\n",self->lambda,self->mu,self->nu,self->xi,self->nuc_per_rotation);
-  alignment.append(string(result));
-
-  snprintf(result,255,"### D[%s][%s]\n",PyString_AsString((PyObject*)self->x_name),
-	   PyString_AsString((PyObject*)self->y_name));
-  alignment.append(string(result));
-
-
-  
-
-  // backtracing
-  int pos_x=0, pos_y=0;
-  for(uint i=1; i<=self->num_of_align; i++){
-    double max=0.0;
-    for (uint x=0; x< self->CP->matrix.size(); x++) {
-      for(uint y=0; y<self->CP->matrix[x].size(); y++) {
-	if (self->CP->matrix[x][y].value > max) {
-	  max= self->CP->matrix[x][y].value;
-	  pos_x=x;
-	  pos_y=y;
-	}
-      }
-    }
-
-    string ret;
-    if (pos_x>=0 && pos_y>=0 && pos_x<(int)self->CP->matrix.size() && pos_y<(int)self->CP->matrix[pos_x].size()){
-      //while (matrix[pos_x][pos_y].x || matrix[pos_x][pos_y].y)
-	do {
-	  uint const real_y= self->CP->index[self->CP->seq_x[pos_x].ID][pos_y];
-	  
-	  // don't look at this position again
-	  if (self->CP->matrix[pos_x][pos_y].value >0) {
-	    self->CP->matrix[pos_x][pos_y].value *= -1;
+      if(entry.value>storingLimit) {
+	matCoord sCoord={entry.x,entry.y};
+	map<matCoord,pair<matCoord,store> >::iterator prevGood=maxses.find(sCoord);
+ 	if(prevGood==maxses.end() ||
+ 	   prevGood->second < entry.value ){  // If new or improved
+ 	  matCoord eCoord={x,y};
+	  if(prevGood==maxses.end()) { // If new
+	    MS_res balg={entry.value,sCoord,eCoord};
+	    localBestAligns.push(balg);
 	  }
-	  
-	  snprintf(result,255,"D[%d][%d]=%.2f %s (%d,%d) <=> (%d,%d)\n",
-		   pos_x, real_y, abs(self->CP->matrix[pos_x][pos_y].value), 
-		   self->CP->ID_to_TF[self->CP->seq_x[pos_x].ID/2].c_str(),
-		   (uint)self->CP->seq_x[pos_x].pos, (uint)self->CP->seq_x[pos_x].epos,
-		   (uint)self->CP->seq_y[real_y].pos, (uint)self->CP->seq_y[real_y].epos);
+ 	  maxses[sCoord]=pair<matCoord,store> (eCoord,entry.value);
+// 	  storingLimit=(storingLimit>entry.value?storingLimit:entry.value);
+ 	}
+	if(localBestAligns.size()>(unsigned int)self->askedresults) {
+	  MS_res maybeWorst=localBestAligns.top();
+	  map<matCoord,pair<matCoord,store> >::iterator maybeBetter=maxses.find(maybeWorst.bgin);
+	  while(abs(maybeBetter->second.second-maybeWorst.value) > numeric_limits<store>::epsilon()) {
+	    // priority queue and maxses do not match.
+	    maybeWorst.value=maybeBetter->second.second;
+	    maybeWorst.end=maybeBetter->second.first;
+	    localBestAligns.pop();
+	    localBestAligns.push(maybeWorst);
 
-	  ret=result + ret;
-	  int new_pos_x= self->CP->matrix[pos_x][pos_y].x;
-	  pos_y= self->CP->matrix[pos_x][pos_y].y;
-	  pos_x= new_pos_x;
-	} while (pos_x>=0 && pos_y>=0); 
+
+	    maybeWorst=localBestAligns.top();
+	    maybeBetter=maxses.find(maybeWorst.bgin);
+	  }
+	  // Take off the worst.
+	  maxses.erase(localBestAligns.top().bgin);
+	  localBestAligns.pop();
+	  storingLimit=(double)localBestAligns.top().value;
+	}
+
+      }
+
+
+      // END TO MAXSES
     }
-    snprintf(result,255,"###  Alignment No %d  ###\n",i);
-    ret= result + ret;
-    
-    alignment.append(ret);
   }
-
-
-  */
-
-  // End timing
-  times(&after);
-
-  ticks_to_align=((after.tms_utime-before.tms_utime)+
-		 (after.tms_stime-before.tms_stime));
-  self->secs_to_align=((double)ticks_to_align)/ticks_per_sec;
-  
-  //snprintf(result,255,"### Alignment took %.1f CPU seconds.\n",self->secs_to_align);
-  //alignment.append(string(result));
-
   
 
+  cout<<"best: "<<storingLimit <<" maxs: "<<maxses.size() <<endl;
+
+  // Flip the maximums in other format over to the self.
+//   map<matCoord,pair<matCoord,store> >::iterator iter=maxses.begin();
+//   map<matCoord,pair<matCoord,store> >::iterator prev;
+//   while(iter!=maxses.end()) {
+//     //
+//    self->CP->bestAlignsTmp[iter->second.second]=pair<matCoord,matCoord> (iter->first,iter->second.first);
+//     prev=iter;
+//     iter++;
+//     maxses.erase(prev);
+//   }
+
+
+   assert(maxses.size()==localBestAligns.size());
+   for(map<matCoord,pair<matCoord,store> >::iterator iter=maxses.begin();
+       iter!=maxses.end();iter++) {
+     MS_res balg={iter->second.second,iter->first,iter->second.first};
+     self->CP->bestAligns.push(balg);
+   }
+
+  clearMatrix(self);
+//   for(vector<vector<matrixentry> >::iterator iter=self->CP->matrix.begin();
+//       iter!=self->CP->matrix.end();iter++) {
+//     (*iter).clear();
+//   }
+//   self->CP->matrix.clear();
 
   CHECKING_DECREF(self->output);
   self->output=(PyStringObject*)Py_BuildValue("s","No output. Use nextBest()");
@@ -1024,15 +1281,30 @@ alignObject(align_AlignmentObject *self)
 
 
 
+void estimateMemoryConsumption(align_AlignmentObject *self)
+{
+  // Compute expected memory usage.
+
+  //self->expectedMemUsage=self->CP->seq_x.size()*self->CP->seq_y.size()*sizeof(matrixentry)/(self->CP->ID_to_TF.size());
+
+  self->expectedMemUsage=0;
+  for(uint i=0;i<self->CP->seq_x.size();i++) {
+    self->expectedMemUsage+=self->CP->index[self->CP->seq_x[i].ID].size()*sizeof(matrixentry);
+  }
+}
+
+////////////////////////////////////////////////////////////
 
 static PyObject *
 align_alignCommon(PyObject *self, PyObject *args,istream *data)
 {
+  PyObject *ret_obj;
   char* stub;
   double lambda, xi, mu, nuc_per_rotation,nu;
+  int result_ask;
   string firstSeqName,secondSeqName;
 
-  if (!PyArg_ParseTuple(args, "sddddd", &stub,
+  if (!PyArg_ParseTuple(args, "siddddd", &stub,&result_ask,
 			&lambda, &xi, &mu, &nu,&nuc_per_rotation)){
     return  Py_BuildValue("s", "");
   }
@@ -1212,16 +1484,61 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
 
 
 
-
   ret_self->lambda=lambda;
   ret_self->xi=xi;
   ret_self->mu=mu;
   ret_self->nu=nu;
   ret_self->nuc_per_rotation=nuc_per_rotation;
+  ret_self->askedresults=result_ask;
+  ret_self->secs_to_align=0;
+
+  tms before,after;
+  long ticks_per_sec=sysconf(_SC_CLK_TCK);
+  long ticks_to_align;
+  // Start timing
+  times(&before);
+
+  ret_self->mem_usage=0;
+
+  // building the index map
+  ret_self->CP->index.resize(ret_self->CP->ID_to_TF.size()*2);
+
+  for(uint id=0; id<ret_self->CP->index.size(); id++){
+    for(uint y=0; y<ret_self->CP->seq_y.size(); y++) {
+      if (id == ret_self->CP->seq_y[y].ID){
+	ret_self->CP->index[id].push_back(y);
+	ret_self->mem_usage += sizeof(int);
+      }
+    }
+  }
+
+  estimateMemoryConsumption(ret_self);
+
+#ifdef SAVE_MEM
+  if(ret_self->expectedMemUsage>SAVE_MEM_LIMIT) {
+    ret_obj=(PyObject*)alignMemorySaveObject(ret_self);
+  } else {
+    ret_obj=(PyObject*)alignObject(ret_self,0,0,ret_self->CP->seq_x.size(),ret_self->CP->seq_y.size());
+  }
+#else
+  ret_obj=(PyObject*)alignObject(ret_self,0,0,ret_self->CP->seq_x.size(),ret_self->CP->seq_y.size());
+#endif
+
+  // End timing
+  times(&after);
+
+  ticks_to_align=((after.tms_utime-before.tms_utime)+
+		 (after.tms_stime-before.tms_stime));
+  ret_self->secs_to_align+=((double)ticks_to_align)/ticks_per_sec;
+  
 
 
-  return (PyObject*)alignObject(ret_self);
+  return ret_obj;
+
 }
+
+
+
 
 
 
@@ -1231,10 +1548,11 @@ align_alignfile(PyObject *self, PyObject *args)
 {
   char* file;
   double lambda, xi, mu, nuc_per_rotation,nu;
+  int result_ask;
   PyObject *ret;
   string firstSeqName,secondSeqName;
 
-  if (!PyArg_ParseTuple(args, "sddddd", &file, 
+  if (!PyArg_ParseTuple(args, "siddddd", &file,&result_ask,
 			&lambda, &xi, &mu, &nu,&nuc_per_rotation)){
     return  Py_BuildValue("s", "");
   }
@@ -1276,9 +1594,9 @@ align_aligndata(PyObject *self, PyObject *args)
   char* data;
   double lambda, xi, mu, nuc_per_rotation,nu;
   string firstSeqName,secondSeqName,sequence;
+  int result_ask;
 
-
-  if (!PyArg_ParseTuple(args, "sddddd", &data,
+  if (!PyArg_ParseTuple(args, "siddddd", &data,&result_ask,
 			&lambda, &xi, &mu, &nu, &nuc_per_rotation)){
     return Py_BuildValue("s", "");
   }
@@ -1323,7 +1641,6 @@ initalign(void)
     
     m=Py_InitModule("align", alignMethods);
 
-    
     if(m==NULL)
       return;
 
@@ -1332,3 +1649,127 @@ initalign(void)
 }
 
 
+static PyObject*
+alignment_nextBest(align_AlignmentObject *self)
+{
+
+  // backtracing
+  int pos_x=0, pos_y=0;
+  int sx=0,sy=0,real_sy=0,real_ey=0;
+  //pair<matCoord,matCoord> bounds;
+
+  PyObject *ret=PyList_New(0);
+
+//   for(map<store,pair<matCoord,matCoord> >::iterator it=self->CP->bestAligns.begin();it!=self->CP->bestAligns.end();it++) {
+//     cout<<"it score: "<<it->first<<endl;
+//   }
+
+
+#ifdef EXTRADEBUG
+//     cout<<"seq_x:"<<endl;
+//     for(int i=0;i<self->CP->seq_x.size();i++) 
+//       cout<<i<<":"<<self->CP->ID_to_TF[self->CP->seq_x[i].ID/2].c_str()<<":"<<self->CP->seq_x[i].pos<<endl;
+//     cout<<"\nseq_y:"<<endl;
+//     for(int i=0;i<self->CP->seq_y.size();i++) 
+//       cout<<i<<":"<<self->CP->ID_to_TF[self->CP->seq_y[i].ID/2].c_str()<<":"<<self->CP->seq_y[i].pos<<endl;
+#endif
+
+  if(self->memSaveUsed) {
+    // Need to compute the actual alignments.
+//     map<store,pair<matCoord,matCoord> >::reverse_iterator iter=self->CP->bestAligns.rbegin();
+//     bounds=iter->second;
+//     cout<<"Giving: "<<iter->first <<" ("<<self->CP->bestAligns.size()<<")"<<endl; 
+
+//     // Stupid gludge needed for erase.
+//     map<store,pair<matCoord,matCoord> >::iterator iterF=iter.base();
+//     iterF--;
+//     //assert(&*iter==&*(iter.base()-1));
+//     self->CP->bestAligns.erase(iterF);
+    
+    MS_res bounds=self->CP->bestAligns.top();
+    self->CP->bestAligns.pop();
+    
+    sx=bounds.bgin.x;
+    sy=bounds.bgin.y;
+    uint ex=bounds.end.x;
+    uint ey=bounds.end.y;
+    real_sy= self->CP->index[self->CP->seq_x[sx].ID][sy];
+    real_ey= self->CP->index[self->CP->seq_x[ex].ID][ey];
+
+    //cout<<"sx"<<sx<<" sy"<<sy<<" ex"<<ex<<" ey"<<ey<<":len="<<self->CP->index[self->CP->seq_x[sx].ID].size()<<endl;
+
+    assert(self->CP->seq_x[sx].ID==self->CP->seq_y[real_sy].ID);
+    assert(self->CP->seq_x[ex].ID==self->CP->seq_y[real_ey].ID);
+
+
+    clearMatrix(self);
+
+    tms before,after;
+    long ticks_per_sec=sysconf(_SC_CLK_TCK);
+    long ticks_to_align;
+    // Start timing
+    times(&before);
+
+    alignObject(self,sx,real_sy,ex+1,real_ey+1);
+
+    // End timing
+    times(&after);
+    
+    ticks_to_align=((after.tms_utime-before.tms_utime)+
+		    (after.tms_stime-before.tms_stime));
+    self->secs_to_align+=((double)ticks_to_align)/ticks_per_sec;
+
+
+    pos_x=ex;
+    pos_y=ey;
+
+  } else {
+    if(findMax(pos_x,pos_y,self)<0.0) {  // No more alignments
+      CHECKING_DECREF(ret);
+      Py_INCREF(Py_None);
+      return Py_None;
+    }
+  }
+
+    
+
+  
+  
+  // Format the output.
+  //string ret;
+  assert(pos_x>=0);
+  assert(pos_y>=0);
+  assert((pos_x-sx)<(int)self->CP->matrix.size() );
+  assert( pos_y<(int)self->CP->matrix[pos_x-sx].size());
+  if (pos_x>=0 && pos_y>=0 && (pos_x-sx)<(int)self->CP->matrix.size() && pos_y<(int)self->CP->matrix[pos_x-sx].size()){
+    do {
+      uint const real_y= self->CP->index[self->CP->seq_x[pos_x].ID][pos_y]; 
+     
+      // don't look at this position again
+      if (self->CP->matrix[pos_x-sx][pos_y].value >0.0) {
+	self->CP->matrix[pos_x-sx][pos_y].value *= -1.0;
+      }
+      
+
+#ifndef NDEBUG
+      if(self->CP->seq_x[pos_x].strand!=self->CP->seq_y[real_y].strand)
+	printf("strand conflict %d%c %d%c\n",self->CP->seq_x[pos_x].ID,self->CP->seq_x[pos_x].strand,self->CP->seq_y[real_y].ID,self->CP->seq_y[real_y].strand);
+#endif
+      PyObject *ret_item=Py_BuildValue("(iids(ii)(ii)c)",
+				       pos_x, real_y, (double)abs((double)self->CP->matrix[pos_x-sx][pos_y].value), 
+				       self->CP->ID_to_TF[self->CP->seq_x[pos_x].ID/2].c_str(),
+				       (int)self->CP->seq_x[pos_x].pos, (int)self->CP->seq_x[pos_x].epos,
+				       (int)self->CP->seq_y[real_y].pos, (int)self->CP->seq_y[real_y].epos, (char)self->CP->seq_y[real_y].strand);
+      PyList_Append(ret,ret_item);
+      CHECKING_DECREF(ret_item);
+		  
+
+      int new_pos_x= self->CP->matrix[pos_x-sx][pos_y].x;
+      pos_y= self->CP->matrix[pos_x-sx][pos_y].y;
+      pos_x= new_pos_x;
+    } while (pos_x>=0 && pos_y>=0); 
+  }
+    
+  return ret;
+
+}
