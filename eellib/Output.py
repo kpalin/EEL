@@ -13,6 +13,10 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.17  2005/01/13 13:16:42  kpalin
+# Moved the requesting of sequences to be aligned to Python side
+# of stuff. Much better.
+#
 # Revision 1.16  2005/01/12 13:34:55  kpalin
 # Added Tkinter/Tix Graphical user interface and command -no-gui to
 # avoid it.
@@ -131,7 +135,7 @@ def get(data):
     """Returns the data as a string formated as GFF.
 
     data must have the following format:
-    dictionary from Matrix to Sequence to Index to Score"""
+    dictionary from Sequence to Matrix to (position,strand,allele,snpPos) to Score"""
     #output=''
     def flatten(mlist):
         olist=[]
@@ -142,9 +146,9 @@ def get(data):
                 olist.append(i)
         return olist
     output="".join(flatten(map( \
-        lambda Seq:map(lambda Mat:map(lambda ((Ind,strand),score):\
-        ("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\n"%(\
-        Seq,Mat.getName(),Ind,Ind+len(Mat)-1,score,strand)),\
+        lambda Seq:map(lambda Mat:map(lambda ((Ind,strand,allele,snpPos),score):\
+        ("%s\teel\t%s\t%d\t%d\t%f\t%s\t.\t%s%d\n"%(\
+        Seq,Mat.getName(),Ind,Ind+len(Mat)-1,score,strand,allele,snpPos)),\
         data[Seq][Mat].items()), data[Seq].keys()),data.keys())))
     return output
 
@@ -280,7 +284,7 @@ def formatalign(alignment,seq=None):
         from editdist import alignSeq
     except ImportError:
         print "Using subb alignment"
-        def alignSeq(xseq,yseq):
+        def alignSeq(xseq,yseq,*rest):
             "Stubb for alignment. Does nothing really"
             l=max(len(xseq),len(yseq))
             return (0,xseq.ljust(l).replace(" ","-"),yseq.rjust(l).replace(" ","-"))
@@ -336,7 +340,7 @@ def formatalign(alignment,seq=None):
                 x2add=xseq[xadded-xstart:as.beginX-1-xstart].lower()
                 #alnFmt="%%s%%-%ds%%s"%(max(len(y2add),len(x2add)))
                 alnFmt="%s%s%s"
-                distYX,y2add,x2add=alignSeq(y2add,x2add)
+                distYX,y2add,x2add=alignSeq(y2add,x2add,1,1)
                 yaln=alnFmt%(yaln,y2add,yseq[as.beginY-1-ystart:as.endY-ystart].upper())
                 xaln=alnFmt%(xaln,x2add,xseq[as.beginX-1-xstart:as.endX-xstart].upper())
                 xadded,yadded=as.endX,as.endY
