@@ -1,0 +1,21 @@
+### lambda=2.000000 mu=0.500000 nu=1.000000 xi=1.000000 Nucleotides per rotation=10.400000
+ENSG00000134323	malign	CisModule	42123	42133	48.65	.	.	CisModule 1
+ENSMUSG00000037169	malign	CisModule	12644	12654	48.65	.	.	CisModule 1
+ENSG00000134323	malign	hb.pfm	42123	42133	48.65	.	.	CisModule 1
+ENSMUSG00000037169	malign	hb.pfm	12644	12654	48.65	.	.	CisModule 1
+ENSG00000134323	malign	hb.pfm	42137	42147	97.87	.	.	CisModule 1
+ENSMUSG00000037169	malign	hb.pfm	12658	12668	97.87	.	.	CisModule 1
+ENSG00000134323	malign	CisModule	40077	40086	35.36	.	.	CisModule 2
+ENSMUSG00000037169	malign	CisModule	13658	13667	35.36	.	.	CisModule 2
+ENSG00000134323	malign	cad.pfm	40077	40086	35.36	.	.	CisModule 2
+ENSMUSG00000037169	malign	cad.pfm	13658	13667	35.36	.	.	CisModule 2
+ENSG00000134323	malign	cad.pfm	40113	40122	59.88	.	.	CisModule 2
+ENSMUSG00000037169	malign	cad.pfm	13695	13704	59.88	.	.	CisModule 2
+ENSG00000134323	malign	hb.pfm	40143	40153	97.35	.	.	CisModule 2
+ENSMUSG00000037169	malign	hb.pfm	13716	13726	97.35	.	.	CisModule 2
+ENSG00000134323	malign	CisModule	2610	2620	51.81	.	.	CisModule 3
+ENSMUSG00000037169	malign	CisModule	9986	9996	51.81	.	.	CisModule 3
+ENSG00000134323	malign	hb.pfm	2610	2620	51.81	.	.	CisModule 3
+ENSMUSG00000037169	malign	hb.pfm	9986	9996	51.81	.	.	CisModule 3
+ENSG00000134323	malign	hb.pfm	2635	2645	96.17	.	.	CisModule 3
+ENSMUSG00000037169	malign	hb.pfm	10005	10015	96.17	.	.	CisModule 3
