@@ -12,6 +12,9 @@ import string
 
 
 # $Log$
+# Revision 1.7  2004/03/03 09:27:25  kpalin
+# Added interface for multiple alignment.
+#
 # Revision 1.6  2004/02/26 11:59:49  kpalin
 # Added gracefull error handling for mabs. Now it doesn't exit after
 # encountering an error but report it and tells to send the error
@@ -116,45 +119,18 @@ class Commandline(Interface):
         "waits for std input and executes these commands"
         print 'Type "help" for more information'
         while(1):
-            try:
-                token=[]
-                while len(token)==0:
-                    #print "> ",
-                    try:
-                        # read tokens for std input
-                        token=raw_input("> ").split()
-                    #except EOFError:
-                    #    self.quit([])
-                    except KeyboardInterrupt:
-                        print
+            token=[]
+            while len(token)==0:
+                try:
+                    # read tokens for std input
+                    token=raw_input("> ")
+                #except EOFError:
+                #    self.quit([])
+                except KeyboardInterrupt:
+                    print
 
-                # if command exists...
-                if self.isCommand(token[0]): 
-                    comm=self.__commands[token[0]][0]
-                    num_of_args=self.__commands[token[0]][1]
 
-                    # if command gets too less arguments...
-                    if num_of_args > len(token)-1:
-                        s=''
-                        if num_of_args!=1: s='s'
-                        print token[0], "needs at least ",\
-                              num_of_args, "argument"+s
-                    # else execute command with its argumments
-                    else:
-                        try:
-                            comm(token[1:])
-                        except StandardError,e:
-                            print "#"*67
-                            print "Software error encountered! Please email this"
-                            print "error message to kimmo.palin@helsinki.fi"
-                            print "Error while processing command:",token
-                            import traceback,sys
-                            traceback.print_exc(file=sys.stdout)
-                            print "#"*67
-                else:
-                    print token[0],": command not found"
-            except KeyboardInterrupt:
-                print "Keyboard Interrupt: Aborted"
+            self.execute(token)
 
     def execute(self, command):
         "executes the given command (like 'run' does)"
@@ -179,12 +155,19 @@ class Commandline(Interface):
                     except KeyboardInterrupt:
                         raise
                     except StandardError,e:
+                        import sys
                         print "#"*67
                         print "Software error encountered! Please email this"
                         print "error message to kimmo.palin@helsinki.fi"
+                        print "Platform:",sys.platform
+                        print "Version: '%s'"%(sys.version)
                         print "Error while processing command:",token
                         import traceback,sys
                         traceback.print_exc(file=sys.stdout)
+                        try:
+                            print "API-version: %s"%(str(sys.api_version))
+                        except AttributeError:
+                            pass
                         print "#"*67
             else:
                 print token[0],": command not found"
