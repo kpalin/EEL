@@ -37,6 +37,7 @@ spam_editDistance(self, args)
     i=smaxlen;
     smaxlen=sminlen;
     sminlen=i;
+
     tmp=smin;
     smin=smax;
     smax=tmp;
@@ -89,6 +90,38 @@ spam_editDistance(self, args)
 }
 
 
+int IUPACmatch(char a,char b)
+{
+  char *IUPACclass[]={"RGA",
+		     "YTC",
+		     "MAC",
+		     "KGT",
+		     "SGC",
+		     "WAT",
+		     "HACT",
+		     "BGTC",
+		     "VGCA",
+		     "DGAT",
+		     "NACGT",
+		      NULL};
+  int i,j,match_a=0,match_b=0;
+
+  if(a==b) return 1;
+
+  for(i=0;IUPACclass[i];i++) {
+    match_a=0;
+    match_b=0;
+    for(j=0;j<strlen(IUPACclass[i]);j++) {
+      match_a|= (IUPACclass[i][j]==a);
+      match_b|= (IUPACclass[i][j]==b);
+    }
+    if(match_a && match_b) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 static PyObject *
 spam_alignSeq(self, args)
     PyObject *self;
@@ -98,12 +131,13 @@ spam_alignSeq(self, args)
   int flipFlag=0;
   int i,j,aln_p;
   unsigned int smaxlen,sminlen,arrayLen,editDist,countEnds=1;
+  unsigned int useIUPAC=0;
   char *smin,*smax,*stmp,nothing,*backTrace;
   int *curr,*prev,*tmp;
   char *minaln,*maxaln;
   PyObject *ret_val;
 
-  if (!PyArg_ParseTuple(args, "ss|d",&smin,&smax,&countEnds)){
+  if (!PyArg_ParseTuple(args, "ss|dd",&smin,&smax,&countEnds,&useIUPAC)){
     Py_INCREF(Py_None);
     return Py_None;
   }
@@ -152,7 +186,8 @@ spam_alignSeq(self, args)
       curr[0]=i+1;
     }
     for(j=0;j<sminlen;j++) {
-      if(smax[i]==smin[j]) {
+      /* Look for equality */
+      if((useIUPAC&&IUPACmatch(smax[i],smin[j])) || smax[i]==smin[j]) {
 	if (prev[j]<curr[j]+delcost && prev[j]<prev[j+1]+delcost) {
 	  BT_POS(backTrace,i,j)=BT_MATCH;
 	  curr[j+1]=prev[j];
