@@ -14,11 +14,24 @@ except ImportError:
     print "No gzip available."
 
 
+#
+# $Log$
+#
+
+
 if 0:
     print "NOW IMPORTING ALIGN module"
 
 import align
 import sys,math
+
+
+try:
+    from gc import collect
+except ImportError:
+    # Define a stubb if there is no Garbage Collection module
+    def collect():
+        pass
 
 class Interface:
     """This class provides most of the functionality.
@@ -35,6 +48,7 @@ class Interface:
     def resetMatrices(self):
         "resets the list of matrices"
         self.matlist=[]
+        collect()
 
     def addMatrix(self, filenames):
         "adds new matrices from given files"
@@ -73,6 +87,7 @@ class Interface:
     def resetSequences(self):
         "resets the sequences"
         self.seq=Sequences()
+        collect()
 
     def addSequence(self, filenames):
         "adds sequences from files in FASTA format"
@@ -82,6 +97,7 @@ class Interface:
     def removeSequence(self, name):
         "removes sequences given by name"
         self.seq.removeSequence(name)
+        collect()
     
     def getSeqNames(self):
         "returns the sequence names"
@@ -153,13 +169,14 @@ class Interface:
         if len(outData)>0:
             self.tempFile.write(outData)
             self.tempFile.flush()
-        self.__comp={}
+            self.__comp={}
 
     def finalTmpGFF(self):
         "Store BS data to temporary file and close it"
         self.storeTmpGFF()
         self.tempFile.close()
         del(self.tempFile)
+        collect()
         
             
     def savematch(self, filename=''):
@@ -228,6 +245,7 @@ class Interface:
         if filename=='.' and  hasattr(self,"tempFileName"):
             filename=self.tempFileName
 
+        collect()
         if filename=='.':
             if len(self.__comp)==0:
                 return "No binding sites"
