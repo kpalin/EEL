@@ -36,6 +36,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.18  2005/01/25 09:29:29  kpalin
+ *  Removed usage of long double to make it compile on MacOSX
+ *
  *  Revision 1.17  2005/01/13 13:16:50  kpalin
  *  Moved the requesting of sequences to be aligned to Python side
  *  of stuff. Much better.
@@ -151,8 +154,17 @@ public:
   uint epos;
   double weight;
   char strand;
+  string annot;
+//   ~triple();  
 };
 
+// triple::~triple()
+// {
+//   if(this->annot) {
+//     free(this->annot);
+//     this->annot=NULL;
+//   }
+// }
 struct id_triple
 {
   string TF;
@@ -162,8 +174,17 @@ struct id_triple
   //uint pos;
   double weight;
   char strand;
+  string annot;
+  //  ~id_triple();
 };
 
+// id_triple::~id_triple()
+// {
+//   if(this->annot) {
+//     free(this->annot);
+//     this->annot=NULL;
+//   }
+// }
 // Needed for sort
 bool operator<(const triple& t1, const triple& t2){
   return t1.epos<t2.epos || (t1.epos==t2.epos && t1.weight<t2.weight);
@@ -241,9 +262,9 @@ vector<string> str_split(const string& str, const string& delimiters = " ")
 }
 
 // Dirty trick. Requires references.
-int parseLine(string const line,triple &tri,string &sequence)
+int parseLine(string const &line,triple &tri,string &sequence)
 {
-  string TF;
+  string TF,junk;
   int pos,epos;
   double weight;
   char strand;
@@ -308,6 +329,20 @@ int parseLine(string const line,triple &tri,string &sequence)
   tri.weight=weight;
   tri.epos=epos;
   tri.strand=strand;
+  
+
+  // Take spacer
+  
+  help>>junk;
+
+  // Get annotation
+  string ends;
+  getline(help,ends,'\n');
+  if(ends.length()>2) {
+    tri.annot=ends;
+  } else {
+    tri.annot=string();
+  }
   return 1;
 }
 
@@ -537,7 +572,7 @@ extern "C" int
 alignment_init(align_AlignmentObject *self, PyObject *args, PyObject *kwds)
 {
 
-    double secs;
+    double secs=0.0;
     PyObject  *x_name=NULL,*y_name=NULL,*output=NULL;
 
     static char *kwlist[] = {"x_name","y_name","secs_to_align","output", NULL};
@@ -1444,7 +1479,8 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
 
   if (!PyArg_ParseTuple(args, "siddddd|zz", &stub,&result_ask,
 			&lambda, &xi, &mu, &nu,&nuc_per_rotation,&firstSeq,&secondSeq)){
-    return  Py_BuildValue("s", "Couldn't parse arguments!");
+    PyErr_SetString(PyExc_AttributeError, "Couldn't parse arguments!");
+    return NULL;
   }
 
 
@@ -1459,8 +1495,6 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
   seq_x=(*matchlist)[firstSeqName];
   seq_y=(*matchlist)[secondSeqName];
   
-
-  delete matchlist;
 
   // Check that we get short rows.
   string tmp_str;
@@ -1533,6 +1567,8 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
     idtr.epos=(double)seq_x[i].epos;
     idtr.weight=seq_x[i].weight;
     idtr.strand=seq_x[i].strand;
+    idtr.annot=seq_x[i].annot;
+
     //id_seq_x.push_back(idtr);
     ret_self->CP->seq_x.push_back(idtr);
     ret_self->CP->prevYindex.push_back(0);
@@ -1553,11 +1589,14 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
     idtr.epos=(double)seq_y[i].epos;
     idtr.weight=seq_y[i].weight;
     idtr.strand=seq_y[i].strand;
+    idtr.annot=seq_y[i].annot;
+
     //id_seq_y.push_back(idtr);
     ret_self->CP->seq_y.push_back(idtr);
   }
 
 
+  delete matchlist;
 
 
 
@@ -1818,7 +1857,9 @@ alignment_nextBest(align_AlignmentObject *self)
 				  (char)self->CP->seq_y[real_y].strand, //strand
 				  (double)fabs((double)self->CP->matrix[pos_x-sx][pos_y].value), // Total align score this far
 				  (double)self->CP->seq_x[pos_x].weight,
-				  (double)self->CP->seq_y[real_y].weight);
+				   (double)self->CP->seq_y[real_y].weight,
+				   self->CP->seq_x[pos_x].annot.c_str(),
+				   self->CP->seq_y[real_y].annot.c_str());
 
       PyList_Append(ret,ret_item);
       CHECKING_DECREF(ret_item);
