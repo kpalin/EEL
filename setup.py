@@ -1,4 +1,8 @@
+"""Setup settings for distutils.
 
+You can get debug build with command:
+python2.2 setup.py debug build
+"""
 import sys
 
 

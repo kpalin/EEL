@@ -1,4 +1,10 @@
+"""Converts a GFF file to chromosomal coordinates.
 
+GFF file with sequence names like HUMAN|1.12345-19999
+are converted to names like HUMAN|1 with the start coordinate
+added to the feature coordinates.
+
+Output comes to standard output. Filename is given on commandline."""
 import sys,re
 
 

@@ -5,8 +5,12 @@ include mabs
 include *.pfm
 include *.bg
 include gffSequenceChange.py
+include ensemblGFFchange.py
 include readline-0.0.0.withheaders.tgz
 recursive-include TFv1 *
 include src/gzstream/*
 exclude src/gzstream/libgzstream.a
 exclude src/gzstream/gzstream.o
+exclude mabslib/mabsClient.py  
+exclude mabslib/mabsServer.py  
+exclude mabslib/matrixTest.py

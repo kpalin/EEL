@@ -1,10 +1,20 @@
+"""Convert GFF sequence names and coordinates.
 
+usage:
+python2.2 gffSequenceChange.py [-S sname] [-s tname] [-p offset] -f fname [-a]
+
+-S sname    Change sequences with sname
+-s tname    Change the sequence name to tname
+-p offset   Add offset to all coordinates
+-f fname    In file 'fname'
+-a          Output all lines, not just changed ones.
+"""
 import sys,re,getopt
 
 
 comopt,args = getopt.getopt(sys.argv[1:],"S:s:p:f:a")
 
-outputAll=0
+FromChg,toChg,coordChg,fname,outputAll="","",0,"need.a.file.gff",0
 for opt,val in comopt:
     if opt=="-S":
         fromChg=val
