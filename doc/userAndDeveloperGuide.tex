@@ -83,6 +83,7 @@
 \author{Kimmo Palin}
 \date{\today}
 
+\newcommand{\Prob}{\mathrm{P}}
 
 \newcommand{\mcommand}[1]{\emph{\sf #1}}
 \newcommand{\mparam}[1]{'\emph{#1}'}
@@ -128,19 +129,111 @@ The commands from the command line are read from left to right, such
 that the command%
 \begin{verbatim}!# mabs -as *.fa -am TFv1/*.pfm -setMarkovBG human.ChrI.O4.bg \\
         -getTFBSabsolute -savematch \end{verbatim}%
-searches all '*.fa' files (\verb|-as *.fa|) for binding sites from
-directory 'TFv1' (\verb|-am TFv1/*.pfm|) with respect to a~markov
-background (\verb|-setMarkovBG human.ChrI.04.bg|). All sites scoring
+searches all '*.fa' files (\mcommand{\mbox{-as} *.fa}) for binding sites from
+directory 'TFv1' (\mcommand{\mbox{-am} TFv1/*.pfm}) with respect to a~markov
+background (\mcommand{\mbox{-setMarkovBG} human.ChrI.04.bg}). All sites scoring
 better than the default cutoff of 9, are searched
-(\verb|-getTFBSabsolute|) and stored to a~file with a~name similar to
- 'mabs\_2003\_8\_27\_15\_48.gff' (\verb|-savematch|).
+(\mcommand{\mbox{-getTFBSabsolute}}) and stored to a~file with a~name similar to
+ 'mabs\_2003\_8\_27\_15\_48.gff' (\mcommand{\mbox{-savematch}}).
 
 
 
 \section{Finding Potential Binding Sites}
 \label{sec:TFBSscan}
 
+The \mcommand{getTFBS} and \mcommand{getTFBSabsolute} commands look
+for the sites whose nucleotide distribution differ the most from the
+background sequence towards the given position specific
+frequencies. The user inputs the position specific counts $C[i,c]$,
+$1\le i \le m$ and $c\in\{A,C,G,T\}=\Sigma$ in
+the PSSM files given with the \mcommand{addMatrix} command. The PSSM
+files should contain four rows of non negative integers, each number
+representing the count of the given nucleotide in that position of the
+site. Each row stands for one nucleotide so that the first row has
+counts for 'A', the second row has counts for 'C', the third row for
+'G' and the fourth row for 'T'.  The sum of each column does not need
+to be the same.
 
+
+Each character of~$\Sigma$ can occur in each position of the
+background sequence with probability~$p_A$, $p_C$, $p_G$, $p_T$ (which
+can be set with \mcommand{setBGfreq}).  The position specific
+nucleotide distribution of the binding site motif ($M$)is biased toward the
+background with pseudocount~$s$ (set by \mcommand{setpseudocount})
+which can be seen as a~Dirichlet prior (see
+e.g.~\cite{durbin98}). This also leviates some technical difficulties
+with division by zero later on. The effect of the pseudocount
+diminishes when there are more observations on the correct motif,
+i.e. the counts $C[i,c]$ are larger. The probability, or the weighted
+frequency, of the binding site (Motif) position~$i$, $M_i$ having a
+character $c$ is
+\begin{equation}
+  \label{eq:motifProb}
+  \Prob(M_i=c)=\frac{C[i,c]+p_cs}{\sum_{x\in\Sigma}C[i,x]+s}
+\end{equation}
+
+The binding sites are searched with respect to two optional background
+distributions. The simpler one assumes the background DNA as
+independently and identically distributed sequence of characters. This
+means that the probability of character~$c$ in background sequence
+position~$i$, $B_i$, is
+\begin{equation}
+  \label{eq:bg0markov}
+  \Prob(B_i=c)=p_c
+\end{equation}.
+
+The more complicated background distribution takes in to account the
+positional dependence between the nearby nucleotides in the background
+sequence. This dependence is noted with~$k$:th order Markov model,
+where~$k$ is the number of nucleotides considered when estimating the
+probability of character $B_i$.  This probability
+$\Prob(B_i|B_{i-1},\ldots,B_{i-k})$ is computed on-line during the
+search by using precomputed data (set by \mcommand{setMarkovBG}). The
+Mabs distribution includes a file 'human.ChrI.04.bg' which
+contains~4th order markov bakground model learned from human
+chromosome one.
+
+For both types of background distribution the motif matching score is
+computed the same way. The score is the log likelihood ratio between
+the motif and the background. For sequence $S_l,\ldots,S_{l+m}$ the
+score is
+\begin{equation}
+  \label{eq:bsScore}
+  \begin{array}{lll}
+  \log_2
+  \frac{\Prob(S_l,\ldots,S_{l+m}|M)}{\Prob(S_l,\ldots,S_{l+m}|B)} &=& \log_2
+  \frac{\prod_{i=1}^{m}\Prob(M_i=S_{l+i-1})}{\prod_{i=1}^m
+    \Prob(B_i=S_{l+i-1}|S_{l+i-2},\ldots,S_{l+i-k}) }\\
+   &= &\sum_{i=1}^{m}\log_2
+  \frac{\Prob(M_i=S_{l+i-1})}{
+    \Prob(B_i=S_{l+i-1}|S_{l+i-2},\ldots,S_{l+i-k}) }
+  \end{array}
+\end{equation}
+
+For the iid background distribution, the score is simply a sum of
+weights since it only depends on the position on the motif and the
+character in the string.
+\begin{equation}
+  \label{eq:bg0markovScore}
+\sum_{i=1}^m \log_2
+  \frac{\Prob(M_i=S_{l+i-1})}{\Prob(B_i=S_{l+i-1})}.
+\end{equation}
+These weights can be precomputed so that the actual binding site scan
+over the sequence is only summing over a moving window.
+
+The higher order markov background is a bit trickier since the weights
+depend on previous characters in the string. But still we can use the
+moving sum method for the probability of the motif and compute the
+background probability independently. After computing both of the log
+likelihoods, we can get the score by substracting
+\begin{equation}
+  \label{eq:markovCounting}
+  \sum_{i=1}^{m}\log_2
+  \Prob(M_i=S_{l+i-1}) -  \sum_{i=1}^{m}\log_2
+    \Prob(B_i=S_{l+i-1}|S_{l+i-2},\ldots,S_{l+i-k}).
+\end{equation}
+In the beginning of the sequence the background probability is
+computed with lower order markov chain.
 
 \section{Pairwise alignment}
 \label{sec:pairalign}
@@ -156,7 +249,7 @@ program and laying foundations for mabses user interface and core
 design.
 
 \bibliographystyle{apalike}
-\bibliography{medlinebib}
+\bibliography{medlinebib,ml}
 
 
 \appendix
@@ -173,5 +266,8 @@ design.
 \section{Version history}
 \begin{verbatim}
 $Log$
+Revision 1.1  2004/01/28 08:43:38  kpalin
+Initial introduction and command help.
+
 \end{verbatim}
 \end{document}
