@@ -11,6 +11,10 @@ from cStringIO import StringIO
 
 #
 # $Log$
+# Revision 1.11  2004/07/30 12:08:54  kpalin
+# Changed the GFF formatting to use alnColumn objects. (Needed
+# for multiple alignment)
+#
 # Revision 1.10  2004/03/03 09:26:59  kpalin
 # Few possible bugs corrected.
 #
@@ -119,7 +123,14 @@ def get(data):
 def savealign(alignment, filename,mode="w"):
     "saves the alignment"
     try:
-        F=open(filename,mode)
+        if filename[-3:]==".gz":
+            try:
+                F=GzipFile(filename,mode)
+            except NameError:
+                filename=filename[:-3]
+                F=open(filename,mode)
+        else:
+            F=open(filename,mode)
         F.write(alignment)
         F.close()
         return filename
