@@ -32,6 +32,9 @@
 /*
  *
  * $Log$
+ * Revision 1.8  2005/02/09 11:08:09  kpalin
+ * Not really working version. As all others before this too.
+ *
  * Revision 1.7  2004/12/22 11:14:34  kpalin
  * Some fixes for better distributability
  *
@@ -112,72 +115,28 @@ int toSite(siteCode code)
 }
 
 
-void ABset::addChar(int seq,int chr,char strand)
+
+
+PointerVec::PointerVec(Matrix *mat,Inputs *indata)
 {
-  chr=fromSiteAndStrand(chr,strand);
+  limData=indata;
+  m=mat->dims();
+  this->myMat=mat;
 
-  B[chr].push_back(seq);
-  if(B[chr].size()>=(uint)limit) {
-    A.push_back(chr);
-  }
-}
+  this->matrix_p.resize(this->m,0);
 
-vector<int> ABset::nextB()
-{
-
-  return B[A[pointer++]];
-}
-
-int ABset::moreAlphas()
-{
-  if(pointer<(int)A.size())
-    return 1;
-  return 0;
-}
-
-ABset Inputs::getAB(PointerVec &p,int limit)
-{
-  ABset out=ABset(factors(),limit);
-
-
-  //p.output();
-  for(int i=0;i<sequences();i++) {
-    out.addChar(i,seq[i][p[i]].ID,seq[i][p[i]].strand);
-  }
-  //cout<<(out.moreAlphas()?"more alphas":"no more alphas")<<endl;
-  return out;
-}
-
-PointerVec::PointerVec(const PointerVec &other)
-{
-  dimlen=other.dimlen;
-  dimFactors=other.dimFactors;
-  bound.resize(other.m,0);
-  p=other.p;
-  m=other.m;
-  matrix_p=dataPoint();
+  // Not sure whether we'll need this.
+  this->p.resize(this->m,-1);
   ok=1;
 
 }
 
 
-PointerVec::PointerVec(vector<int> &p, vector<int> &dims,vector<int> *dimFactors)
-{
-  dimlen=dims;
-  limData=NULL;
-  m=dims.size();
-  bound.resize(m,0);
-  this->dimFactors=dimFactors;
-
-
-  setValue(p);
-}
-
-
-posind PointerVec::difference(int i) const {
+int PointerVec::difference(PointerVec const &other,int i) const {
   assert(limData!=NULL);
-  return abs((int)(limData->getSite(dimlen[i],i).pos-
-    limData->getSite(*this,i).epos));
+  int otherRight=(int)(other.getSite(i).pos-this->getSite(i).epos);
+  int otherLeft=(int)(this->getSite(i).pos-other.getSite(i).epos);
+  return max(otherRight,otherLeft);
 }
 
 
@@ -218,58 +177,87 @@ const PointerVec& PointerVec::operator--(int dummy)
 
 const PointerVec& PointerVec::operator++(int dummy)
 {
-  uint i=0;
+  seqCode seq;
 
-  do {
-    if(bound[i]==0) {  // If the dimension is free
-      p[i]++;
-      matrix_p+=(*dimFactors)[i];
-      if(p[i]>=dimlen[i]) {
-	p[i]=0;
-	matrix_p-=dimlen[i]*(*dimFactors)[i];
-	i++;
-      } else {
-	break;
-      }
+  for(seq=this->m-1;seq>0;seq--) {
+    int sites=this->counTFinSeq(seq,this->limData->getSite(this->matrix_p[0],0));
+    if(this->matrix_p[seq]<(sites-1)) {
+      this->matrix_p[seq]++;
+      break;
     } else {
-      i++;
+      this->matrix_p[seq]=0;
     }
-  } while(i<m);
-
-  if(i>=m) {
+  }
+  if(seq==0 && this->matrix_p[0]<(this->limData->sequenceLens(0)-1)) {
+    this->matrix_p[0]++;
+  } else {
+    this->matrix_p[0]=-1;
     ok=0;
   }
-
-  assert(matrix_p==dataPoint());
   return *this;
 }
 
 
-
-
-Matrix::Matrix(vector<int> &dims)
+// Return either *vector<void*>  or *vector<matrixentry> for the last level
+void * Matrix::allocateData(seqCode level,motifCode mot)
 {
-  matSize=1;
+  if(level<(this->dim-1)) {
+    vector<void*> *curDat=new vector<void*>;
 
-  dim=dims.size();
-  dimLen=dims;
+    curDat->reserve(this->countTFinSeq(level,mot));
+    for(int i=0;i<curDat->size();i++) {
+      curDat->push_back(this->allocateData(level+1,mot));
+    }
+    this->matSize+=sizeof(void*);
+    return (void*)curDat;
+  } else if(level==(this->dim-1)) {
+    vector<matrixentry> *curDat=new vector<matrixentry>;
 
-  dimFactors.resize(dim);
+    curDat->resize(this->countTFinSeq(level,mot));
+
+    this->matSize+=sizeof(matrixentry)*curDat->size();
+    return (void*)curDat;
+  }
+
+  return (void*) NULL; // SHOULDN'T COME HERE!!
+}
 
 
-  for(int i=0;i<dim;i++) {
-    matSize*=dimLen[i];
-    if(i==0) {
-      dimFactors[i]=1;
-    } else {
-      dimFactors[i]=dimLen[i-1]*dimFactors[i-1];
+
+Matrix::Matrix(Inputs *indata)
+{
+  this->indata=indata;
+
+  this->dim=indata->sequences();
+  this->dimLen=indata->sequenceLens();
+
+
+  this->matSize=0;
+  
+
+
+  try {
+    // Allocate the helpers for the sparse matrix
+    this->tfIndex.resize(indata->sequences());
+    for(seqCode seq=0;seq<indata->sequences();seq++) {
+      this->tfIndex[seq].resize(indata->factors());
+
+      for(posCode pos=0;pos<this->dimLen[seq];pos++) {
+	this->tfIndex[seq][indata->getSite(pos,seq).ID].push_back(pos);
+      }
+
+    }
+    // Allocate the sparse matrix itself
+
+    // First dimension straight away.
+    this->data.reserve(this->dimLen[0]);
+
+    for(posCode basePos=0;basePos<this->dimLen[0];basePos++) {
+      motifCode baseMot=indata->getSite(basePos,0);
+      this->data.push_back(this->allocateData(1,baseMot));
     }
   }
-  try {
-    data.resize(matSize);
-  }
   catch (std::bad_alloc const&) {
-    cout << "Memory allocation fail!" << endl;
     PyErr_SetString(PyExc_MemoryError,"Out of memory!");
   }
 
@@ -277,9 +265,7 @@ Matrix::Matrix(vector<int> &dims)
 
 PointerVec Matrix::getOrigin()
 {
-  vector<int> zeros=vector<int> (dim,0);
-
-  return PointerVec(zeros,dimLen,&dimFactors);
+  return PointerVec(this,this->indata);
 }
 
 PointerVec Matrix::argMax()
@@ -312,28 +298,10 @@ PointerVec Matrix::argMax()
 }
 
 
-int PointerVec::dataPoint() const
-{ // Compute the mapping from multi to single dimensional array
 
-  int pos=0;
-
-  for(uint i=0;i<m;i++) {
-    pos+=p[i]*(*dimFactors)[i];
-    if(p[i]>=dimlen[i]) {
-      cout<<"p[i] = "<<p[i]<<endl<<dimlen[i]<<endl;
-      assert(p[i]<dimlen[i]);
-    }
-  }
-  assert(pos>=0);
-  return pos;
-}
-
-
-matrixentry const &Matrix::getValue(PointerVec const &p) const
+matrixentry &Matrix::getValue(PointerVec const &p)
 {
-  int pos=p.getMatrixCoord();
-
-  return data[pos];
+  return *this->getValueP(p);
 }
 
 matrixentry *Matrix::getValueP(PointerVec const &p)
@@ -345,9 +313,9 @@ matrixentry *Matrix::getValueP(PointerVec const &p)
 
 void Matrix::setValue(PointerVec &p,matrixentry &val)
 {
-  int pos=p.getMatrixCoord();
+  matrixentry *matVal=this->getValueP(p);
 
-  data[pos]=val;
+  *matVal=val;
 
 }
 
@@ -356,7 +324,7 @@ void Matrix::setValue(PointerVec &p,matrixentry &val)
 
 matrixentry &Matrix::operator[](PointerVec &p)
 { 
-  return data[p.getMatrixCoord()]; 
+  return this->getValue(p); 
 }
 
 Inputs::Inputs(PyObject *inpSeq)
@@ -385,6 +353,10 @@ Inputs::Inputs(PyObject *inpSeq)
     seqName++;
     sort(seq[i].begin(),seq[i].end());
   }
+
+
+
+
   cout<<endl;
 
 
@@ -396,7 +368,8 @@ int Inputs::addSite(PyObject *site)
   // site should be a sequence with fields as in GFF file
 
   int n=PySequence_Size(site);
-  int tf_id,seq_id;
+  motifCode tf_id;
+  seqCode seq_id;
 
 
   if(n<0) {
@@ -481,7 +454,7 @@ vector<int> Inputs::sequenceLens()
 }
 
 
-void matrixentry::setInitData(store v,int site,char strand,PointerVec *p)
+void matrixentry::setInitData(store v,PointerVec *p)
 {
   assert(&p);
 
@@ -491,18 +464,17 @@ void matrixentry::setInitData(store v,int site,char strand,PointerVec *p)
     backTrack=NULL;
   }
   value=v;
-  siteEtStrand=fromSiteAndStrand(site,strand);
 }
 
 
-matrixentry::matrixentry(store v,int site,char strand,PointerVec &p)
+matrixentry::matrixentry(store v,PointerVec &p)
 {
-  this->setInitData(v,site,strand,&p);
+  this->setInitData(v,&p);
 }
 
-matrixentry::matrixentry(store v,int site,char strand,PointerVec *p)
+matrixentry::matrixentry(store v,PointerVec *p)
 {
-  this->setInitData(v,site,strand,p);
+  this->setInitData(v,p);
 //   if(p && p->isOK()) {
 //     backTrack=new PointerVec(*p);
 //   } else {
@@ -517,157 +489,52 @@ store matrixentry::getValue() const
   return value;
 }
 
-int matrixentry::getSite() const
-{
-  return toSite(siteEtStrand);
-}
-
-char matrixentry::getStrand() const
-{
-  assert(siteEtStrand>=0);
-
-  return toStrand(siteEtStrand);
-}
 
 void PointerVec::output()
 {
   if(this->isOK()) {
    // cout<<"valid("<<m<<"): ";
     for(uint i=0;i<m;i++) {
-      cout<<p[i]<<(bound[i]?"b":"f")<<dimlen[i]<<",";
+      cout<<p[i]<<",";
     } } else { cout<<"Invalid!"; }
   //  cout<<endl; 
   cout<<flush;
 }
 
 
-
-/* Projections:
-
-   A dimension is "free" if we wish to explore the cube in that
-   dimension. 
-   The "bound" dimensions are irrelevant and are not explored
-   because they have no effect on the scoring.
-*/
-PointerVec PointerVec::project(vector<int> &freeDims)
-{
-  PointerVec ret=PointerVec();
-
-  if(freeDims.size()>m) {  
-    return ret;
-  }
-
-  // Limit this pointer to "before" part of the matrix
-  ret.dimlen=dimlen;
-  for(uint i=0;i<ret.dimlen.size();i++) {
-    ret.dimlen[i]=min(this->dimlen[i],p[i]+1);
-  }
-
-//   for(uint i=0;i<dimlen.size();i++) {
-//     cout<<dimlen[i]<<"="<<ret.dimlen[i]<<endl;
-//   }
-
-
-  ret.dimFactors=dimFactors;
-  ret.bound.resize(m,1);
-  //ret.p.resize(p.size());
-  ret.p=p;
-  ret.m=m;
-
-//   for(uint i=0;i<m;i++) {
-//     ret.p[i]=max(0,p[i]);
-//   }
-// #ifndef NDEBUG
-//   ret.ok=1;ret.output();
-// #endif
-
-  for(uint i=0;i<freeDims.size();i++) {
-    ret.bound[freeDims[i]]=0;
-    //ret.p[freeDims[i]]=max(0,ret.p[freeDims[i]]-1);
-    ret.p[freeDims[i]]=ret.p[freeDims[i]]-1;
-    if(ret.p[freeDims[i]]<0) {
-      ret.ok=0;
-      return ret;
-    }
-  }
-
-
-  ret.matrix_p=ret.dataPoint();
-  ret.ok=1;
-  return ret;
-}
-
-// DOESN'T HAVE ANY IDEA
-PointerVec PointerVec::limitBacktrack(Inputs *indata,int maxbp) {
-  PointerVec ret=PointerVec(*this);
-
-  // Limit this pointer to "before" part of the matrix
-  ret.dimlen=this->dimlen;
-  for(uint i=0;i<ret.dimlen.size();i++) {
-    ret.dimlen[i]=min(this->dimlen[i],this->p[i]+1);
-  }
-  // Set the limit values
-  ret.limData=indata;
-  ret.limitBP=maxbp;
-
-
-
-  vector<int> freedims;
-  // Ugly hack. FIX THIS
-  freedims.resize(this->bound.size());
-  for(uint i=0;i<freedims.size();i++) {
-    freedims[i]=i;
-  }
-  return projectAndLimit(freedims,indata,maxbp);
-
-
-}
-
-
-PointerVec PointerVec::projectAndLimit(vector<int> &freeDims,Inputs *indata,
-				       int maxbp)
-{
-  PointerVec ret=this->project(freeDims);
-  if(!ret.isOK()) {
-    return ret;
-  }
-  ret.limData=indata;
-  ret.limitBP=maxbp;
-
-  for(uint i=0;i<freeDims.size();i++) {
-    int bd=freeDims[i];
-    while(ret.p[bd]>=0 && 
-	  indata->getSite(ret.p[bd],bd).epos >= indata->getSite(this->p[bd],bd).pos) {
-      ret.p[bd]--;
-      ret.matrix_p-=(*ret.dimFactors)[bd];
-    }
-    if(ret.p[bd]<0) {
-      ret.ok=0;
-      break;
-    }
-  }
-
-  //cout<<"not proj";this->output();
-  //cout<<"projected";ret.output();
-  return ret;
-}
-  
-
-
 void PointerVec::setValue(vector<int> &np)
 {
   p=np;
-  matrix_p=dataPoint();
-  ok=1;
-}
 
-
-void PointerVec::clearProject()
-{
-  for(uint i=0;i<m;i++) {
-    bound[i]=0;
+#ifndef NDEBUG
+  for(int i=0;i<m;i++) {
+    assert(p[i]<myMat.dims(i));
+    assert(p[i]>=0);
   }
+#endif
+
+  ok=0;
 }
+
+// Assist functions.
+store PointerVec::getValue() const { return myMat->getValueP(*this)->getValue(); }
+vector<id_triple>  PointerVec::getSites() { return limData->getSites(*this); }
+id_triple PointerVec::getSite(int i) const { return limData->getSite(this->p[i],i); }
+
+
+// Return true, if the sites are the same in all dimensions.
+int PointerVec::allSame() 
+{
+  uint ID=this->getSite(0).ID;
+
+  for(uint i=1;i<m;i++) {
+    if(this->getSite(i).ID!=ID) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 
 
 //returns the square of a mod 2 PI double
@@ -959,8 +826,8 @@ malignment_nextBest(malign_AlignmentObject *self)
 
     matVal=self->CP->dynmat->getValueP(*p);
 
-    char strand=matVal->getStrand();
-    siteCode motifID=matVal->getSite();
+    char strand=p->getSite(0).strand;
+    siteCode motifID=p->getSite(0).ID;
 
     // Tuple for one column of the alignment
     //    colTuple=PyTuple_New(5);
@@ -1017,7 +884,7 @@ malignment_nextBest(malign_AlignmentObject *self)
     PyObject *alnRow=PyAln_New_Multi(self->CP->indata->factor(motifID),
 				    seqs,seqPos,coords,strand,
 				    self->CP->dynmat->getValue(*p).getValue(),
-				    siteScore);
+				    siteScore,NULL);
 
     PyList_Append(goodAlign,alnRow);
 
@@ -1086,93 +953,74 @@ malignObject(malign_AlignmentObject *self)
 
   int Empty=0,nonEmpty=0,unNecessary=0;
 
-  for(PointerVec entry=self->CP->dynmat->getOrigin();entry.isOK();entry++) {
-    ABset AB=self->CP->indata->getAB(entry);
+
+  // Iterate over the whole multi D matrix with the pointer entry.
+  PointerVec entry=self->CP->dynmat->getOrigin();
+  if(!entry.allSame()){
+    entry++;  // Start from the first entry with same sites on all cordinates.
+  }
+  for(;entry.isOK();entry++) {
 
 
-
-
-    vector<id_triple> sites=self->CP->indata->getSites(entry);
-
-#ifndef NDEBUG
-    if(AB.moreAlphas()) {
-      nonEmpty++;
-      cout<<endl<<"Solua "; entry.output(); cout<<" varten:"<<endl;
-    } else {
-      Empty++;
-      cout<<endl<<"Solu   "; entry.output(); cout<<" tyhjä:"<<endl;
-    }
-#endif
-
-
+    vector<id_triple> sites=entry.getSites();
 
     store maxScore=SCORE_FAIL;
+
     siteCode maxSite=SITE_FAIL;
     char maxStrand=STRAND_FAIL;
 
     PointerVec *maxSourceP=NULL;
-    while(AB.moreAlphas()) {
-      maxScore=-DBL_MAX;
-      vector<int> Bak=AB.nextB();
+    maxScore=-DBL_MAX;
 
+    store base=0;
+
+    // Compute the fixed bonus part of the penalty function
+    int n=sites.size();
+    for(int i=0;i<n;i++) {
+      base+=sites[i].weight;
+    }
+    base*=self->lambda*n*(n-1)/2;
+
+
+
+    maxScore=base;  // On our own. The first site of the alignment.
+
+
+    // Look for the previous alignments
+    PointerVec k=PointerVec(entry);
+    for(k--;
+	k.isOK(); k--) {  // Exponential loop
+	 
+	 
 #ifndef NDEBUG
-      cout<<"Mahdollisesti "<<self->CP->indata->factor(sites[Bak[0]].ID)<<endl;
+      k.output();cout<<"s"<<endl;
 #endif
-      store base=0;
-      int n=Bak.size();
+	 
+      // Continuing alignment.
+#ifndef NDEBUG
+      if((*self->CP->dynmat)[k].getValue()==0.0) {
+	unNecessary++;
+      }
+#endif
+      
+      // Add the score from the lookup table
+      Score=base+k.getValue();
+
+      // Compute the negative penalty
       for(int i=0;i<n;i++) {
-	base+=sites[Bak[i]].weight;
+	for(int j=i+1;j<n;j++) {
+	  Score=Score - penalty(self,k.difference(entry,i),k.difference(entry,j));
+	}
       }
-      base*=self->lambda*n*(n-1)/2;
 
 
-      if(base>maxScore) {
-	maxScore=base;  // On our own. The first site of the alignment.
-	maxSite=sites[Bak[0]].ID;
-	maxStrand=sites[Bak[0]].strand;
+      if(Score>maxScore) {
+	maxScore=Score;
 	delete maxSourceP;
-	maxSourceP=NULL;
+	maxSourceP=new PointerVec(k);
       }
 
-#ifndef NDEBUG
-      cout<<"."<<flush;
-#endif
-      for(PointerVec k=entry.projectAndLimit(Bak,self->CP->indata,MAX_BP_DIST);
-      //      for(PointerVec k=entry.limitBacktrack(self->CP->indata,MAX_BP_DIST);
-	   k.isOK(); k--) {  // Exponential loop
-	 
-	 assert(k.getMatrixCoord()>=0);
-	 
-#ifndef NDEBUG
-	 k.output();cout<<"s"<<endl;
-#endif
-	 
-	// Continuing alignment.
-#ifndef NDEBUG
-	 if((*self->CP->dynmat)[k].getValue()==0.0) {
-	   unNecessary++;
-	 }
-#endif
-	Score=base+(*self->CP->dynmat)[k].getValue();
-	for(uint i=0;i<Bak.size();i++) {
-	  for(uint j=i+1;j<Bak.size();j++) {
-	    Score=Score - penalty(self,k.difference(i),k.difference(j));
-	  }
-	}
-
-
-	if(Score>maxScore) {
-	  maxScore=Score;
-	  delete maxSourceP;
-	  maxSite=sites[Bak[0]].ID;
-	  maxStrand=sites[Bak[0]].strand;
-	  maxSourceP=new PointerVec(k);
-	  //k.output();
-	}
-
-	if(PyErr_Occurred()) return NULL;
-       }
-
+      if(PyErr_Occurred()) return NULL;
     }
 
     if(maxScore>0.0) {
@@ -1184,7 +1032,7 @@ malignObject(malign_AlignmentObject *self)
       }else { cout<<"NULL";  }
       cout<<endl;
 #endif
-      (*self->CP->dynmat)[entry]=matrixentry(maxScore,maxSite,maxStrand,maxSourceP);
+      (*self->CP->dynmat)[entry]=matrixentry(maxScore,maxSourceP);
     } else {
       (*self->CP->dynmat)[entry]=matrixentry();
     }
@@ -1238,7 +1086,7 @@ malign_alignCommon( malign_AlignmentObject *self,PyObject *data,int result_ask,
   if(PyErr_Occurred()) return NULL;
 
 
-  if(self->CP->indata->sequences()<3) {
+  if(self->CP->indata->sequences()<2) {
     PyErr_SetString(PyExc_EOFError,"Too few sequences in input");
     return NULL;
   }
@@ -1247,7 +1095,7 @@ malign_alignCommon( malign_AlignmentObject *self,PyObject *data,int result_ask,
 
 
   vector<int> dimensions=self->CP->indata->sequenceLens();
-  self->CP->dynmat=new Matrix(dimensions);
+  self->CP->dynmat=new Matrix(self->CP->indata);
 
   if(PyErr_Occurred()) return NULL;
   
@@ -1300,6 +1148,7 @@ malign_aligndata(PyObject *self, PyObject *args)
   int result_ask;
   PyObject *data;
 
+  // SUDDEN DEATH!!! THIS IS JUNK FUNCTION OR METHOD
   PyErr_SetString(PyExc_ValueError,"First parameter must be sequence!");
   return NULL;
 
