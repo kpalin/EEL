@@ -22,6 +22,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.10  2005/03/22 12:29:50  kpalin
+ * Flush the markov background context.
+ *
  * Revision 1.9  2005/03/03 09:01:45  kpalin
  * Presumably working with proper output.
  *
@@ -393,6 +396,11 @@ bg_countGrams(matrix_bgObject *self)
 }
 
 
+int PyGramCount_Check(PyObject *self)
+{
+  return PyTuple_Check(self)||PyList_Check(self);
+}
+
 extern "C" int
 bg_init(matrix_bgObject *self, PyObject *args, PyObject *kwds)
 {
@@ -407,14 +415,16 @@ bg_init(matrix_bgObject *self, PyObject *args, PyObject *kwds)
     return -1; 
 
 
-  if(PySequence_Check(self->bgSample)) {   //Given a tupple of grams
+  if(PyGramCount_Check(self->bgSample)) {   //Given a tupple of grams
     int size=PySequence_Length(self->bgSample);
     double db_qgram=log((double)size)/log(4.0);
 
-    self->qgram=(int)db_qgram;
+    self->qgram=(int)round(db_qgram);
     self->order=self->qgram-1;
     if(fabs(self->qgram-db_qgram)>0.1) {
-      PyErr_SetString(PyExc_ValueError,"Malformed gram count sequence.");
+      char errStr[256];
+      sprintf(errStr,"Malformed gram count sequence len=%d dbqgram=%g qgram=%d.",size,db_qgram,self->qgram);
+      PyErr_SetString(PyExc_ValueError,errStr);
       return -1;
     }
 
@@ -442,7 +452,7 @@ bg_init(matrix_bgObject *self, PyObject *args, PyObject *kwds)
 
 
 
-  if(PySequence_Check(self->bgSample)) {   //Given a tupple of grams
+  if(PyGramCount_Check(self->bgSample)) {   //Given a tupple of grams
     int size=PySequence_Length(self->bgSample);
     for(int i=0;i<size;i++) {
       int value=PyInt_AsLong(PySequence_GetItem(self->bgSample,i));

@@ -20,6 +20,15 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.22.2.3  2005/03/22 12:19:26  kpalin
+# Fixed the problems that came up with testing.
+#
+# Revision 1.22.2.2  2005/03/08 11:14:03  kpalin
+# Fix matrix/background position dependency issue.
+#
+# Revision 1.26  2005/03/08 10:51:34  kpalin
+# Merging matrix/background change to distribution version.
+#
 # Revision 1.25  2005/03/08 10:38:23  kpalin
 # Fixed markov background setting to keep effect also after adding
 # more matricies.
@@ -328,7 +337,9 @@ If you use '.' as filename the local data are aligned."""
             except IOError, (errno, strerror):
                 print "%s: %s" % (strerror, f)
         # Make the matrix names nicer.
-        cpreflen=len(os.path.commonprefix([os.path.dirname(x.fname) for x in self.matlist]))+1
+        cpreflen=len(os.path.commonprefix([os.path.dirname(x.fname) for x in self.matlist]))
+        if cpreflen>0:
+            cpreflen+=1  # Take away also the dir separator if any.
         for m in self.matlist:
             m.name=m.fname[cpreflen:]
         
@@ -340,14 +351,24 @@ If you use '.' as filename the local data are aligned."""
             print "Matrix No %d (info=%g) %s"%(i,self.matlist[i].InfoContent,self.matlist[i].name)
             self.matlist[i].draw()
 
+    def setPseudoCount(self,pseudoCnt):
+        "Set the amount of pseudocounts on matricies."
+        Matrix.setPseudoCount(pseudoCnt)
+        self._initMatrixWeights()
+
     def setBGFreq(self,arglist=None):
         "Arguments: A C G T\nBackground nucleotide frequencies. Removes markov background."
-        if not arglist==None:
-            tot=reduce(lambda x,y:float(x)+float(y),arglist,0.0)*1.0
-            self.A,self.C,self.G,self.T=map(lambda x:float(x)/tot,arglist)
-            
-        for m in self.matlist:
-            m.setBGfreq(self.A,self.C,self.G,self.T)
+        if (not arglist==None):
+            try:
+                assert(len(arglist)==4)
+                tot=reduce(lambda x,y:float(x)+float(y),arglist,0.0)*1.0
+                self.A,self.C,self.G,self.T=map(lambda x:float(x)/tot,arglist)
+            except (ValueError,AssertionError):
+                print "Invalid parameters as background frequences.\nBackground distribution not set."
+                return
+
+        Matrix.setBGfreq(self.A,self.C,self.G,self.T)
+        self._initMatrixWeights()
 
     def setMarkovBG(self,bgData,order=4):
         "Arguments: bgSampleSequence [order]\nBackground sample sequence and order of the model or saved background file."
@@ -361,6 +382,10 @@ If you use '.' as filename the local data are aligned."""
         self.bg=_c_matrix.BackGround(sampleStr,int(order))
 
         Matrix.setMarkovBackground(self.bg)
+        self._initMatrixWeights()
+
+
+    def _initMatrixWeights(self):
         map(Matrix.Matrix.initWeights,self.matlist)
             
 
@@ -369,15 +394,18 @@ If you use '.' as filename the local data are aligned."""
         "prints matrix weights to standard out"
         for i in range(len(self.matlist)):
             try:
-                bgStr="Order %d Markov"%(self.matlist[i].backGround.order)
+                bgStr="Order %d Markov"%(Matrix.Matrix.backGround.order)
             except AttributeError:
                 bgStr="(%0.2f,%0.2f,%0.2f,%0.2f)"%(self.matlist[i].freqA,self.matlist[i].freqC,self.matlist[i].freqG,self.matlist[i].freqT)
-            print "Matrix No %d %s bg=%s pCount=%g maxscore=%0.2f"%(i,self.matlist[i].name,bgStr,self.matlist[i].pseudoCount,self.matlist[i].maxscore)
+            print "Matrix No %d %s bg=%s pCount=%g maxscore=%0.2f"%(i,self.matlist[i].name,bgStr,Matrix.Matrix.pseudoCount,self.matlist[i].maxscore)
             self.matlist[i].drawWeights()
 
     def removeMatrix(self, index):
         "removes matrix given by index"
-        self.matlist.pop(index)
+        try:
+            self.matlist.pop(index)
+        except IndexError:
+            pass
 
     def resetSequences(self, arglist=None):
         "Arguments: none\nremoves all sequences"
@@ -418,8 +446,12 @@ If you use '.' as filename the local data are aligned."""
             seqnumber +=1
             print "Matching Sequence.",seqnumber,"of",len(self.seq.getNames())
             self.__comp[name]={}
-            self.__comp[name]=Matrix.getAllTFBS(self.seq.sequence(name),
-                                                  bound,self.matlist,absCutoff)
+            try:
+                self.__comp[name]=Matrix.getAllTFBS(self.seq.sequence(name),
+                                                    bound,self.matlist,absCutoff)
+            except (OverflowError,ValueError): # Zero, Negative
+                print "Need positive threshold!"
+                return
 #                self.__comp[name][m]=m.getTFBSbyRatio(self.seq.sequence(name),
 #                                                      bound)
             try:

@@ -8,6 +8,9 @@ from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.12  2005/03/08 11:19:49  kpalin
+# Removed a debugging exception.
+#
 # Revision 1.11  2005/03/08 10:37:29  kpalin
 # Fixed the use of markov Background, such that one background
 # takes care of all Matrix-objects.
@@ -50,9 +53,9 @@ class Matrix:
 
     backGround=None
     freqA,freqC,freqG,freqT=0.25,0.25,0.25,0.25
+    pseudoCount=1.0
     def __init__(self,filename):
         "reads matrix from file"
-        self.pseudoCount=1.0
 
         File=open(filename,'r')
         self.fname=filename
@@ -139,13 +142,6 @@ class Matrix:
         
 
 
-    def setBGfreq(self,a,c,g,t):
-        """Sets 0-order background.
-
-        The parameters are frequences of a,c,g and t in the background sequence"""
-        Matrix.backGround=None
-        Matrix.freqA,Matrix.freqC,Matrix.freqG,Matrix.freqT=a,c,g,t
-        self.initWeights()
 
     def getName(self):
         """Gives the name of this matrix"""
@@ -182,13 +178,6 @@ class Matrix:
         #self.freqX now contains the background self.frequency of base X
         self.initWeights()
 
-    def setPseudoCount(self,pcount=1.0):
-        """Sets the amount of pseudocount"""
-        if pcount<=0:
-            print "Pseudocount must be non negative. Setting to one (1.0)!"
-            pcount=1.0
-        self.pseudoCount=pcount
-        self.initWeights()
 
     def initWeights(self):
         """Helper to initialize the matrix weights for 0- or higher order background models"""
@@ -206,16 +195,16 @@ class Matrix:
         Update weights only for positive probability.
         Background is taken care elsewhere"""
 
-        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[self.pseudoCount]*len(self.LLMatrix[0]))
+        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[Matrix.pseudoCount]*len(self.LLMatrix[0]))
 
 
-        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqA*self.pseudoCount))/tot),
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqA*Matrix.pseudoCount))/tot),
                             self.LLMatrix[0],sum))
-        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/tot),
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*Matrix.pseudoCount))/tot),
                             self.LLMatrix[1],sum))
-        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/tot),
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*Matrix.pseudoCount))/tot),
                             self.LLMatrix[2],sum))
-        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqT*self.pseudoCount))/tot),
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqT*Matrix.pseudoCount))/tot),
                             self.LLMatrix[3],sum))
 
         # Don't know how to compute maxscore with markov background. It varies.
@@ -233,11 +222,11 @@ class Matrix:
     def computeInfoContent(self):
         "Computes and sets the information content for this matrix."
         # Sum of the columns.
-        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[self.pseudoCount]*len(self.LLMatrix[0]))
+        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[Matrix.pseudoCount]*len(self.LLMatrix[0]))
 
 
         # Frequencies of a nucleotide
-        freq=[ [ (x+bgFreq*self.pseudoCount)/(tot) for x,tot in zip(matrix,sum) ] \
+        freq=[ [ (x+bgFreq*Matrix.pseudoCount)/(tot) for x,tot in zip(matrix,sum) ] \
                for matrix,bgFreq in zip(self.LLMatrix,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
 
         # Compute information content of the motif
@@ -250,26 +239,26 @@ class Matrix:
 
 
         # Sum of the columns.
-        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[self.pseudoCount]*len(self.LLMatrix[0]))
+        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[Matrix.pseudoCount]*len(self.LLMatrix[0]))
 
 
         # Frequencies of a nucleotide
-        freq=[ [ (x+bgFreq*self.pseudoCount)/(tot) for x,tot in zip(matrix,sum) ] \
+        freq=[ [ (x+bgFreq*Matrix.pseudoCount)/(tot) for x,tot in zip(matrix,sum) ] \
                for matrix,bgFreq in zip(self.LLMatrix,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
 
 
 
         # Compute weights.
-        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqA*self.pseudoCount))/
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqA*Matrix.pseudoCount))/
                                                (tot*self.freqA)),
                             self.LLMatrix[0],sum))
-        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*self.pseudoCount))/
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*Matrix.pseudoCount))/
                                                (tot*self.freqC)),
                             self.LLMatrix[1],sum))
-        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqG*self.pseudoCount))/
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqG*Matrix.pseudoCount))/
                                                (tot*self.freqG)),
                             self.LLMatrix[2],sum))
-        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqT*self.pseudoCount))/
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqT*Matrix.pseudoCount))/
                                                (tot*self.freqT)),
                             self.LLMatrix[3],sum))
 
@@ -334,11 +323,27 @@ class Matrix:
     
 
 
+def setPseudoCount(pcount=1.0):
+    """Sets the amount of pseudocount"""
+    if pcount<=0:
+        print "Pseudocount must be non negative. Setting to one (1.0)!"
+        pcount=1.0
+    Matrix.pseudoCount=pcount
+
+def setBGfreq(a,c,g,t):
+    """Sets 0-order background.
+
+    The parameters are frequences of a,c,g and t in the background sequence"""
+    Matrix.backGround=None
+    Matrix.freqA,Matrix.freqC,Matrix.freqG,Matrix.freqT=a,c,g,t
+
+
 def setMarkovBackground(bg):
-    """Set a markov Background.
+    """Set a markov Background.ds
 
     Markov background of k-order is represented as counts of (k+1)-grams
     in the background sequence"""
+    print "Setting %dth order Markov background"%(bg.order)
     Matrix.backGround=bg
 
 def getAllTFBS(sequence,cutoff,matlist,absoluteCutoff=None):

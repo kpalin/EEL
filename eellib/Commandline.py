@@ -16,6 +16,9 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.18  2005/03/09 07:40:03  kpalin
+# Fixed order setting in setMarkovBG
+#
 # Revision 1.17  2005/03/08 10:39:16  kpalin
 # Fixed Matrix add/Markov background setting.
 #
@@ -273,7 +276,6 @@ class Commandline(Interface):
         try:
             grams=self.bg.giveGramVector()
         except AttributeError,e:
-            print e
             print "No markov background to save"
             return
 
@@ -296,9 +298,14 @@ class Commandline(Interface):
         except IndexError:
             order=4
         except ValueError:
-            print "Invalid order"
+            print "Invalid order. Markov background not set."
             return
         
+        try:
+            datName=arglist[0]
+        except IndexError:
+            print "Missing file or sample sequence name. Markov background not set."
+            return
         try:
             self.setMarkovBG(arglist[0],order)
         except Exception,e:
@@ -308,8 +315,11 @@ class Commandline(Interface):
 
     def setPseudoCnt(self,arglist=("1.0")):
         "Arguments: [pseudocount]\nSet the amount of pseudocounts on matricies. Default 1.0"
-        for m in self.matlist:
-            m.setPseudoCount(string.atof(arglist[0]))
+        try:
+            Interface.setPseudoCount(self,float(arglist[0]))
+        except ValueError:
+            print "Invalid pseudocount. Pseudocount not set."
+            return
 
     # The following functions are executable from the command line (see 'run')
     # The Argument 'arglist' is a list of the command line arguments
@@ -378,15 +388,15 @@ class Commandline(Interface):
 
     def removeSequence(self, arglist):
         "Arguments: Sequencename\nremoves a sequence"
-        seqname=arglist[0]
-        Interface.removeSequence(self, seqname)
+        for seqname in arglist:
+            Interface.removeSequence(self, seqname)
         
 
     def getTFBS(self, arglist):
         """Arguments: [bound]
 computes the scores of all matrices and all sequences which are
 better than bound*maxscore. maxscore is the highest reachable
-score of the matrix with respect to the 0-order background.
+score of the actual matrix with respect to the background
 The default value for bound is 0.1"""
         bound=0.1
         try:

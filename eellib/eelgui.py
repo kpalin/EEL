@@ -2,6 +2,13 @@
 
 ##
 ## $Log$
+## Revision 1.3.2.1  2005/03/22 12:19:26  kpalin
+## Fixed the problems that came up with testing.
+##
+## Revision 1.3  2005/01/13 13:16:42  kpalin
+## Moved the requesting of sequences to be aligned to Python side
+## of stuff. Much better.
+##
 ## Revision 1.2  2005/01/12 13:55:09  kpalin
 ## Path handling fixed.
 ##
@@ -267,8 +274,10 @@ class getTFBS(Frame):
 
     def getTFBS(self,cutoff=9.0):
         bgStr=self._widgets["background"].bg_variable.get()
-        if bgStr=="radio_single" and not self._widgets["background"]._widgets["single"].hasNormalFreq():
-            return
+        if bgStr=="radio_single":
+            if not self._widgets["background"]._widgets["single"].hasNormalFreq():
+                return
+            self._widgets["background"].selectSingle()
             
         #self._widgets["background"]._widgets[bgStr].select()
         isAbsolute=int(self._widgets["other"].bg_mode.get())
@@ -584,6 +593,8 @@ class showAligns(Frame):
         self._widgets={}
 
         self._widgets["scrollText"]=ScrolledText(self,scrollbar="auto")
+        #self._widgets["scrollText"].config(textfont="Courier")
+        self._widgets["scrollText"].text["font"]="courier"
 
         from eellib import Output
         siteStr=Output.formatalign(self._parent.master.alignment,self._parent.master.seq)
