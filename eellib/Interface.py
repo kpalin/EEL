@@ -197,21 +197,19 @@ class Interface:
             del(self.alignment)
             
         if filename=='.' and  hasattr(self,"tempFile"):
-            # At least for now, we can't handle gzip:ed files in c++
-            print "Fine! If you say so! But it'd be better to save the matches before alignment!"
-            self.tempFile.flush()
-            self.alignment=align.aligndata(GzipFile(self.tempFileName,"r").read(),
-                                             num_of_align, Lambda, xi,
-                                             mu, nu,nuc_per_rotation)
-        elif filename=='.' and len(self.__comp)==0:
-            return "No binding sites"
-        elif filename==".":
-            self.alignment=align.aligndata(Output.get(self.__comp),
-                                             num_of_align, Lambda, xi,
-                                             mu, nu,nuc_per_rotation)
+            filename=self.tempFileName
+
+        if filename=='.':
+            if len(self.__comp)==0:
+                return "No binding sites"
+            else:
+                self.alignment=align.aligndata(Output.get(self.__comp),
+                                               num_of_align, Lambda, xi,
+                                               mu, nu,nuc_per_rotation)
+
         else:
             self.alignment= align.alignfile(filename, num_of_align, Lambda,
-                                              xi, mu, nu,nuc_per_rotation)
+                                            xi, mu, nu,nuc_per_rotation)
 
         self.moreAlignments(num_of_align)
         if self.alignment:
