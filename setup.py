@@ -11,6 +11,9 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.15  2005/01/07 13:41:25  kpalin
+##   Works with py2exe. (windows executables)
+##
 ##   Revision 1.14  2005/01/05 09:05:08  kpalin
 ##   Fixed a one line description to satisfy bdist_rpm
 ##
@@ -64,10 +67,16 @@ compileLibs=[]
 
 
 
-
+from glob import glob
 if sys.platform=='win32':
+    extra_data=[]
     try:
         import py2exe
+        extra_data.append((r"tcl\tix8.1",[x for x in glob(r"C:\Python*\tcl\tix8.1\*") if x[-7:] not in ("bitmaps",".1\\pref")]))
+        extra_data.append((r"tcl\tix8.1\bitmaps",glob(r"C:\Python*\tcl\tix8.1\bitmaps\*")))
+        extra_data.append((r"tcl\tix8.1\pref",glob(r"C:\Python*\tcl\tix8.1\pref\*")))
+        extra_data.append((".",glob(r"C:\Python*\DLLs\tix*.dll")))
+        print extra_data
     except ImportError:
         pass
     common_compile_args.extend([r"/O2", r"/IC:\Program Files\Microsoft Platform SDK for Windows XP SP2\Include",\
@@ -155,4 +164,5 @@ setup (name = 'EEL',
        libraries= compileLibs,
        packages = ["eellib"],
        scripts = [ "eel"],
-       console = [ "eel"] )
+       console = [ "eel"],
+       data_files=extra_data)
