@@ -36,6 +36,10 @@
 /*
  *
  *  $Log$
+ *  Revision 1.17  2005/01/13 13:16:50  kpalin
+ *  Moved the requesting of sequences to be aligned to Python side
+ *  of stuff. Much better.
+ *
  *  Revision 1.16  2005/01/12 13:35:21  kpalin
  *  Allowing #-comments in GFF files.
  *
@@ -1282,7 +1286,7 @@ alignMemorySaveObject(align_AlignmentObject *self)
 	if(localBestAligns.size()>(unsigned int)self->askedresults) {
 	  MS_res maybeWorst=localBestAligns.top();
 	  map<matCoord,pair<matCoord,store> >::iterator maybeBetter=maxses.find(maybeWorst.bgin);
-	  while(fabsl(maybeBetter->second.second-maybeWorst.value) > numeric_limits<store>::epsilon()) {
+	  while(fabs(maybeBetter->second.second-maybeWorst.value) > numeric_limits<store>::epsilon()) {
 	    // priority queue and maxses do not match.
 	    maybeWorst.value=maybeBetter->second.second;
 	    maybeWorst.end=maybeBetter->second.first;
