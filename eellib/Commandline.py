@@ -12,6 +12,9 @@ import string
 
 
 # $Log$
+# Revision 1.4  2004/01/14 10:05:57  kpalin
+# Generated documentation
+#
 # Revision 1.3  2004/01/13 07:55:01  kpalin
 # Paljon kaikenlaista.
 #
@@ -195,7 +198,7 @@ class Commandline(Interface):
             
 
     def setMarkovBG(self,arglist=None):
-        "Arguments: bgSampleSequence [order]\nBackground sample sequence and order of the model."
+        "Arguments: bgSampleSequence [order]\nBackground sample sequence and order of the model or saved background file."
         try:
             sampleStr=self.seq.sequence(arglist[0])
         except KeyError:
@@ -218,7 +221,7 @@ class Commandline(Interface):
             
 
     def setPseudoCnt(self,arglist=("1.0")):
-        "Set the amount of pseudocounts on matricies. Default 1.0"
+        "Arguments: [pseudocount]\nSet the amount of pseudocounts on matricies. Default 1.0"
         for m in self.matlist:
             m.setPseudoCount(string.atof(arglist[0]))
 
