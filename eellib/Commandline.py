@@ -16,6 +16,9 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.17  2005/03/08 10:39:16  kpalin
+# Fixed Matrix add/Markov background setting.
+#
 # Revision 1.16  2005/01/13 13:16:42  kpalin
 # Moved the requesting of sequences to be aligned to Python side
 # of stuff. Much better.
@@ -288,10 +291,14 @@ class Commandline(Interface):
 
     def _setMarkovBG(self,arglist=None):
         "Arguments: bgSampleSequence [order]\nBackground sample sequence and order of the model or saved background file."
-        if len(arglist)>1:
-            order=len(arglist[1])
-        else:
+        try:
+            order=int(arglist[1])
+        except IndexError:
             order=4
+        except ValueError:
+            print "Invalid order"
+            return
+        
         try:
             self.setMarkovBG(arglist[0],order)
         except Exception,e:
