@@ -2,6 +2,9 @@
 
 #
 # $Log$
+# Revision 1.5  2004/03/03 09:16:21  kpalin
+# Functional version with reasonably good integration to mabs interface
+#
 # Revision 1.4  2004/03/02 10:45:56  kpalin
 # Working version. It doesn't give proper output yet and it's not
 # integrated to the mabs interface but it mostly works.
@@ -90,14 +93,15 @@ class PairModule:
             return 0
         return 1
 
-    def intersection(self,other):
+    def intersection(self,other,common=None):
         """Returns the intersection of two PairModules.
 
         Return value is the list of pairs of overlaping sites."""
         #print "Intersecting",self.sNames,other.sNames
-        for common in self.sNames:
-            if other.DNApos.has_key(common):
-                break
+        if not common:
+            for common in self.sNames:
+                if other.DNApos.has_key(common):
+                    break
         try:
             # No overlap if self ends before beginning of other
             # or starts after the end of the other
@@ -384,26 +388,34 @@ class MultiModule:
         """Checks whether i and j are connected in the consistency graph."""
         return i==j or not self._inconsist.has_key((i,j))
 
+    def cliqueToDot(self,j,strbuf=None):
+        if not strbuf:
+            strbuf=StringIO()
+            
+        clq=self._cliques[j]
+        N=len(self._pairs)
+        strbuf.write('subgraph cluster%d {\nlabel="Clique %s";\n%s;\n\n}'%(j,j,";\n".join(["n%dC%d"%(x,j) for x in clq])))
+        for i in range(N):
+            try:
+                strbuf.write('n%dC%d [label="%s-%s CM%s"];\n'%(i,j,self._pairs[i].sNames[0][:6],self._pairs[i].sNames[1][:6],str(self._pairs[i].id[-3:])))
+            except AttributeError:
+                pass
+            for k in range(i,N):
+                if i!=k and self._overlaps.has_key((i,k)):
+                    strbuf.write("n%dC%d -- n%dC%d;\n"%(i,j,k,j))
+                    if not self.connected(i,k):
+                        strbuf.write("n%dC%d -- n%dC%d [color=red];\n"%(i,j,k,j))
+        #strbuf.write("}\n")
+        return strbuf
+
+    
     def cliquesToDot(self):
         strbuf=StringIO()
         strbuf.write("graph G {\n")
         N=len(self._pairs)
         if hasattr(self,"_cliques"):
             for j in range(len(self._cliques)):
-                clq=self._cliques[j]
-                strbuf.write('subgraph cluster%d {\nlabel="Clique %s";\n%s;\n\n}'%(j,j,";\n".join(["n%dC%d"%(x,j) for x in clq])))
-                for i in range(N):
-                    try:
-                        strbuf.write('n%dC%d [label="%s-%s CM%s"];\n'%(i,j,self._pairs[i].sNames[0][:3],self._pairs[i].sNames[1][:3],str(self._pairs[i].id[-3:])))
-                    except AttributeError:
-                        pass
-                    for k in range(i,N):
-                        if i!=k and self._overlaps.has_key((i,k)):
-                            strbuf.write("n%dC%d -- n%dC%d;\n"%(i,j,k,j))
-                            if not self.connected(i,k):
-                                strbuf.write("n%dC%d -- n%dC%d [color=red];\n"%(i,j,k,j))
-                #strbuf.write("}\n")
-
+                self.cliqueToDot(j,strbuf)
         strbuf.write("}\n")
         return strbuf.getvalue()
 
@@ -447,6 +459,7 @@ class MultiModule:
             new=range(ce)
             minnod,nod=ce,0
 
+            pos=ne # Default: Take the next candidate
             # Determine each counter value and look for minimum
             for i in range(ce):
                 if minnod==0:
@@ -465,12 +478,16 @@ class MultiModule:
                 # Test new minimum
                 if count<minnod:
                     fixp=p
-                    minnod=count
                     if i<ne:
-                        s=pos
+                        try:
+                            s=pos
+                        except Exception:
+                            print count,"<",minnod,old
+                            raise
                     else:
                         s=i
                         nod=1
+                    minnod=count
                     # Note: If fixed point initially chosen from candidates
                     # then number of disconnections will be preincreased by
                     # one
@@ -502,7 +519,12 @@ class MultiModule:
                 if newce==0:
                     self._cliques.append(compsub[:self.c])
                 elif newne<newce:
-                    extend2(new,newne,newce)
+                    try:
+                        extend2(new,newne,newce)
+                    except Exception:
+                        print "new:",new,newne,newce
+                        print "old:",old,ne,ce
+                        raise
                 # Remove from COMPSUB
                 self.c-=1
                 # Add to NOT
@@ -513,7 +535,11 @@ class MultiModule:
                     # look for candidate
                     while self.connected(fixp,old[s]):
                         s+=1
-            
+                    try:
+                        assert(ne<=s and not self.connected(fixp,old[s]))
+                    except AssertionError:
+                        print ne,"<=",s,self.connected(fixp,old[s])
+                        raise
                         
         compsub=[-1]*N
 
@@ -556,25 +582,59 @@ class MultiModule:
                         
                     # Overlapping sites s1 s2
                     p=0
-                    #print "starting",seq1,common,seq2
-                    #print self._overlaps[(clq[i],clq[j])]
-                    #print [(p1.sitePos[seq1][x],p1.sitePos[common][x],p2.sitePos[seq2][y]) for (x,y) in self._overlaps[(clq[i],clq[j])]]
                     for s1,s2 in self._overlaps[(clq[i],clq[j])]:
+                        # Scan to correct position
                         while p<alnLen and mult[seq1][p]<p1.sitePos[seq1][s1] and \
                               mult[seq2][p]<p2.sitePos[seq2][s2] and \
                               mult[common][p]<p2.sitePos[common][s2]:
                             p+=1
 
                         # Add new column if needed
-                        if p==alnLen or (mult[seq1][p]>p1.sitePos[seq1][s1] and \
-                              mult[seq2][p]>p2.sitePos[seq2][s2] and \
-                              mult[common][p]>p2.sitePos[common][s2]):
+                        if p==alnLen or ( (mult[seq1][p]>p1.sitePos[seq1][s1] or mult[seq1][p]==-1) and \
+                              (mult[seq2][p]>p2.sitePos[seq2][s2] or mult[seq2][p]==-1) and \
+                              (mult[common][p]>p2.sitePos[common][s2] or mult[common][p]==-1)):
                             for key in mult.keys():
                                 mult[key].insert(p,-1)
                             colCount.insert(p,0)
                             sites.insert(p,p1.sites[s1])
                             alnLen+=1
 
+                        try:
+                            assert(p1.sites[s1].match(p2.sites[s2]))
+                            assert(mult[seq1][p]==-1 or mult[seq1][p]==p1.sitePos[seq1][s1])
+                            assert(mult[common][p]==-1 or mult[common][p]==p1.sitePos[common][s1])
+                            assert(mult[seq2][p]==-1 or mult[seq2][p]==p2.sitePos[seq2][s2])
+                        except AssertionError:
+                            raise
+                            def pos_left(arr,x):
+                                for p in range(len(arr)):
+                                    if arr[p]>=0 and arr[p]>x:
+                                        return p
+                                return len(arr)
+                            print "Graph size:",len(self._pairs)
+                            print "CLIQUE:",clq
+                            a=StringIO()
+                            a.write("graph G {\n")
+                            self.cliqueToDot(clqId,a)
+                            a.write("}\n")
+                            open("assertBreak%d.dot"%(clqId),"w").write(a.getvalue())
+                            print "s1 %d,s2 %d, p %d"%(s1,s2,p)
+                            print "p1.sites[%d]=%s"%(s1,str(p1.sites[s1]))
+                            print "p2.sites[%d]=%s"%(s2,str(p2.sites[s2]))
+                            print "mult[%s]=%s"%(seq1,str(mult[seq1]))
+                            print "mult[%s]=%s"%(common,str(mult[common]))
+                            print "mult[%s]=%s\n"%(seq2,str(mult[seq2]))
+                            print "p1.sitePos[%s][%d]=%s"%(seq1,s1,str(p1.sitePos[seq1][s1]))
+                            print "p1.sitePos[%s][%d]=%s"%(common,s1,str(p1.sitePos[common][s1]))
+                            print "p2.sitePos[%s][%d]=%s"%(seq2,s2,str(p2.sitePos[seq2][s2]))
+                            
+                            mult[seq1].insert(pos_left(mult[seq1],p1.sitePos[seq1][s1]),"*")
+                            mult[seq2].insert(pos_left(mult[seq2],p2.sitePos[seq2][s2]),"*")
+                            mult[common].insert(pos_left(mult[common],p1.sitePos[common][s1]),"*")
+
+                            for seq in mult.keys():
+                                print "%10s %s"%(seq[:10],mult[seq])
+                            raise
                         # (Re)set the values
                         mult[seq1][p]=p1.sitePos[seq1][s1]
                         mult[common][p]=p1.sitePos[common][s1]
@@ -658,12 +718,19 @@ class MultipleAlignment:
             if len(line)==0 or line[0]=='#':  ## Skip empty and comment lines.
                 continue
             ## Parse a GFF line
-            seq,src,feat,start,stop,score,strand,frame,attribs=line.split('#')[0].split("\t",8)
+            try:
+                seq,src,feat,start,stop,score,strand,frame,attribs=line.split('#')[0].split("\t",8)
+            except ValueError:
+                print line
+                raise
             attribs=self._parseAttribs(attribs)
             lineModId=fname+attribs["CM"]
             # Start of a new cis module
             if feat=='CisModule':
-                seq2=attribs["Target"].strip('"')
+                try:
+                    seq2=attribs["Target"].strip('"')
+                except TypeError:
+                    seq2=attribs["Target"].replace('"','')
                 start2=int(attribs["Start"])
                 stop2=int(attribs["End"])
                 if currModId!=lineModId:
@@ -673,7 +740,7 @@ class MultipleAlignment:
                                        seq2,start2,stop2)
                     currModId=lineModId
             else:
-                assert(lineModId==currModId)
+                #assert(lineModId==currModId)
                 siteId=Site(feat,float(score),strand,int(stop)-int(start))
                 currMod.appendSite({seq:int(start)},siteId)
         if currMod:
@@ -735,10 +802,13 @@ class MultipleAlignment:
             mmod.TransitiveClosure()
             mmod.InconsistencyGraph()
             mmod.allMaxCliques()
+
             for i in range(len(mmod._cliques)):
                 if len(mmod._cliques[i])<2:continue
-                self.resAligns.append(mmod.makeMultiAlign(i))
-
+                try:
+                    self.resAligns.append(mmod.makeMultiAlign(i))
+                except AssertionError:
+                    raise
             
     def __str__(self):
         strbuf=StringIO()
@@ -747,28 +817,39 @@ class MultipleAlignment:
         return strbuf.getvalue()
         
 
-
-if __name__=="__main__":
+def apu(datat=1):
     a=MultipleAlignment()
-    #a.addGFFfile("/home/kpalin/tyot/comparative/mabs/goodPairAligns.gff")
-    a.addGFFfile("/home/kpalin/tyot/comparative/mabs/hmmyf5.align.opt.gff")
-    a.addGFFfile("/home/kpalin/tyot/comparative/mabs/hrmyf5.align.opt.gff")
-    a.addGFFfile("/home/kpalin/tyot/comparative/mabs/mrmyf5.align.opt.gff")
-    #a._modules.sort()
+    if datat==0:
+        a.addGFFfile("/home/kpalin/tyot/comparative/mabs/hmmyf5.align.opt.gff")
+        a.addGFFfile("/home/kpalin/tyot/comparative/mabs/hrmyf5.align.opt.gff")
+        a.addGFFfile("/home/kpalin/tyot/comparative/mabs/mrmyf5.align.opt.gff")
+    elif datat==1:
+        a.addGFFfile("/home/kpalin/tyot/comparative/mabs/ENS.10ekaa.gff")
     a.multiAlign()
-    #p=[x._pairs[0] for x in a._multiAlign]
-    import pdb
-    #b=a._multiAlign[11].makeMultiAlign(0)
-    #print str(b)
+
+    return 
     for b in range(len(a._multiAlign)):
         for c in range(len(a._multiAlign[b]._cliques)):
             print "Module",b,"clique",c
-            if b==2 and c==6:
-                print a._multiAlign[b]._cliques[6]
-            print str(a._multiAlign[b].makeMultiAlign(c))
-                
-            #if len(a._multiAlign[b]._pairs)<2:
-            #continue
-        #open("tmp%d.dot"%(b),"w").write(a._multiAlign[b].cliquesToDot())
-        
-    #pdb.run("a.multiAlign()")
+            #print
+            try:
+                x=str(a._multiAlign[b].makeMultiAlign(c))
+                print x
+            except AssertionError:
+                pass
+        open("tmp.%d.dot"%(b),"w").write(a._multiAlign[b].cliquesToDot())
+        print "Module",b,"cliques",len(a._multiAlign[b]._cliques)
+
+    x=[len(x._cliques) for x in a._multiAlign]
+    x.sort()
+    print x
+##    for b in range(len(a)):
+##        x=str(a[b])
+##        print "Align %d\n"%(b),x
+    
+
+if __name__=="__main__":
+    import profile,pstats
+    profile.run("apu(1)","mabs.prof")
+    p=pstats.Stats("mabs.prof")
+    p.sort_stats('time').print_stats(20)
