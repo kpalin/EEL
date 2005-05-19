@@ -36,9 +36,6 @@
 /*
  *
  *  $Log$
- *  Revision 1.19.2.5  2005/05/19 07:43:33  kpalin
- *  Fixed one assert to work with border conditions.
- *
  *  Revision 1.19.2.4  2005/04/25 08:08:52  kpalin
  *  Fixed border condition on suboptimal alignment. Now recomputes also
  *  the last site of the sequence.
@@ -146,7 +143,7 @@
 
 
 #ifdef HAS_NO_TRUNC
-
+// round to interger, towards zero
 double trunc(double x)
 {
   return (x>0?1:-1)*floor(fabs(x));
@@ -217,25 +214,27 @@ struct matrixentry
 
 
 
-
-//returns the square of a mod 2 PI double
+//returns the square of a min_k(val-k2PI,k2PI-val)
 inline double squaremod(double val)
 {
   double f=fabs(val);
   f-=2*PI*trunc(f/(2*PI));
-
-#ifndef NDEBUG
-  double apuf=fabs(val);
-  apuf-=2*PI*round(apuf/(2*PI));
-  if(apuf>PI) apuf-= 2*PI;
-
-  if(f>(PI+1e9) || f<(-PI-1e9)) {
-    printf("f=%g!=%g=PI\n",f,PI);
+  if(f>PI) {
+    f=2*PI-f;
   }
+#ifndef NDEBUG
+  double altF=(PI-f);
+  altF-=2*PI*trunc(altF/(2*PI));  // altF % (2PI)
+  altF=PI-altF;
+
+
+  assert(f<(altF+numeric_limits<float>::epsilon()));
+  assert(f>(altF-numeric_limits<float>::epsilon()));
 #endif
-  assert(fabs(f-apuf)<1e9);
-  assert(f<(PI+1e9));
-  assert(f>(-PI-1e9));
+
+
+  assert(f<(PI+numeric_limits<float>::epsilon()));
+  assert(f>(-PI-numeric_limits<float>::epsilon()));
   return f * f;
 }
 
@@ -1724,10 +1723,12 @@ PyObject* traceAlignment(align_AlignmentObject *self,int const sx,int const sy,i
       CHECKING_DECREF(ret_item);
       
 
+      assert((pos_x-sx)>=0 && pos_y>=0);
       int new_pos_x= self->CP->matrix[pos_x-sx][pos_y].x+sx;
       pos_y= self->CP->matrix[pos_x-sx][pos_y].y;
       pos_x= new_pos_x;
-      assert( (pos_x==-1 && pos_y==-1) || pos_y<(int)self->CP->matrix[pos_x-sx].size());
+      assert((pos_x==-1 && pos_y==-1) || (pos_x-sx)>=0 && pos_y>=0);
+      assert((pos_x==-1 && pos_y==-1) || pos_y<(int)self->CP->matrix[pos_x-sx].size());
     } while (pos_x>=0 && pos_y>=0); 
     
   }
@@ -1904,7 +1905,13 @@ alignment_suboptimal(align_AlignmentObject *self)
   // backtracing
   int pos_x=0, pos_y=0;
   int sx=0,sy=0;
+#ifndef NDEBUG
+  static int kierros=0;
+  kierros++;
+  printf("suboptimal: %d\n",kierros);
 
+#endif
+  
 
 
   if(self->memSaveUsed) {
