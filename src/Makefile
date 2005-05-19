@@ -1,5 +1,17 @@
 #
 # $Log$
+# Revision 1.3.2.1  2005/03/31 13:32:01  kpalin
+# Added command 'suboptimal' which is like 'more' but gives real
+# suboptimal results instead of next best from the alignment matrix.
+# This is similar to the waterman eggert algorithm but the
+# implementation is not tight.
+#
+# ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+#
+# Revision 1.3  2005/03/22 13:24:40  kpalin
+# Make more usefull for using in emacs
+#
 # Revision 1.2  2004/07/30 12:17:49  kpalin
 # Added alnColumn and usage of top level makefile.
 #
@@ -14,7 +26,7 @@ BASEDIR=$(PWD)/../
 
 debug:
 	cd $(BASEDIR); \
-	python setup.py  debug install --prefix=/home/kpalin/tyot/comparative/EEL/subzero/
+	python setup.py  debug install --prefix=$(PWD)/../subzero/
 
 all:
 	cd $(BASEDIR);\

@@ -8,6 +8,12 @@ from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.13.2.1  2005/05/09 07:15:09  kpalin
+# Matrix distances.
+#
+# Revision 1.13  2005/03/22 13:17:13  kpalin
+# Merged some fixes surfacing from testing the public version.
+#
 # Revision 1.12  2005/03/08 11:19:49  kpalin
 # Removed a debugging exception.
 #
@@ -127,8 +133,8 @@ class Matrix:
         def recurse(i=0,s=[],score=0.0):
             if i>=len(self):
                 if score>=limit:
-                    print "".join(s)
-                    #ret.append(("".join(s),score))
+                    #print "".join(s)
+                    ret.append(("".join(s),score))
                 return
             acgt= acgtWeights[i]
             for sc,nucl in acgt:
@@ -219,34 +225,31 @@ class Matrix:
         
 
 
-    def computeInfoContent(self):
-        "Computes and sets the information content for this matrix."
+
+    def computeFreqMatrix(self):
+        "Computes the self.freq matrix. The frequency table for this matrix."
         # Sum of the columns.
         sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[Matrix.pseudoCount]*len(self.LLMatrix[0]))
 
 
         # Frequencies of a nucleotide
-        freq=[ [ (x+bgFreq*Matrix.pseudoCount)/(tot) for x,tot in zip(matrix,sum) ] \
-               for matrix,bgFreq in zip(self.LLMatrix,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
+        self.freq=[ [ (x+bgFreq*Matrix.pseudoCount)/(tot) for x,tot in zip(matrix,sum) ] \
+                    for matrix,bgFreq in zip(self.LLMatrix,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
+        
+    def computeInfoContent(self):
+        "Computes and sets the information content for this matrix."
+
+        self.computeFreqMatrix()
 
         # Compute information content of the motif
-        InfoContent=[[ f*log2(f/bgF) for f in fLine] for (fLine,bgF) in zip(freq,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
+        InfoContent=[[ f*log2(f/bgF) for f in fLine] for (fLine,bgF) in zip(self.freq,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
 
 
         self.InfoContent=reduce(operator.add,reduce(lambda x,y:x+y,InfoContent,[]))
     def trivialWeights(self):
         """Update weights according to 0-order background"""
 
-
-        # Sum of the columns.
         sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[Matrix.pseudoCount]*len(self.LLMatrix[0]))
-
-
-        # Frequencies of a nucleotide
-        freq=[ [ (x+bgFreq*Matrix.pseudoCount)/(tot) for x,tot in zip(matrix,sum) ] \
-               for matrix,bgFreq in zip(self.LLMatrix,(self.freqA,self.freqC,self.freqG,self.freqT)) ]
-
-
 
         # Compute weights.
         self.M_weight.append(map(lambda x,tot: log2((x+(self.freqA*Matrix.pseudoCount))/
@@ -272,6 +275,46 @@ class Matrix:
                                  self.M_weight[3][i])
 
 
+
+    def minimumKLdistance(self,other):
+        "Compute the minimum Kullback-Leibler distance between self and other"
+        if len(self)<len(other):
+            return other.minimumKLdistance(self)
+
+        minKLdist=1e50
+        self.computeFreqMatrix()
+        other.computeFreqMatrix()
+
+        assert(len(self)>=len(other))
+
+        for shift in range(1-len(other),len(self)):
+            kld=self.KLdistance(other,shift)
+            #print shift,kld
+            if kld<minKLdist:
+                minKLdist=kld
+                minKLshift=shift
+
+        return (minKLdist,minKLshift)
+
+    def KLdistance(self,other,shift=0):
+        "Computes the Kullback-Leibler distance D(self||other) between two matrices. Actually on on the overlapping region"
+
+        KLdist=0.0
+        for (pList,qList,bgFreq) in zip(self.freq,other.freq,[self.freqA,self.freqC,self.freqG,self.freqT]):
+            if shift<0:
+                pList=[bgFreq]*(-shift)+pList
+            else:
+                lenDelta=len(self)-len(other)
+                pList=pList[shift:]+[bgFreq]*(shift-lenDelta+1)
+            qList=qList[:len(other)]
+            pList=pList[:len(other)]
+            #print "len",len(qList),len(pList)
+            KLdist+=reduce(operator.add,[ p*log2(p/q) for (p,q) in zip(pList,qList) ])
+
+        return KLdist
+
+
+        
 
     def match(self,sequence):
         "matches matrix on sequence DOES NOT CURRENTLY WORK"

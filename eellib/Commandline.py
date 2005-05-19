@@ -16,6 +16,20 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.19.2.3  2005/05/09 07:14:57  kpalin
+# Matrix distances with hidden command.
+#
+# Revision 1.19.2.2  2005/04/12 09:09:57  kpalin
+# Now help accepts parameters and ps outputs sequence description along
+# with names.
+#
+# Revision 1.19.2.1  2005/03/31 13:30:54  kpalin
+# Added command 'suboptimal' which is like 'more' but gives
+# real suboptimal results instead of next best from the alignment matrix.
+#
+# Revision 1.19  2005/03/22 13:17:13  kpalin
+# Merged some fixes surfacing from testing the public version.
+#
 # Revision 1.18  2005/03/09 07:40:03  kpalin
 # Fixed order setting in setMarkovBG
 #
@@ -159,11 +173,13 @@ class Commandline(Interface):
                          'ass':               (self.addSingleSequence,1),
                          'saveMarkovBackground':  (self.saveMarkovBackground,1),
                          'more':               (self.moreAlignment,0),
+                         'suboptimals':               (self.suboptimalAlignment,0),
                          '__multipleAlignGreedy':      (self.multiAlignGreedy,1),
                          '__multipleAlign':      (self.multiAlign,0),
                          '__showMultiAlign':     (self.showMultiAlign,0),
                          '__saveMultiAlign':     (self.saveMultiAlign,1),
-                         'no-gui':               (self.no_gui,0)
+                         'no-gui':               (self.no_gui,0),
+                         '__computeKLdistances': (self.showKLdist,1)
                          }
         # Add directory commands if available.
         if globals().has_key("os") and hasattr(os,"getcwd") and hasattr(os,"chdir"):
@@ -380,7 +396,7 @@ class Commandline(Interface):
 
     def printSeqNames(self, arglist):
         "Arguments: none\nprints the names of the sequences"
-        print str(self.seq),
+        print str(self.seq)
         #names= Interface.getSeqNames(self)
         #names.sort()
         #for n in names:
@@ -420,7 +436,26 @@ The default value for cutoff is 9.0"""
         except ValueError:
             print "getTFBSabsolute requires an numeric argument!"
             
-            
+
+
+    def showKLdist(self,arglist):
+        "Arguments: File to save the result\nComputes the distance matrix between all pairs of TFBS matrixes."
+        KL=dict([(m.name,{}) for m in self.matlist])
+        try:
+            fout=open(arglist[0],"w")
+        except IOEerror,e:
+            print "Could not save %s:"%(arglist[0]),e
+            return
+        
+        for m in self.matlist:
+            for n in self.matlist:
+                KL[m.name][n.name]=m.minimumKLdistance(n)
+
+        names=KL.keys()
+        names.sort()
+        fout.write("\t".join(["names"]+names)+"\n")
+        fout.writelines(["%s\t%s\n"%(name,"\t".join([str(KL[name][n][0]) for n in names])) for name in names])
+        
     def showmatch(self,arglist):
         "Arguments: none\nprints the computed scores to stdout"
         Interface.showmatch(self)
@@ -428,11 +463,13 @@ The default value for cutoff is 9.0"""
     def help(self, arglist):
         "Arguments: none\nprints this help"
         minus=''
-        if arglist==['add -']: minus='-'
+        if arglist==['add -']:
+            minus='-'
+            arglist==[]
         if "full" in arglist:
             values=self.__commands.values()
         else:
-            values=[x[1] for x in self.__commands.items() if x[0][:2]!="__"]
+            values=[x[1] for x in self.__commands.items() if x[0][:2]!="__" and (len(arglist)==0 or x[0] in arglist)]
         values.sort()
         for v in values:
             if values.count(v)>1:
@@ -581,6 +618,15 @@ If you use '.' as filename the local data are aligned."""
             count=1
         self.showMoreAlignments(count)
 
+    def suboptimalAlignment(self,arglist):
+        """Arguments: [number of alignments]
+        prints more suboptimal alignments from previously run matrix"""
+        
+        if len(arglist)>0:
+            count=string.atoi(arglist[0])
+        else:
+            count=1
+        self.suboptimalAlignments(count)
 
 
     def getBaseSaveName(self):

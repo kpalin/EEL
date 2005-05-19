@@ -36,6 +36,32 @@
 /*
  *
  *  $Log$
+ *  Revision 1.19.2.5  2005/05/19 07:43:33  kpalin
+ *  Fixed one assert to work with border conditions.
+ *
+ *  Revision 1.19.2.4  2005/04/25 08:08:52  kpalin
+ *  Fixed border condition on suboptimal alignment. Now recomputes also
+ *  the last site of the sequence.
+ *
+ *  Revision 1.19.2.3  2005/04/07 12:11:20  kpalin
+ *  Fixed a seqfault if site occurs only on one of the sequences.
+ *
+ *  Revision 1.19.2.2  2005/04/01 13:07:22  kpalin
+ *  Cleaned the inner most loop of the alignment algorithm. Previously it
+ *  was copy-pasted three times. Now it's in computeMatrixEntry().
+ *
+ *  Revision 1.19.2.1  2005/03/31 13:32:01  kpalin
+ *  Added command 'suboptimal' which is like 'more' but gives real
+ *  suboptimal results instead of next best from the alignment matrix.
+ *  This is similar to the waterman eggert algorithm but the
+ *  implementation is not tight.
+ *
+ *  ----------------------------------------------------------------------
+ *  ----------------------------------------------------------------------
+ *
+ *  Revision 1.19  2005/02/28 08:41:00  kpalin
+ *  Should fix CVS consistency.
+ *
  *  Revision 1.18  2005/01/25 09:29:29  kpalin
  *  Removed usage of long double to make it compile on MacOSX
  *
@@ -155,42 +181,28 @@ public:
   double weight;
   char strand;
   string annot;
-//   ~triple();  
 };
 
-// triple::~triple()
-// {
-//   if(this->annot) {
-//     free(this->annot);
-//     this->annot=NULL;
-//   }
-// }
+
 struct id_triple
 {
   string TF;
   uint ID;
   double pos;
   double epos;
-  //uint pos;
   double weight;
   char strand;
   string annot;
-  //  ~id_triple();
 };
 
-// id_triple::~id_triple()
-// {
-//   if(this->annot) {
-//     free(this->annot);
-//     this->annot=NULL;
-//   }
-// }
+
 // Needed for sort
 bool operator<(const triple& t1, const triple& t2){
   return t1.epos<t2.epos || (t1.epos==t2.epos && t1.weight<t2.weight);
 }
 
 typedef map<string, vector<triple> > matchlisttype;
+
 
 struct matrixentry
 {
@@ -200,13 +212,6 @@ struct matrixentry
   int x;
   int y;
 };
-
-
-
-
-
-
-
 
 
 
@@ -703,11 +708,16 @@ double findMax(int &pos_x,int &pos_y,align_AlignmentObject *self)
 
 static PyObject*
 alignment_nextBest(align_AlignmentObject *self);
+static PyObject*
+alignment_suboptimal(align_AlignmentObject *self);
 
 
 static PyMethodDef alignment_methods[] = {
     {"nextBest", (PyCFunction)alignment_nextBest, METH_NOARGS,
      "Return the next best alignment from the matrix."
+    },
+    {"suboptimal", (PyCFunction)alignment_suboptimal, METH_NOARGS,
+     "Return the next suboptimal alignment from the matrix. (Waterman-Eggert style)"
     },
     {NULL}  /* Sentinel */
 };
@@ -875,6 +885,74 @@ inline int indexYBeforeOrAtBp(int xx,struct __CPSTUF *CP, double const pos)
 
 
 
+inline matrixentry computeMatrixEntry(align_AlignmentObject *self,int const sx,int const sy, int const x,int const y,unsigned int const slizeWidth)
+{
+
+  matrixentry entry;
+  double help;
+
+
+  assert(y>=0);
+  assert(y<self->CP->index[self->CP->seq_x[sx+x].ID].size());
+	
+  int const real_y=self->CP->index[self->CP->seq_x[sx+x].ID][y];
+  assert(real_y>=0);
+
+  entry.value= (store)self->lambda*(self->CP->seq_x[sx+x].weight + self->CP->seq_y[real_y].weight);
+
+  if(entry.value<0.0) entry.value=0.0;
+  entry.x=-1;
+  entry.y=-1;
+
+  int xx=x-1;
+  while(xx>=0 && self->CP->seq_x[sx+x].pos<(self->CP->seq_x[sx+xx].epos+0.5)) {
+    xx--;
+	
+  }
+
+  int real_yy;
+  double delta_x,delta_y;
+  for(; 
+      xx>=0 && 
+	(delta_x=(self->CP->seq_x[sx+x].pos-self->CP->seq_x[sx+xx].epos-1.0))<MAX_BP_DIST; 
+      xx--){
+    for (int yy=indexYBeforeOrAtBp(sx+xx,self->CP,self->CP->seq_y[real_y].pos-0.5);
+	 yy>=0 && 
+	   (delta_y=(self->CP->seq_y[real_y].pos - self->CP->seq_y[(real_yy=self->CP->index[self->CP->seq_x[sx+xx].ID][yy])].epos-1.0))<MAX_BP_DIST 
+	   && real_yy>=(int)sy; 
+	 yy--){
+      
+      assert(delta_x>-0.5);
+      assert(delta_y>-0.5);
+      assert(xx<x);
+      assert((int)real_yy<(int)real_y);
+      if((delta_x+delta_y)==0.0) {
+	help=(double)self->CP->matrix[xx%slizeWidth][yy].value +
+	  self->lambda *(self->CP->seq_x[sx+x].weight + self->CP->seq_y[real_y].weight) -
+	  self->mu *(delta_x + delta_y)/2.0;
+      } else {
+	help=(double)self->CP->matrix[xx%slizeWidth][yy].value +
+	  self->lambda *(self->CP->seq_x[sx+x].weight + self->CP->seq_y[real_y].weight) -
+	  self->mu *(delta_x + delta_y)/2.0 -
+	  self->nu * (delta_x-delta_y)*(delta_x-delta_y)/(delta_x+delta_y)-
+	  self->xi *anglepenalty(delta_x,delta_y,self->nuc_per_rotation);
+      }
+      
+      assert(finite(help));
+      if(help>entry.value){
+	entry.value= (store)help;
+	entry.x=xx;
+	entry.y=yy;
+	//if(x==1167 && real_y==943) printf(" ->(%d+%d,%d+%d)=%g yy=%d\n",sx,xx,sy,yy,entry.value,yy);
+      }
+    }
+  }
+
+  return entry;
+}
+
+
+
 void outputMemory(double bytes)
 {
   if(bytes>(1024*1024)) {
@@ -947,7 +1025,12 @@ int indexYafterOrAtRealY(int sx, int x,struct __CPSTUF *CP,int real_y)
 static PyObject *
 alignObject(align_AlignmentObject *self,unsigned long int const sx, unsigned long int const sy,unsigned long int const ex, unsigned long int const ey)
 { 
-  /* Compute the alignment matrix in rectangle (sx,sy) -> (ex,ey)  ((ey,ex) exclusive) */
+  /* Compute the alignment matrix in rectangle (sx,sy) -> (ex,ey)  
+     ((ey,ex) exclusive) 
+  */
+  /* Not really: compute the matrix in slice from sx to ex (the whole
+     length of y) */
+
 
   assert(sx<ex);
   assert(ex<=self->CP->seq_x.size());
@@ -955,6 +1038,7 @@ alignObject(align_AlignmentObject *self,unsigned long int const sx, unsigned lon
   assert(ey<=self->CP->seq_y.size());
 
   // allocating the matrix
+  // Allocate full rows between sx and ex. 
   for (uint i=sx; i<ex; i++){
     //cout<<"row:"<<i<<" len:"<<self->CP->index[self->CP->seq_x[i].ID].size()<<endl;
     self->CP->matrix.push_back(vector<matrixentry> (self->CP->index[self->CP->seq_x[i].ID].size()));
@@ -965,17 +1049,13 @@ alignObject(align_AlignmentObject *self,unsigned long int const sx, unsigned lon
   memReport(self);
 
 
-//   for(int i=0;i<self->CP->matrix.size();i++) {
-//     cout<<"matrix["<<i<<"].size()="<<self->CP->matrix[i].size()<<endl;
-//   }
-      
 
   // filling the matrix using dynamic programming
   matrixentry entry;
   int x, y;
 
   int cells_filled=0;
-  double help;
+
 
   for (x=0; x<(int)(ex-sx); x++) {
 
@@ -989,111 +1069,21 @@ alignObject(align_AlignmentObject *self,unsigned long int const sx, unsigned lon
       cells_filled-=OUTPUTFREQ;
     }
 
-    //for(y=0; y<(int)self->CP->matrix[x].size(); y++){
     for(y=indexYafterOrAtRealY(sx,x,self->CP,sy); y<(int)self->CP->matrix[x].size(); y++){
+      assert(y>=0 && y<self->CP->index[self->CP->seq_x[sx+x].ID].size());
       int const real_y= self->CP->index[self->CP->seq_x[sx+x].ID][y];
-//        if((unsigned int)real_y<sy || (unsigned int)real_y>=ey) {
-// 	 cout<<"skipping "<<y<<endl;
-//  	continue;
-//        }
+      assert(real_y>=0);
       if((unsigned int)real_y>=ey) {
       	break;
       }
-      entry.value= (store)self->lambda*(self->CP->seq_x[sx+x].weight + self->CP->seq_y[real_y].weight);
-      if(entry.value<0.0) entry.value=0.0;
-      entry.x=-1;
-      entry.y=-1;
-      //if(x>250) cout<<x<<","<<y<<endl;
-      int xx=x-1;
-      while(xx>=0 && self->CP->seq_x[sx+x].pos<(self->CP->seq_x[sx+xx].epos+0.5)) {
-	xx--;
-	
-      }
+      entry=computeMatrixEntry(self,sx,sy,x,y,self->CP->seq_x.size()+1);
+//       if((x+sx)==1182 && real_y==954) 
+// 	printf("(%d,%d|%d)->(%d,%d|%d)=%g\n",sx+x,
+// 	       self->CP->index[self->CP->seq_x[sx+x].ID][y],y,
+// 	       sx+entry.x,
+// 	       self->CP->index[self->CP->seq_x[sx+entry.x].ID][entry.y],entry.y,
+// 	       entry.value);
 
-      //printf("x,y=%d,%d (val=%g=%g*(%g+%g))\n",x,real_y,entry.value,self->lambda,self->CP->seq_x[x].weight,self->CP->seq_y[real_y].weight);
-
-//       cout<<"Before:"<<x<<"x"<<y<<":"<<entry.value<<endl;
-
-      int real_yy;
-      double delta_x,delta_y;
-      for(; 
-	  xx>=0 && 
-	    (delta_x=(self->CP->seq_x[sx+x].pos-self->CP->seq_x[sx+xx].epos-1.0))<MAX_BP_DIST; 
-	  xx--){
-#ifdef HEAVY_DEBUG
-	assert(indexBeforeOrAtBp(self->CP->index[self->CP->seq_x[sx+xx].ID],self->CP->seq_y,self->CP->seq_y[real_y].pos-0.5) ==
-	       indexYBeforeOrAtBp(sx+xx,self->CP,self->CP->seq_y[real_y].pos-0.5));
-#endif
-	//for (int yy=indexBeforeOrAtBp(self->CP->index[self->CP->seq_x[xx].ID],self->CP->seq_y,self->CP->seq_y[real_y].pos-0.5);
-	for (int yy=indexYBeforeOrAtBp(sx+xx,self->CP,self->CP->seq_y[real_y].pos-0.5);
-	     yy>=0 && 
-	       (delta_y=(self->CP->seq_y[real_y].pos - self->CP->seq_y[(real_yy=self->CP->index[self->CP->seq_x[sx+xx].ID][yy])].epos-1.0))<MAX_BP_DIST 
-	       && real_yy>=(int)sy; 
-	     yy--){
-
-	  assert(delta_x>-0.5);
-	  assert(delta_y>-0.5);
-	  assert(xx<x);
-	  //if(delta_y<0.5)
-	  //  printf("delta_x %g, delta_y %g\n",delta_x,delta_y);
-	  assert((int)real_yy<(int)real_y);
-
-	  // The actual recursion formula
-	  /* TEX SYNTAX */
-	  /*
-	    \STATE $ D_{i,j}=\max_{0\le k <i, 0\le l<j} \left\{0,%
-	    D_{k,l}+\lambda(w_i+v_j)-\mu \frac{\delta p+\delta q}{2}-
-	    \nu \frac{(\delta p-\delta q)^2}{\delta p + \delta q}-
-	    \xi \phi^2/(\delta p+\delta q)
-	    \right\}$
-	    
-	  */
-
-
-	  /* 
-	  // This formula gives non finite results due to division by zero.
-	  help= self->CP->matrix[xx][yy].value +
-	    self->lambda *(self->CP->seq_x[x].weight + self->CP->seq_y[real_y].weight) -
-	    self->mu *(delta_x + delta_y)/2.0-
-	    self->nu * (delta_x-delta_y)*(delta_x-delta_y)/(delta_x+delta_y)-
-	    self->xi *anglepenalty(delta_x,delta_y,self->nuc_per_rotation);
-	  */
-
-	  // Be carefull for correctness and speed!!!
-	  //if(delta_x==0.0 && delta_y==0.0) {  // Security check for division by zero
-// 	  if(real_yy<sy || real_yy>=ey) 
-// 	    cout<<xx<<"=xx:yy="<<yy<<":[xx].size()="<<self->CP->matrix[xx].size()<<endl;
-	  if((delta_x+delta_y)==0.0) {
-	    help=(double)self->CP->matrix[xx][yy].value +
-	      self->lambda *(self->CP->seq_x[sx+x].weight + self->CP->seq_y[real_y].weight) -
-	      self->mu *(delta_x + delta_y)/2.0;
-	  } else {
-	    help=(double)self->CP->matrix[xx][yy].value +
-	      self->lambda *(self->CP->seq_x[sx+x].weight + self->CP->seq_y[real_y].weight) -
-	      self->mu *(delta_x + delta_y)/2.0 -
-	      self->nu * (delta_x-delta_y)*(delta_x-delta_y)/(delta_x+delta_y)-
-	      self->xi *anglepenalty(delta_x,delta_y,self->nuc_per_rotation);
-	  }
-	  
-	  assert(finite(help));
-
-	    //xi *squaremod((delta_x - delta_y) * 2.0 * PI/nuc_per_rotation) / 
-	    //(delta_x + delta_y);
-	  
-
-	  //if(help>entry.value && xx!=x && yy!=y){
-	  //if(help>entry.value && xx<x && real_yy<real_y){
-	  if(help>entry.value){
-	    entry.value= (store)help;
-	    //if((sx+xx)>0 && yy>0) {  // Make sure that the local alignment ending at (0,0) is properly terminated
-	      entry.x=sx+xx;
-	      entry.y=yy;
-	      //}
-	  }
-	}
-      }
-      
-//       cout<<"After:"<<x<<"x"<<y<<":"<<entry.value<<endl;
       self->CP->matrix[x][y]= entry;
     }
   }
@@ -1196,7 +1186,7 @@ alignMemorySaveObject(align_AlignmentObject *self)
   int x, y;
 
   int cells_filled=0;
-  double help;
+
 
   for (x=0; x<(int)self->CP->seq_x.size(); x++) {
 
@@ -1212,95 +1202,18 @@ alignMemorySaveObject(align_AlignmentObject *self)
 
       assert((unsigned int)real_y<self->CP->seq_y.size());
 
-      entry.value= (store)self->lambda*(self->CP->seq_x[x].weight + self->CP->seq_y[real_y].weight);
-      if(entry.value<0.0) entry.value=0.0;
-      entry.x=x;
-      entry.y=y;
-      //if(x>250) cout<<x<<","<<y<<endl;
-      int xx=x-1;
-      while(xx>=0 && self->CP->seq_x[x].pos<(self->CP->seq_x[xx].epos+0.5)) {
-	xx--;
-	
+      entry=computeMatrixEntry(self,0,0,x,y,slizeWidth);
+      if(entry.x<0 || entry.y<0) {
+	entry.x=x;
+	entry.y=y;
+      } else {
+	int my_x=entry.x%slizeWidth;
+	entry.x=self->CP->matrix[my_x][entry.y].x;
+	entry.y=self->CP->matrix[my_x][entry.y].y;
       }
 
-      //printf("x,y=%d,%d (val=%g=%g*(%g+%g))\n",x,real_y,entry.value,self->lambda,self->CP->seq_x[x].weight,self->CP->seq_y[real_y].weight);
-
-      int real_yy;
-      double delta_x,delta_y;
-      for(; 
-	  xx>=0 && 
-	    (delta_x=(self->CP->seq_x[x].pos-self->CP->seq_x[xx].epos-1.0))<MAX_BP_DIST; 
-	  xx--){
-#ifdef HEAVY_DEBUG
-	assert(indexBeforeOrAtBp(self->CP->index[self->CP->seq_x[xx].ID],self->CP->seq_y,self->CP->seq_y[real_y].pos-0.5) ==
-	       indexYBeforeOrAtBp(xx,self->CP,self->CP->seq_y[real_y].pos-0.5));
-#endif
-
-	for (int yy=indexYBeforeOrAtBp(xx,self->CP,self->CP->seq_y[real_y].pos-0.5);
-	     yy>=0 && 
-	       (delta_y=(self->CP->seq_y[real_y].pos - self->CP->seq_y[(real_yy=self->CP->index[self->CP->seq_x[xx].ID][yy])].epos-1.0))<MAX_BP_DIST; 
-	     yy--){
-
-	  assert(delta_x>-0.5);
-	  assert(delta_y>-0.5);
-	  assert(xx<x);
-	  //if(delta_y<0.5)
-	  //  printf("delta_x %g, delta_y %g\n",delta_x,delta_y);
-	  assert((int)real_yy<(int)real_y);
-
-	  // The actual recursion formula
-	  /* TEX SYNTAX */
-	  /*
-	    \STATE $ D_{i,j}=\max_{0\le k <i, 0\le l<j} \left\{0,%
-	    D_{k,l}+\lambda(w_i+v_j)-\mu \frac{\delta p+\delta q}{2}-
-	    \nu \frac{(\delta p-\delta q)^2}{\delta p + \delta q}-
-	    \xi \phi^2/(\delta p+\delta q)
-	    \right\}$
-	    
-	  */
-
-
-	  /* 
-	  // This formula gives non finite results due to division by zero.
-	  help= self->CP->matrix[xx][yy].value +
-	    self->lambda *(self->CP->seq_x[x].weight + self->CP->seq_y[real_y].weight) -
-	    self->mu *(delta_x + delta_y)/2.0-
-	    self->nu * (delta_x-delta_y)*(delta_x-delta_y)/(delta_x+delta_y)-
-	    self->xi *anglepenalty(delta_x,delta_y,self->nuc_per_rotation);
-	  */
-
-	  // Be carefull for correctness and speed!!!
-	  //if(delta_x==0.0 && delta_y==0.0) {  // Security check for division by zero
-	  if((delta_x+delta_y)==0.0) {
-	    help=(double)self->CP->matrix[xx%slizeWidth][yy].value +
-	      self->lambda *(self->CP->seq_x[x].weight + self->CP->seq_y[real_y].weight) -
-	      self->mu *(delta_x + delta_y)/2.0;
-	  } else {
-	    help=(double)self->CP->matrix[xx%slizeWidth][yy].value +
-	      self->lambda *(self->CP->seq_x[x].weight + self->CP->seq_y[real_y].weight) -
-	      self->mu *(delta_x + delta_y)/2.0 -
-	      self->nu * (delta_x-delta_y)*(delta_x-delta_y)/(delta_x+delta_y)-
-	      self->xi *anglepenalty(delta_x,delta_y,self->nuc_per_rotation);
-	  }
-	  
-	  assert(finite(help));
-
-	    //xi *squaremod((delta_x - delta_y) * 2.0 * PI/nuc_per_rotation) / 
-	    //(delta_x + delta_y);
-	  
-
-	  if(help>entry.value){
-	    entry.value= (store)help;
-	    entry.x=self->CP->matrix[xx%slizeWidth][yy].x;
-	    entry.y=self->CP->matrix[xx%slizeWidth][yy].y;
-
-	    // Now the entry.(x,y) contains the _starting_ coordinate of
-	    // the best local alignment ending here.
-	  }
-	}
-      }
-      
       self->CP->matrix[x%slizeWidth][y] = entry;
+
       // The best local alignment ending to (x,y) starts at (entry.x,entry.y).
       // add the current maximum to MAXSES if getting better alignment
       // ending at that position
@@ -1365,6 +1278,7 @@ alignMemorySaveObject(align_AlignmentObject *self)
        iter!=maxses.end();iter++) {
      MS_res balg={iter->second.second,iter->first,iter->second.first};
      self->CP->bestAligns.push(balg);
+
    }
 
   clearMatrix(self);
@@ -1761,9 +1675,65 @@ initalign(void)
 
     Py_INCREF(&align_AlignmentType);
     PyModule_AddObject(m, "Alignment", (PyObject *)&align_AlignmentType);
-
+    
 }
 
+
+PyObject* traceAlignment(align_AlignmentObject *self,int const sx,int const sy,int pos_x,int pos_y)
+{  // Format the alignment ending at (pos_x,pos_y) ready for passing to python.
+  // The memory saving matrix begins from (sx,sy).
+  
+  PyObject *ret=PyList_New(0);
+  
+  
+  assert(pos_x>=0);
+  assert(pos_y>=0);
+  assert((pos_x-sx)<(int)self->CP->matrix.size() );
+  assert( pos_y<(int)self->CP->matrix[pos_x-sx].size());
+  if (pos_x>=0 && pos_y>=0 && (pos_x-sx)<(int)self->CP->matrix.size() && pos_y<(int)self->CP->matrix[pos_x-sx].size()){
+    do {
+      uint const real_y= self->CP->index[self->CP->seq_x[pos_x].ID][pos_y]; 
+      
+      // don't look at this position again
+      if (self->CP->matrix[pos_x-sx][pos_y].value >0.0) {
+	self->CP->matrix[pos_x-sx][pos_y].value *= -1.0;
+      }
+      
+      
+#ifndef NDEBUG
+      if(self->CP->seq_x[pos_x].strand!=self->CP->seq_y[real_y].strand)
+	printf("strand conflict %d%c %d%c\n",self->CP->seq_x[pos_x].ID,self->CP->seq_x[pos_x].strand,self->CP->seq_y[real_y].ID,self->CP->seq_y[real_y].strand);
+#endif
+      
+      
+      PyObject *ret_item=PyAln_New(self->CP->ID_to_TF[self->CP->seq_x[pos_x].ID/2].c_str(), // motif name
+				   pos_x, // on site sequence X
+				   real_y, // on site sequence Y
+				  (int)self->CP->seq_x[pos_x].pos, 
+				   (int)self->CP->seq_x[pos_x].epos,
+				   (int)self->CP->seq_y[real_y].pos, // start DNA pos on Y
+				   (int)self->CP->seq_y[real_y].epos, //end DNA pos on Y
+				   (char)self->CP->seq_y[real_y].strand, //strand
+				   (double)fabs((double)self->CP->matrix[pos_x-sx][pos_y].value), // Total align score this far
+				   (double)self->CP->seq_x[pos_x].weight,
+				   (double)self->CP->seq_y[real_y].weight,
+				   self->CP->seq_x[pos_x].annot.c_str(),
+				   self->CP->seq_y[real_y].annot.c_str());
+      
+      PyList_Append(ret,ret_item);
+      CHECKING_DECREF(ret_item);
+      
+
+      int new_pos_x= self->CP->matrix[pos_x-sx][pos_y].x+sx;
+      pos_y= self->CP->matrix[pos_x-sx][pos_y].y;
+      pos_x= new_pos_x;
+      assert( (pos_x==-1 && pos_y==-1) || pos_y<(int)self->CP->matrix[pos_x-sx].size());
+    } while (pos_x>=0 && pos_y>=0); 
+    
+  }
+  return ret;
+}
+  
 
 static PyObject*
 alignment_nextBest(align_AlignmentObject *self)
@@ -1773,11 +1743,9 @@ alignment_nextBest(align_AlignmentObject *self)
   int pos_x=0, pos_y=0;
   int sx=0,sy=0,real_sy=0,real_ey=0;
 
-  PyObject *ret=PyList_New(0);
-
 
   if(self->memSaveUsed) {
-    
+    // If memory save is used. i.e. We have to recompute the alignment
     MS_res bounds=self->CP->bestAligns.top();
     self->CP->bestAligns.pop();
     
@@ -1788,7 +1756,6 @@ alignment_nextBest(align_AlignmentObject *self)
     real_sy= self->CP->index[self->CP->seq_x[sx].ID][sy];
     real_ey= self->CP->index[self->CP->seq_x[ex].ID][ey];
 
-    //cout<<"sx"<<sx<<" sy"<<sy<<" ex"<<ex<<" ey"<<ey<<":len="<<self->CP->index[self->CP->seq_x[sx].ID].size()<<endl;
 
     assert(self->CP->seq_x[sx].ID==self->CP->seq_y[real_sy].ID);
     assert(self->CP->seq_x[ex].ID==self->CP->seq_y[real_ey].ID);
@@ -1814,8 +1781,8 @@ alignment_nextBest(align_AlignmentObject *self)
     pos_y=ey;
 
   } else {
+    // If we have not used memory save. i.e. we still remember the alignment matrix.
     if(findMax(pos_x,pos_y,self)<0.0) {  // No more alignments
-      CHECKING_DECREF(ret);
       Py_INCREF(Py_None);
       return Py_None;
     }
@@ -1827,50 +1794,135 @@ alignment_nextBest(align_AlignmentObject *self)
   
   // Format the output.
   //string ret;
-  assert(pos_x>=0);
-  assert(pos_y>=0);
-  assert((pos_x-sx)<(int)self->CP->matrix.size() );
-  assert( pos_y<(int)self->CP->matrix[pos_x-sx].size());
-  if (pos_x>=0 && pos_y>=0 && (pos_x-sx)<(int)self->CP->matrix.size() && pos_y<(int)self->CP->matrix[pos_x-sx].size()){
-    do {
-      uint const real_y= self->CP->index[self->CP->seq_x[pos_x].ID][pos_y]; 
-     
-      // don't look at this position again
-      if (self->CP->matrix[pos_x-sx][pos_y].value >0.0) {
-	self->CP->matrix[pos_x-sx][pos_y].value *= -1.0;
-      }
-      
+  
+  return traceAlignment(self,sx,sy,pos_x,pos_y);
+  
+}
 
-#ifndef NDEBUG
-      if(self->CP->seq_x[pos_x].strand!=self->CP->seq_y[real_y].strand)
-	printf("strand conflict %d%c %d%c\n",self->CP->seq_x[pos_x].ID,self->CP->seq_x[pos_x].strand,self->CP->seq_y[real_y].ID,self->CP->seq_y[real_y].strand);
+void recomputeAlignment(align_AlignmentObject *self,uint pos_x,uint pos_y)
+{
+  int end_x=pos_x,end_y=pos_y;
+
+  int new_x=pos_x,new_y=pos_y;
+  int begin_x=new_x,begin_y=new_y;
+
+#ifdef SUBOPTDEBUG
+  cout<<endl;
 #endif
 
+  // Trace to the beginning of the previous alignment
+  while(new_x>=0 && new_y>=0){
+    begin_x=new_x;
+    begin_y=new_y;
+#ifdef SUBOPTDEBUG
+    //cout<<"<"<<flush;
+#endif
+    assert(self->CP->matrix[begin_x][begin_y].value<0.0);
 
-      PyObject *ret_item=PyAln_New(self->CP->ID_to_TF[self->CP->seq_x[pos_x].ID/2].c_str(), // motif name
-				  pos_x, // on site sequence X
-				  real_y, // on site sequence Y
-				  (int)self->CP->seq_x[pos_x].pos, 
-				  (int)self->CP->seq_x[pos_x].epos,
-				  (int)self->CP->seq_y[real_y].pos, // start DNA pos on Y
-				  (int)self->CP->seq_y[real_y].epos, //end DNA pos on Y
-				  (char)self->CP->seq_y[real_y].strand, //strand
-				  (double)fabs((double)self->CP->matrix[pos_x-sx][pos_y].value), // Total align score this far
-				  (double)self->CP->seq_x[pos_x].weight,
-				   (double)self->CP->seq_y[real_y].weight,
-				   self->CP->seq_x[pos_x].annot.c_str(),
-				   self->CP->seq_y[real_y].annot.c_str());
-
-      PyList_Append(ret,ret_item);
-      CHECKING_DECREF(ret_item);
-		  
-
-      int new_pos_x= self->CP->matrix[pos_x-sx][pos_y].x;
-      pos_y= self->CP->matrix[pos_x-sx][pos_y].y;
-      pos_x= new_pos_x;
-    } while (pos_x>=0 && pos_y>=0); 
+    new_x=self->CP->matrix[begin_x][begin_y].x;
+    new_y=self->CP->matrix[begin_x][begin_y].y;
   }
+
+////////////////////////////////////////////////////////////////////////////////
+
+  int real_begin_y= self->CP->index[self->CP->seq_x[begin_x].ID][begin_y];
+  int real_end_y= self->CP->index[self->CP->seq_x[end_x].ID][end_y];
+
+
+  double const max_x_bp=self->CP->seq_x[self->CP->seq_x.size()-1].pos;
+  double const max_y_bp=self->CP->seq_y[self->CP->seq_y.size()-1].pos;
+
+  // Last effect positions
+  double last_x_bp=min(max_x_bp,self->CP->seq_x[end_x].epos+MAX_BP_DIST)+1.0;
+  double last_y_bp;
+
+  int last_chg_real_y=real_end_y;
+
+  // filling the matrix using dynamic programming
+  matrixentry entry;
+  int x, y;
+  int real_y;
+
+
+  // Go as far as we might have changes
+  for (x=begin_x+1; x<(int)self->CP->matrix.size() && self->CP->seq_x[x].pos<last_x_bp  ; x++) {
+
+    // We may have changes at most MAX_BP_DIST right from the right most change
+    last_y_bp=min(max_y_bp,self->CP->seq_y[last_chg_real_y].epos+MAX_BP_DIST)+1.0;
+
+
+    for(y=indexYafterOrAtRealY(0,x,self->CP,real_begin_y+1); 
+	  y<(int)self->CP->matrix[x].size() && self->CP->seq_y[(real_y=self->CP->index[self->CP->seq_x[x].ID][y])].pos<last_y_bp;  y++){
+      
+
+      if(self->CP->matrix[x][y].value<0.0) {
+#ifdef SUBOPTDEBUG
+	//cout<<"-"<<flush;
+	cout<<" Running for "<<x<<"x"<<real_y<<" (x,y)=<("<<self->CP->seq_x[x].pos<<","<<self->CP->seq_y[real_y].pos<<")<"<<last_x_bp<<","<<last_y_bp<<")"<<endl;
+#endif
+	continue;
+      }
+
+      entry=computeMatrixEntry(self,0,0,x,y,self->CP->seq_x.size()+1);
+      
+      // Matrix entry must be not used and have a changed value 
+      if(self->CP->matrix[x][y].value>=0.0 && fabs(self->CP->matrix[x][y].value-entry.value)>numeric_limits<store>::epsilon()) {
+	last_chg_real_y=max(last_chg_real_y,real_y);
+	last_x_bp=min(max_x_bp,self->CP->seq_x[x].epos+MAX_BP_DIST)+1.0;
+
+#ifdef SUBOPTDEBUG
+	char newOrCont='u';
+	if(self->CP->matrix[x][y].x>=0 && self->CP->matrix[x][y].y>=0) {
+	  // New alignment starting from scratch or continuing something old.
+	  newOrCont=(self->CP->matrix[self->CP->matrix[x][y].x][self->CP->matrix[x][y].y].value<0.0?'n':'c');
+	}
+	cout<<"+"<<entry.value-self->CP->matrix[x][y].value<<"="<<entry.value<<
+	    newOrCont<<endl;
+#endif
+	self->CP->matrix[x][y]= entry;
+
+      } else {
+#ifdef SUBOPTDEBUG
+	//cout<<"."<<flush;
+#endif
+      }
+    }
+  }
+  
+
+////////////////////////////////////////////////////////////////////////////////
+}
+
+
+
+
+
+static PyObject*
+alignment_suboptimal(align_AlignmentObject *self)
+{
+
+  // backtracing
+  int pos_x=0, pos_y=0;
+  int sx=0,sy=0;
+
+
+
+  if(self->memSaveUsed) {
+    PyErr_SetString(PyExc_NotImplementedError,"Suboptimal fetching is not implemented with large alignments.");
+    return 0;
+  }
+  
+  // If we have not used memory save. i.e. we still remember the alignment matrix.
+  if(findMax(pos_x,pos_y,self)<0.0) {  // No more alignments
+    Py_INCREF(Py_None);
+    return Py_None;
+  }
+
+  // Format the output.
+  PyObject *ret=traceAlignment(self,sx,sy,pos_x,pos_y);
+  recomputeAlignment(self,pos_x,pos_y);
     
   return ret;
 
 }
+

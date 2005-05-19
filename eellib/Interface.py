@@ -20,6 +20,19 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.28.2.3  2005/05/09 07:14:07  kpalin
+# Catch exception with faulty savealignGFF
+#
+# Revision 1.28.2.2  2005/04/12 09:10:44  kpalin
+# Suboptimals is the default way of getting new results.
+#
+# Revision 1.28.2.1  2005/03/31 13:30:54  kpalin
+# Added command 'suboptimal' which is like 'more' but gives
+# real suboptimal results instead of next best from the alignment matrix.
+#
+# Revision 1.28  2005/03/22 13:17:13  kpalin
+# Merged some fixes surfacing from testing the public version.
+#
 # Revision 1.22.2.3  2005/03/22 12:19:26  kpalin
 # Fixed the problems that came up with testing.
 #
@@ -540,9 +553,22 @@ If you use '.' as filename the local data are aligned."""
 
     def showMoreAlignments(self,count=1):
         """Gets more alignments but doesn't display them"""
-        self.moreAlignments(count)
+        if not hasattr(self,"alignment"):
+            return 
+        if not self.alignment or not hasattr(self.alignment,"memSaveUsed"):
+            print self.alignment
+            return
+        self.moreAlignments(count,self.alignment.nextBest)
         #print Output.formatalign(self.alignment,self.seq),
-        
+
+    def suboptimalAlignments(self,count=1):
+        """Gets more alignments but doesn't display them"""
+        try:
+            self.moreAlignments(count,self.alignment.suboptimal)
+        except (NotImplementedError,AttributeError):
+            print "Fetching suboptimal alignments is not supported."
+        #print Output.formatalign(self.alignment,self.seq),
+
 
     def quit(self):
         "Exits the program"
@@ -555,18 +581,16 @@ If you use '.' as filename the local data are aligned."""
         return  len(self.__comp)>0 or hasattr(self,"tempFileName")
             
 
-    def moreAlignments(self,num_of_align=1):
+    def moreAlignments(self,num_of_align=1,fetcherFun=None):
         """Fetch more alignments from previously run alignment matrix"""
-        if not hasattr(self,"alignment"):
-            return 
-        if not self.alignment or not hasattr(self.alignment,"memSaveUsed"):
-            print self.alignment
-            return
         for i in range(num_of_align):
             if self.alignment.memSaveUsed==1 and self.alignment.askedResults<=len(self.alignment.bestAlignments):
                 print "Can't give more alignments. Don't remember those"
                 break
-            goodAlign=self.alignment.nextBest()
+            if not fetcherFun:
+                goodAlign=self.alignment.suboptimal()
+            else:
+                goodAlign=fetcherFun()
             if not goodAlign:
                 break
             goodAlign.reverse() # For old times sake
@@ -617,16 +641,26 @@ If you use '.' as filename the local data are aligned."""
 
     def savealignGFF(self,filename=""):
         "Saves the results in GFF format"
-        return Output.savealign(Output.formatalignGFF(self.alignment), filename)
+        try:
+            return Output.savealign(Output.formatalignGFF(self.alignment), filename)
+        except AttributeError:
+            print "No alignment to save"
 
     def savealignAnchor(self,filename=""):
         "Saves the results in Anchor format"
-        return Output.savealign(Output.formatalignCHAOS(self.alignment), filename)
-        
+        try:
+            return Output.savealign(Output.formatalignCHAOS(self.alignment), filename)
+        except AttributeError:
+            print "No alignment to save"
+
+
     def savealign(self, filename=''):
         "Saves the results"
-        if hasattr(self,"alignment"):
+        try:
             return Output.savealign(Output.formatalign(self.alignment,self.seq), filename)
+        except AttributeError:
+            print "No alignment to save"
+
 
     def showalignSTDO(self):
         "Prints the alignment to standart out"

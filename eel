@@ -9,6 +9,12 @@ import sys
 
 
 # $Log$
+# Revision 1.6.2.1  2005/05/19 06:49:50  kpalin
+# renamed class eelgui to eelGUI
+#
+# Revision 1.6  2005/03/22 13:16:30  kpalin
+# Cleaner way to parse commandline arguments. Allows negative numerical inputs.
+#
 # Revision 1.5  2005/01/14 12:51:48  kpalin
 # Fixes for TCL/TIX gui in windows
 #
@@ -54,8 +60,8 @@ if len(sys.argv)==1:
             root=Tkinter.Tk()
             root.tk.eval('package require Tix')
             import Tix
-            from eellib.eelgui import eelgui
-            o=eelgui(root)
+            from eellib.eelgui import eelGUI
+            o=eelGUI(root)
             o.pack(side=Tkinter.TOP,fill=Tkinter.BOTH,expand=1)
             root.mainloop()
         except TclError,e:
@@ -65,7 +71,8 @@ if len(sys.argv)==1:
             except NameError:
                 pass
             raise ImportError()
-    except ImportError:
+    except ImportError,e:
+        print e
         try:
             cl.run()
         except EOFError:

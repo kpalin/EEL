@@ -22,6 +22,12 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.11.2.1  2005/05/03 08:22:52  kpalin
+ * Fixed crashes due to iterator invalidation for erase in deque.
+ *
+ * Revision 1.11  2005/03/22 13:17:22  kpalin
+ * Merged some fixes surfacing from testing the public version.
+ *
  * Revision 1.10  2005/03/22 12:29:50  kpalin
  * Flush the markov background context.
  *
@@ -69,6 +75,7 @@ PyObject *TFBShit::buildPySNPs()
   if(size!=realSize) {
     int rval=_PyTuple_Resize(&ret,realSize);
     assert(rval==0);
+    rval=0;
   }
   return ret;
 }
@@ -1043,11 +1050,9 @@ void TFBSscan::halfHistories()
   deque<deque<double> >::iterator Iter=this->history.begin();
   deque<deque<double> >::iterator compl_Iter=this->compl_history.begin();
   // Remove every second value
-  while(Iter!=this->history.end()) {
-    compl_Iter=this->compl_history.erase(compl_Iter);
-    compl_Iter++;
-    Iter=this->history.erase(Iter);
-    Iter++;
+  for(int i=0;i<this->history.size();i++) {
+    this->compl_history.erase(this->compl_history.begin()+i);
+    this->history.erase(this->history.begin()+i);
   }
   assert((before>>1)==this->history.size());
   assert(this->history.size()>0);
@@ -1116,8 +1121,49 @@ TFBSscan::TFBSscan(PyObject *mat,double cutoff)
   this->history.push_front( deque<double>(this->mat_length,0.0) );
   this->compl_history.push_front(deque<double>(this->mat_length,0.0));
 }
+
+void TFBSscan::doubleHistory()
+{
+  int hSize=this->history.size();
+  for(int i=0;i<hSize;i++) {
+    this->history.push_back(this->history[i]);
+  }
+
+  assert(hSize==this->compl_history.size());
+
+  for(int i=0;i<hSize;i++) {
+    this->compl_history.push_back(this->compl_history[i]);
+  }
+
+
+
+
+  // These range inserts are not good for you
+//   this->history.insert(this->history.end(),
+// 		       this->history.begin(),this->history.end());
+//   this->compl_history.insert(this->compl_history.end(),
+// 			     this->compl_history.begin(),this->compl_history.end());
+
+  // Neither are these 
+//   deque<deque<double> >::iterator hEnd=this->history.end();
+
+//   for(deque<deque<double> >::iterator hI=this->history.begin();
+//       hI<hEnd;hI++) {
+//     this->history.push_back(*hI);
+//   }
+
+//   deque<deque<double> >::iterator chEnd=this->compl_history.end();
+
+//   for(deque<deque<double> >::iterator chI=this->compl_history.begin();
+//       chI<chEnd;chI++) {
+//     this->compl_history.push_back(*chI);
+//   }
+
+
+
+}
   
-void TFBSscan::nextChar(char chr)
+void TFBSscan::nextChar(char const chr)
 {
 
   char *allels=getAllels(chr);
@@ -1126,16 +1172,13 @@ void TFBSscan::nextChar(char chr)
   if(allels==NULL) {
     this->nextACGT(chr);
   } else {
+    int newStart=this->history.size();
     for(int allel_p=0;allel_p<2;allel_p++) {
       //this->SNPs.push_back(SNPdat(chr,allels[allel_p],0));
-      int newStart;
       if(allel_p==0) {
-	newStart=this->history.size();
+	//newStart=this->history.size();
 
-	this->history.insert(this->history.end(),
-				this->history.begin(),this->history.end());
-	this->compl_history.insert(this->compl_history.end(),
-			this->compl_history.begin(),this->compl_history.end());
+	this->doubleHistory();
 	this->nextACGT(allels[allel_p],0,newStart);
       } else if(allel_p==1) {
 	this->nextACGT(allels[allel_p],newStart);
@@ -1150,7 +1193,7 @@ void TFBSscan::nextChar(char chr)
 }
 
 
-void TFBSscan::nextACGT(char chr,int fromCode,int toCode)
+void TFBSscan::nextACGT(char const chr,int fromCode,int toCode)
 {
   //printf("chr: %c fromCode: %d history.size(): %d\n",chr,fromCode,this->history.size());
   if(toCode<=fromCode) {
@@ -1161,14 +1204,14 @@ void TFBSscan::nextACGT(char chr,int fromCode,int toCode)
     printf("toCode: %d\n",toCode);
   }
 #endif
-  for(unsigned int i=fromCode;i<toCode;i++) {
+  for(int i=fromCode;i<toCode;i++) {
     this->nextACGTsingle(chr,i);
     //cout<<i<<endl;
   }
 
 }
 
-void TFBSscan::nextACGTsingle(char chr,int snpCode)
+void TFBSscan::nextACGTsingle(char const chr,int snpCode)
 {
   int nucleotide=-1,compl_nucleotide=-1;
 
@@ -1433,6 +1476,11 @@ vector<TFBShit*> TFBShelper::getMatches()
 #endif
 
   for(unsigned int matInd=0;matInd<this->matrixCount();matInd++) {
+    if(((unsigned int)this->matricies[matInd]->length())>this->seqPos()) {
+      continue;
+    }
+
+
     vector<double> WatsonScores=this->matricies[matInd]->WatsonScore();
     vector<double> CrickScores=this->matricies[matInd]->CrickScore();
     double scoreBound=this->matricies[matInd]->bound;
@@ -1568,7 +1616,7 @@ void TFBShelper::removeScannerHistories()
   unsigned int lookBackDist=0;
 
   // Longest matrix first
-  for(int i=this->matricies.size()-1;i>=0 && snpId<this->SNPs.size();i--) {
+  for(int i=this->matricies.size()-1;i>=0 && snpId<(int)this->SNPs.size();i--) {
     // Loop min(number of matricies, number of SNPs) times.
 
 
@@ -1576,10 +1624,10 @@ void TFBShelper::removeScannerHistories()
     
 
     // Furthest SNP first
-    while(snpId<this->SNPs.size() && this->SNPs[snpId].pos>(int)lookBackDist) {
+    while(snpId<(int)this->SNPs.size() && this->SNPs[snpId].pos>(int)lookBackDist) {
       snpId++;
     }
-    if(snpId<this->SNPs.size() && this->SNPs[snpId].pos==(int)lookBackDist) {
+    if(snpId<(int)this->SNPs.size() && this->SNPs[snpId].pos==(int)lookBackDist) {
       this->matricies[i]->halfHistories();
     }
   }
@@ -1589,8 +1637,32 @@ void TFBShelper::removeScannerHistories()
 
 }
 
+void TFBShelper::doubleBackground()
+{
 
-void TFBShelper::nextChar(char chr)
+  int pbSize=this->probBuffer.size();
+  int bgSize=this->bg.size();
+  for(int i=0;i<pbSize;i++) {
+    this->probBuffer.push_back(this->probBuffer[i]);
+  }
+
+  // g++ doesn't have anything against this, but since it doesn't work
+  // for this->bg I don't want to use it here either.
+  //this->probBuffer.insert(this->probBuffer.end(),
+  // this->probBuffer.begin(),this->probBuffer.end());
+
+  for(int i=0;i<bgSize;i++) {
+    this->bg.push_back(this->bg[i]);
+  }
+
+
+  // For some reason, G++ doesn't like this:
+
+  //  this->bg.insert(this->bg.end(),
+  //		  this->bg.begin(),this->bg.end());
+}
+
+void TFBShelper::nextChar(char const chr)
 {
   this->seqCount++;
 
@@ -1618,12 +1690,16 @@ void TFBShelper::nextChar(char chr)
 	deque<deque<double> >::iterator probIter=this->probBuffer.begin();
 	deque<matrix_bgObject>::iterator bgIter=this->bg.begin();
 	// Remove every second value
-	while(probIter!=this->probBuffer.end()) {
-	  probIter=this->probBuffer.erase(probIter);
-	  probIter++;
-	  bgIter=this->bg.erase(bgIter);
-	  bgIter++;
+	for(int i=0;i<this->probBuffer.size();i++) {
+	  this->probBuffer.erase(this->probBuffer.begin()+i);
+	  this->bg.erase(this->bg.begin()+i);
 	}
+// 	while(probIter!=this->probBuffer.end()) {
+// 	  probIter=this->probBuffer.erase(probIter);
+// 	  probIter++;
+// 	  bgIter=this->bg.erase(bgIter);
+// 	  bgIter++;
+// 	}
 
       }
       
@@ -1649,10 +1725,9 @@ void TFBShelper::nextChar(char chr)
       this->nextACGT(chr);
     } else {
       int newStart=this->probBuffer.size();
-      this->probBuffer.insert(this->probBuffer.end(),
-			      this->probBuffer.begin(),this->probBuffer.end());
-      this->bg.insert(this->bg.end(),
-		      this->bg.begin(),this->bg.end());
+
+      this->doubleBackground();
+
       for(int allel_p=0;allel_p<2;allel_p++) {
 	if(allel_p==0) {
 	  this->nextACGT(allels[allel_p],0,newStart);
@@ -1672,7 +1747,7 @@ void TFBShelper::nextChar(char chr)
 
 }
 
-void TFBShelper::nextACGT(char chr,unsigned int startFrom,unsigned int upTo)
+void TFBShelper::nextACGT(char const chr,unsigned int startFrom,unsigned int upTo)
 {
 
   if(upTo<=startFrom) {
@@ -1869,28 +1944,30 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
       continue;
     }
     
-
-    vector<TFBShit*> hits=scanner.getMatches();
-//     if(hits.size()>0) {
-//       printf("hits: %d pos=%d\n",hits.size(),scanner.seqPos());
-//     }
-    for(unsigned int i=0;i<hits.size();i++) {
-      PyObject *snps=hits[i]->buildPySNPs();
-      assert(PyTuple_Check(snps));
-      assert(ret);
-      addMatchWithKey(ret,hits[i]->mat->py_matrix,hits[i]->pos,hits[i]->strand,hits[i]->score,snps,hits[i]->minScore);
+    if(seq_i>=0) {  // Don't report matches overlapping the beginning of the sequence
+    
+      vector<TFBShit*> hits=scanner.getMatches();
+      //     if(hits.size()>0) {
+      //       printf("hits: %d pos=%d\n",hits.size(),scanner.seqPos());
+      //     }
+      for(unsigned int i=0;i<hits.size();i++) {
+	PyObject *snps=hits[i]->buildPySNPs();
+	assert(PyTuple_Check(snps));
+	assert(ret);
+	addMatchWithKey(ret,hits[i]->mat->py_matrix,hits[i]->pos,hits[i]->strand,hits[i]->score,snps,hits[i]->minScore);
 
 #ifndef NDEBUG
-      if((hits[i]->score-hits[i]->minScore)>1.0) {
-	char *str=PyString_AsString(PyObject_GetAttrString(hits[i]->mat->py_matrix,"name"));
+	if((hits[i]->score-hits[i]->minScore)>1.0) {
+	  char *str=PyString_AsString(PyObject_GetAttrString(hits[i]->mat->py_matrix,"name"));
 
-	printf("pos=%d %s score_delta=%g\n",hits[i]->pos,str,hits[i]->score-hits[i]->minScore);
-      }
+	  printf("pos=%d %s score_delta=%g\n",hits[i]->pos,str,hits[i]->score-hits[i]->minScore);
+	}
 #endif
-      delete hits[i];
-      hits[i]=NULL;
-      if(PyErr_Occurred()!=NULL) {
-	return NULL;
+	delete hits[i];
+	hits[i]=NULL;
+	if(PyErr_Occurred()!=NULL) {
+	  return NULL;
+	}
       }
     }
     

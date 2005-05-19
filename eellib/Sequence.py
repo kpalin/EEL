@@ -15,6 +15,12 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.8.2.1  2005/04/12 09:11:19  kpalin
+# Handles also the descriptions along with sequence names.
+#
+# Revision 1.8  2005/03/03 09:07:05  kpalin
+# Added handling for EMBL formated sequences. Not just FASTA.
+#
 # Revision 1.7  2005/01/07 13:41:25  kpalin
 # Works with py2exe. (windows executables)
 #
@@ -82,6 +88,7 @@ class Sequences:
     def __init__(self,filename=0):
         "reads seqences from file"
         self.__Seq={}
+        self.__Desc={}
         if filename:
             self.addSequence(filename)
 
@@ -128,7 +135,13 @@ class Sequences:
             line=line.strip()
             if line:
                 if line[0]=='>':
-                    name=string.split(line[1:].strip())[0]
+                    parts=line[1:].strip().split(" ",1)
+                    try:
+                        name,description=parts
+                    except ValueError:
+                        description=""
+                        name=parts[0]
+                    self.__Desc[name]=description
                     toGetValue[name]=1
                     self.__Seq[name]=StringIO()
                 else:
@@ -145,11 +158,15 @@ class Sequences:
             accession=accession.split(";")[0].split(",")[0]
             seq=[x for x in lines if x.strip()[:2]=='SQ']
             seq=seq[0]
-            seq="".join(seq.strip().split("\n")[1:])
+            seqParts=seq.strip().split("\n")
+            seq="".join(seqParts[1:])
+            description="XX".join(lines[:-1]+["\n"+seqParts[0]])
+            seqParts=None
         except IndexError:
             raise UnsupportedTypeException()
 
         seq=seq.translate(string.maketrans("",""),"/\n\r\t 0123456789")
+        self.__Desc[accession]=description
         self.__Seq[accession]=StringIO(seq)
 
         return [accession]
@@ -189,15 +206,16 @@ class Sequences:
 
     def __str__(self):
         """returns the names of the sequences"""
-        outs=""
-        for name in self.__Seq.keys():
-            outs+=name+"\n"
-        return outs
-        for name,seq in self.__Seq.items():
-            Ac,Cc,Gc,Tc=seq.count("A")+seq.count("a"),seq.count("C")+seq.count("c"),seq.count("G")+seq.count("g"),seq.count("T")+seq.count("t")
-            Nc=len(seq)-Ac-Tc-Cc-Gc
-            tot=float(len(seq))/100.0
-            outs+="%s\nLen A C G T Other= %d %4.2f %4.2f %4.2f %4.2f %4.2f\n\n"%(name,len(seq),Ac/tot,Cc/tot,Gc/tot,Tc/tot,Nc/tot)
+        return "\n".join(["%s : %s"%(name,self.describeShort(name)) for name in self.__Seq.keys()])
+##        outs=""
+##        for name in self.__Seq.keys():
+##            outs+=name+"\n"
+##        return outs
+##        for name,seq in self.__Seq.items():
+##            Ac,Cc,Gc,Tc=seq.count("A")+seq.count("a"),seq.count("C")+seq.count("c"),seq.count("G")+seq.count("g"),seq.count("T")+seq.count("t")
+##            Nc=len(seq)-Ac-Tc-Cc-Gc
+##            tot=float(len(seq))/100.0
+##            outs+="%s\nLen A C G T Other= %d %4.2f %4.2f %4.2f %4.2f %4.2f\n\n"%(name,len(seq),Ac/tot,Cc/tot,Gc/tot,Tc/tot,Nc/tot)
         return outs
 
 
@@ -232,3 +250,11 @@ class Sequences:
     def sequence(self,name):
         "Returns the DNA sequence of sequence name"
         return self[name]
+
+    def describe(self,name):
+        "Returns the description of the sequence"
+        return self.__Desc[name].strip()
+
+    def describeShort(self,name):
+        "Return 1 line description of the sequence"
+        return self.__Desc[name].split("\n")[0]

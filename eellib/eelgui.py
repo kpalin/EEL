@@ -2,6 +2,15 @@
 
 ##
 ## $Log$
+## Revision 1.4.2.2  2005/05/10 13:13:00  kpalin
+## Fixed the default directory thing. Now it should be in working order.
+##
+## Revision 1.4.2.1  2005/05/09 07:16:46  kpalin
+## Remember browsed directory and fixed button labeling.
+##
+## Revision 1.4  2005/03/22 13:17:13  kpalin
+## Merged some fixes surfacing from testing the public version.
+##
 ## Revision 1.3.2.1  2005/03/22 12:19:26  kpalin
 ## Fixed the problems that came up with testing.
 ##
@@ -28,7 +37,7 @@ import tkMessageBox
 from Tix import *
 #from Tkinter import *
 
-import os.path
+import os.path,os
 
 
 class alignUI(Frame):
@@ -61,7 +70,6 @@ class alignUI(Frame):
         if int(self.loadFile.get())>0:
             fname=self.siteFileName.get()
             try:
-                import os
                 if not os.access(fname,os.R_OK):
                     return 0
             except(ImportError,AttributeError):
@@ -164,7 +172,7 @@ class alignData(Frame):
 
         self._widgets["computed_radio"].grid(column=1,row=1,sticky="w")
 
-        self._widgets["load_radio"]=Radiobutton(self,name="load_radio",font=fontStr,text="Stored binding sites:",value="1",variable=self._parent.loadFile)
+        self._widgets["load_radio"]=Radiobutton(self,name="load_radio",font=fontStr,text="Saved binding sites:",value="1",variable=self._parent.loadFile)
 
         self._widgets["load_radio"].grid(column=1,row=2,sticky="w")
 
@@ -187,6 +195,7 @@ class alignData(Frame):
         fsboxStr=_self.tk.call(fdialStr,"subwidget","fsbox")
         
         _self.tk.call(fsboxStr,"configure","-pattern","*.gff")
+        _self.tk.call(fsboxStr,"configure","-directory",self._parent._parent.master.defaultDir)
         pass
 
 class alignCommand(Frame):
@@ -365,6 +374,7 @@ class _bgSelect(Frame):
         fsboxStr=_self.tk.call(fdialStr,"subwidget","fsbox")
         
         _self.tk.call(fsboxStr,"configure","-pattern","*.bg")
+        _self.tk.call(fsboxStr,"configure","-directory",self._parent._parent.master.defaultDir)
         #print repr(self._widgets["markov"].file_dialog())
         pass
 
@@ -459,10 +469,13 @@ class _bgFreq(Frame):
         return (a,c,g,t)
 
         
-class eelgui(Interface,tixgui):
+class eelGUI(Interface,tixgui):
     def __init__(self,*args,**keywd):
         Interface.__init__(self)
         tixgui.__init__(self,*args,**keywd)
+        # Give consistent default directory. Changes when user changes dir.
+        self.defaultDir=os.getcwd()
+
         self.a,self.c,self.g,self.t=0.25,0.25,0.25,0.25
 
   ## METHOD saveAlign_button:
@@ -475,7 +488,6 @@ class eelgui(Interface,tixgui):
         
             
         pass
-
 
   ## METHOD align_button:
   ## ~~~~~~
@@ -546,14 +558,14 @@ class eelgui(Interface,tixgui):
     def addAllSequences(self):
         filelist=self._widgets["sequences_pick"].subwidget("filelist").subwidget("listbox")
 
-        pattern=self._widgets["sequences_pick"].filter["value"]
-        basedir=os.path.dirname(pattern)
+        self.defaultDir=self._widgets["sequences_pick"]["directory"]
                 
         files=filelist.get(0,END)
-        self.addSequence([os.path.join(basedir,x) for x in files])
+        self.addSequence([os.path.join(self.defaultDir,x) for x in files])
         self.updateSequenceList()
 
     def addSequences(self,filename):
+        self.defaultDir=self._widgets["sequences_pick"]["directory"]
         self.addSequence([filename])
         self.updateSequenceList()
 
@@ -570,14 +582,16 @@ class eelgui(Interface,tixgui):
     def addAllMatrices(self):
         filelist=self._widgets["mat_pick"].subwidget("filelist").subwidget("listbox")
 
-        pattern=self._widgets["mat_pick"].filter["value"]
-        basedir=os.path.dirname(pattern)
+
+        self.defaultDir=self._widgets["mat_pick"]["directory"]
         
         files=filelist.get(0,END)
-        self.addMatrix([os.path.join(basedir,x) for x in files])
+        self.addMatrix([os.path.join(self.defaultDir,x) for x in files])
         self.updateMatrixList()
         
     def addMatrices(self,filename):
+        
+        self.defaultDir=self._widgets["mat_pick"]["directory"]
         self.addMatrix([filename])
         self.updateMatrixList()
 
@@ -610,7 +624,7 @@ class showAligns(Frame):
         
         self._widgets["buttonFrame"]=Frame(self)
 
-        self._widgets["button_OK"]=Button(self._widgets["buttonFrame"],name="button_OK",font=fontStr,text="OK",command=self.button_OK)
+        self._widgets["button_OK"]=Button(self._widgets["buttonFrame"],name="button_OK",font=fontStr,text="Done",command=self.button_OK)
         self._widgets["button_OK"].grid(column=3,row=1)
 
         self._widgets["button_Save"]=Button(self._widgets["buttonFrame"],name="button_Save",font=fontStr,text="Save human readable..",command=self.button_Save)
@@ -637,17 +651,25 @@ class showAligns(Frame):
     def button_Save(self):
         #self.save_w=Toplevel(self)
         #self.save_w.title("Save sites..")
-        self._widgets["saveBox"]=FileSelectDialog(self,command=self._parent.master.savealign)
-        self._widgets["saveBox"].fsbox.config(pattern="*.aln")
+        self._widgets["saveBox"]=FileSelectDialog(self,command=self.savealign_click)
+        self._widgets["saveBox"].fsbox.config(pattern="*.aln",directory=self._parent.master.defaultDir)
 
         self._widgets["saveBox"].popup()
-        
+
+
+    def savealign_click(self,*others):
+        self._parent.master.defaultDir=self._widgets["saveBox"].fsbox["directory"]
+        self._parent.master.savealign(*others)
+
+    def savealignGFF_click(self,*others):
+        self._parent.master.defaultDir=self._widgets["saveBox"].fsbox["directory"]
+        self._parent.master.savealignGFF(*others)
 
     def button_SaveGFF(self):
         #self.save_w=Toplevel(self)
         #self.save_w.title("Save sites..")
-        self._widgets["saveBox"]=FileSelectDialog(self,command=self._parent.master.savealignGFF)
-        self._widgets["saveBox"].fsbox.config(pattern="*.gff")
+        self._widgets["saveBox"]=FileSelectDialog(self,command=self.savealignGFF_click)
+        self._widgets["saveBox"].fsbox.config(pattern="*.gff",directory=self._parent.master.defaultDir)
 
         self._widgets["saveBox"].popup()
         
@@ -675,7 +697,7 @@ class showSites(Frame):
 
         self._widgets["buttonFrame"]=Frame(self)
 
-        self._widgets["button_OK"]=Button(self._widgets["buttonFrame"],name="button_OK",font=fontStr,text="OK",command=self.button_OK)
+        self._widgets["button_OK"]=Button(self._widgets["buttonFrame"],name="button_OK",font=fontStr,text="Done",command=self.button_OK)
         self._widgets["button_OK"].grid(column=2,row=1)
 
         self._widgets["button_Save"]=Button(self._widgets["buttonFrame"],name="button_Save",font=fontStr,text="Save..",command=self.button_Save)
@@ -694,6 +716,7 @@ class showSites(Frame):
         #self.save_w.title("Save sites..")
         self._widgets["saveBox"]=FileSelectDialog(self,command=self.saveSelect)
         self._widgets["saveBox"].fsbox.config(pattern="*.gff")
+        self._widgets["saveBox"].fsbox.config(directory=self._parent.master.defaultDir)
 
         self._widgets["saveBox"].popup()
         
@@ -701,10 +724,14 @@ class showSites(Frame):
         
 
     def saveSelect(self,fname):
+        self._parent.master.defaultDir=self._widgets["saveBox"].fsbox["directory"]
         self._parent.master.savematch(fname)
         
+
+
+
 if __name__ == '__main__':
   root = Tk()
-  o = eelgui(root)
+  o = eelGUI(root)
   o.pack(side=TOP, fill=BOTH, expand=1)
   root.mainloop()

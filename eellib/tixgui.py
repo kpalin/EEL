@@ -3,8 +3,20 @@
 
 ##
 ## $Log$
+## Revision 1.1.4.2  2005/05/10 13:13:00  kpalin
+## Fixed the default directory thing. Now it should be in working order.
+##
+## Revision 1.1.4.1  2005/05/09 07:17:08  kpalin
+## Fixed labeling etc.
+##
+## Revision 1.1  2005/01/12 13:34:55  kpalin
+## Added Tkinter/Tix Graphical user interface and command -no-gui to
+## avoid it.
+##
 ##
 
+
+import eelgui
 
 from Tkinter import *
 
@@ -34,11 +46,11 @@ class tixgui(Frame):
     self._widgets['matrices_button'].grid(column=2, row=2)
     self._widgets['getSites_button'] = Button(self, name='getSites_button', command=self.getSites_button, font=fontStr, text='Get Binding Sites',state="disabled")
     self._widgets['getSites_button'].grid(column=1, row=3)
-    self._widgets['saveSites_button'] = Button(self, name='saveSites_button', command=self.saveSites_button, font=fontStr, text='Show Sites',state="disabled")
+    self._widgets['saveSites_button'] = Button(self, name='saveSites_button', command=self.saveSites_button, font=fontStr, text='Show/save Sites',state="disabled")
     self._widgets['saveSites_button'].grid(column=2, row=3)
     self._widgets['align_button'] = Button(self, name='align_button', command=self.align_button, font=fontStr, text='Align Sites')
     self._widgets['align_button'].grid(column=1, row=4)
-    self._widgets['saveAlign_button'] = Button(self, name='saveAlign_button', command=self.saveAlign_button, font=fontStr, text='Show Alignments',state="disabled")
+    self._widgets['saveAlign_button'] = Button(self, name='saveAlign_button', command=self.saveAlign_button, font=fontStr, text='Show/save Alignments',state="disabled")
     self._widgets['saveAlign_button'].grid(column=2, row=4)
     ## Scroll commands
 
@@ -98,13 +110,13 @@ class tixgui(Frame):
     
     self.seq_w=Toplevel()
     frm=Frame(self.seq_w)
-    self._widgets["sequences_pick"]=FileSelectBox(self.seq_w,command=self.addSequences,pattern="*.fa")
+    self._widgets["sequences_pick"]=FileSelectBox(self.seq_w,command=self.addSequences,pattern="*.fa",directory=self.defaultDir)
     self._widgets["sequences_pick"].pack()
 
     frm2=Frame(frm)
 
     Button(frm2,text="All Sequences",command=self.addAllSequences).pack(side=LEFT,padx=5,pady=3)
-    Button(frm2,text="OK",command=self.seq_w.destroy).pack(side=LEFT,padx=5,pady=3)
+    Button(frm2,text="Done",command=self.seq_w.destroy).pack(side=LEFT,padx=5,pady=3)
     frm2.pack()
     frm.pack()
     pass
@@ -113,17 +125,16 @@ class tixgui(Frame):
   ## METHOD matrices_button:
   ## ~~~~~~
   def matrices_button(self):
-    self.mat_w=Tk()
-    _widgets={}
+    self.mat_w=Toplevel()
+    print "self.defaultDir",self.defaultDir
     frm=Frame(self.mat_w)
-
-    self._widgets["mat_pick"]=FileSelectBox(frm,command=self.addMatrices,pattern="*.pfm")
+    self._widgets["mat_pick"]=FileSelectBox(frm,command=self.addMatrices,pattern="*.pfm",directory=self.defaultDir)
     self._widgets["mat_pick"].pack()
 
     frm2=Frame(frm)
 
     Button(frm2,text="All matrices",command=self.addAllMatrices).pack(side=LEFT)
-    Button(frm2,text="OK",command=self.mat_w.destroy).pack(side=LEFT)
+    Button(frm2,text="Done",command=self.mat_w.destroy).pack(side=LEFT)
     frm2.pack()
     frm.pack()
     pass

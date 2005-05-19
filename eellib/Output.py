@@ -13,6 +13,16 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.20.2.2  2005/05/10 13:12:14  kpalin
+# Added a 3rd row for the alignment noting the aligned motif.
+#
+# Revision 1.20.2.1  2005/04/12 09:12:10  kpalin
+# Formatalign outputs also the description of the sequences, when
+# available.
+#
+# Revision 1.20  2005/03/03 09:04:59  kpalin
+# Even better output for SNP matching.
+#
 # Revision 1.19  2005/02/24 11:37:43  kpalin
 # Site annotations.
 #
@@ -301,16 +311,23 @@ def formatalign(alignment,seq=None):
 
             
         
-    def formatAlnSeq(xaln,yaln,xname,yname,xstart,ystart,linelen=60):
+    def formatAlnSeq(xaln,yaln,xname,yname,xstart,ystart,motifAln="",linelen=60):
         """Formats the DNA sequence alignment output"""
         outstr="Sequence 1: %s\nSequence 2: %s\n\n"%(xname,yname)
         n=len(xaln)
         xpos,ypos=xstart+1,ystart+1
         for i in range(0,n,linelen):
-            xline,yline=xaln[i:i+linelen],yaln[i:i+linelen]
-            outstr+="%7d : %s\n%7d : %s\n\n"%(xpos,xline,ypos,yline)
+            xline,yline,mline=xaln[i:i+linelen],yaln[i:i+linelen],motifAln[i:i+linelen]
+            outstr+="%7d : %s\n%7d : %s\n          %s\n\n"%(xpos,xline,ypos,yline,mline)
             xpos+=len(xline)-xline.count("-")
             ypos+=len(yline)-yline.count("-")
+##        n=len(xaln)
+##        xpos,ypos=xstart+1,ystart+1
+##        for i in range(0,n,linelen):
+##            xline,yline=xaln[i:i+linelen],yaln[i:i+linelen]
+##            outstr+="%7d : %s\n%7d : %s\n\n"%(xpos,xline,ypos,yline)
+##            xpos+=len(xline)-xline.count("-")
+##            ypos+=len(yline)-yline.count("-")
         return outstr
 
     outStrIO.write("### lambda=%g mu=%g nu=%g xi=%g Nucleotides per rotation=%g\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation))
@@ -321,6 +338,9 @@ def formatalign(alignment,seq=None):
     if seq and not (seq.has_key(xname) and seq.has_key(yname)):
         seq=None
 
+    if seq:
+        outStrIO.write("Sequence %s:\n%s\n\nSequence %s:\n%s\n"%(xname,seq.describe(xname),yname,seq.describe(yname)))
+        
     # goodAlign= [ (x,y,Score,Motif,(startX,endX),(startY,endY),Strand) ]
     for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
         if len(goodAlign)==0:
@@ -336,6 +356,7 @@ def formatalign(alignment,seq=None):
 
             xaln=""
             yaln=""
+            maln=""
             xadded=xstart
             yadded=ystart
 
@@ -348,10 +369,16 @@ def formatalign(alignment,seq=None):
                 y2add=yseq[yadded-ystart:as.beginY-1-ystart].lower()
                 x2add=xseq[xadded-xstart:as.beginX-1-xstart].lower()
                 #alnFmt="%%s%%-%ds%%s"%(max(len(y2add),len(x2add)))
-                alnFmt="%s%s%s"
+                #alnFmt="%s%s%s"
+                siteLen=as.endX-as.beginX+1
+                alnFmt="%%s%%s%%-%ds"%(siteLen)
+
+                assert(len(xseq[as.beginX-1-xstart:as.endX-xstart])==siteLen)
                 distYX,y2add,x2add=alignSeq(y2add,x2add,1,1)
                 yaln=alnFmt%(yaln,y2add,yseq[as.beginY-1-ystart:as.endY-ystart].upper())
                 xaln=alnFmt%(xaln,x2add,xseq[as.beginX-1-xstart:as.endX-xstart].upper())
+
+                maln=alnFmt%(maln," "*len(y2add),as.motif[:siteLen])
                 xadded,yadded=as.endX,as.endY
 
         if seq:
@@ -359,7 +386,7 @@ def formatalign(alignment,seq=None):
             yaln+=y2add
             xaln+=x2add
 
-            outStrIO.write("\n"+formatAlnSeq(xaln.replace(" ","-"),yaln.replace(" ","-"),xname,yname,xstart,ystart))
+            outStrIO.write("\n"+formatAlnSeq(xaln.replace(" ","-"),yaln.replace(" ","-"),xname,yname,xstart,ystart,maln))
             #outstr+="%s\n%s\n"%(xaln.replace(" ","-"),yaln.replace(" ","-"))
 
     outStrIO.write("### Alignment took %.1f CPU seconds.\n"%(alignment.secs_to_align))

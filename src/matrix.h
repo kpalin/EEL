@@ -1,5 +1,17 @@
 //
 // $Log$
+// Revision 1.3.2.3  2005/05/12 11:07:12  kpalin
+// Made matrix to compile.
+//
+// Revision 1.3.2.2  2005/05/09 07:38:02  kpalin
+// Fixed some half ready work.
+//
+// Revision 1.3.2.1  2005/05/09 07:29:10  kpalin
+// Reflecting few cleanups in _c_matrix.cc
+//
+// Revision 1.3  2005/03/03 09:01:59  kpalin
+// Presumably working with proper output.
+//
 // Revision 1.2  2005/02/25 09:28:35  kpalin
 // Few additions for the less inefficient scanner version.
 //
@@ -13,7 +25,13 @@
 #define LARGE_AFFY_DELTA 1.0
 #endif
 
+#if SIZEOF_LONG==4
 typedef unsigned long int bit32;
+#elif SIZEOF_INT==4
+typedef unsigned int bit32;
+#else
+#error "Don't know how to define 32-bit variable!"
+#endif
 
 struct __BGdataCPP {
   vector<unsigned long int> counts;
@@ -44,9 +62,11 @@ typedef struct {
 } matrix_bgObject;
 
 
+
 class TFBSscan {
   void nextACGTsingle(char chr,int snpCode);
-  void nextACGT(char chr,int fromCode=0,int toCode=0);
+  void doubleHistory();
+  void nextACGT(char const chr,int fc=0,int tc=-1);
 public:
   PyObject *py_matrix;  // Pointer to the matrix itself
   double bound;   // Cutoff
@@ -116,6 +136,8 @@ class TFBShelper {
   unsigned int seqCount;
 
 
+  void doubleBackground();
+  
   void nextACGT(char chr,unsigned int startFrom=0,unsigned int upTo=0);
   void removeScannerHistories();
 public:

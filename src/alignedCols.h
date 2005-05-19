@@ -4,6 +4,12 @@
 
 /*
  * $Log$
+ * Revision 1.2.2.1  2005/05/19 06:45:07  kpalin
+ * Added path for the alignedCols module import
+ *
+ * Revision 1.2  2005/02/24 11:37:29  kpalin
+ * Site annotations.
+ *
  * Revision 1.1  2004/07/30 12:11:07  kpalin
  * C api header file for alnColumn objects.
  *
@@ -57,7 +63,7 @@ static void **PyAln_API;
 static int
 import_alnCols(void)
 {
-  PyObject *module = PyImport_ImportModule("alignedCols");
+  PyObject *module = PyImport_ImportModule("eellib.alignedCols");
 
   if(module!=NULL) {
     PyObject *c_api_object=PyObject_GetAttrString(module,"_C_API");

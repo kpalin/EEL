@@ -11,6 +11,12 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.18.2.1  2005/05/09 07:12:52  kpalin
+##   Under development.
+##
+##   Revision 1.18  2005/03/02 13:31:43  kpalin
+##   One more working version.
+##
 ##   Revision 1.17  2005/01/14 13:45:21  kpalin
 ##   Better installation and added msvcp71.dll and msvcr71.dll for windows
 ##   installation.
@@ -50,7 +56,7 @@ print sys.argv
 common_compile_args=["-Wall"]
 if len(sys.argv)>1:
     if sys.argv[1]=='debug':
-        common_compile_args=["-O0","-fno-inline","-Wall","-g","-UNDEBUG","-DEXTRADEBUG","-DDEBUG_OUTPUT"]
+        common_compile_args=["-O0","-fno-inline","-Wall","-g","-UNDEBUG","-DEXTRADEBUG","-DDEBUG_OUTPUT","-DSUBOPTDEBUG"]
         print "Using debug settings"
         del sys.argv[1]
     elif sys.argv[1]=='profile':
@@ -97,7 +103,7 @@ if sys.platform=='win32':
     pass
 else:
     commonLibs.extend(["stdc++"])
-    common_compile_args.extend([r"-O3", r"-Wall"])
+    #common_compile_args.extend([r"-O3", r"-Wall"])
     try:
         import gzip
         print "Looks like you have zlib! (It's a bad thing if you don't)"
