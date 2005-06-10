@@ -36,6 +36,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.21  2005/05/19 07:57:18  kpalin
+ *  Merged some last minute fixes. Nasty.
+ *
  *  Revision 1.19.2.4  2005/04/25 08:08:52  kpalin
  *  Fixed border condition on suboptimal alignment. Now recomputes also
  *  the last site of the sequence.
@@ -1344,14 +1347,18 @@ int getSequences(matchlisttype *matchlist, string &firstSeqName,string &secondSe
     // Get first user given sequence name
     firstSeqName=string(firstSeq);
     if(matchlist->find(firstSeqName)==matchlist->end()) {
-      PyErr_SetString(PyExc_AttributeError,firstSeq);
+      char *errStr=(char*)malloc(512+firstSeqName.length());
+      sprintf(errStr,"No sites for 1st sequence (%s).",firstSeq);
+      PyErr_SetString(PyExc_AttributeError,errStr);
       return 0;
     }
     // Get second user given sequence name
     if(secondSeq) {
       secondSeqName=string(secondSeq);
       if(matchlist->find(secondSeqName)==matchlist->end()) {
-	PyErr_SetString(PyExc_AttributeError,secondSeq);
+	char *errStr=(char*)malloc(512+secondSeqName.length());
+	sprintf(errStr,"No sites for 2nd sequence (%s).",secondSeq);
+	PyErr_SetString(PyExc_AttributeError,errStr);
 	return 0;
       }
     } else {  //  if(!secondSeq)
