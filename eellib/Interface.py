@@ -9,6 +9,8 @@ import os,shutil
 from tempfile import mktemp
 import atexit
 from glob import glob
+from time import time
+
 
 import sys
 if sys.platform!='win32':
@@ -20,6 +22,10 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.29  2005/05/19 07:49:35  kpalin
+# Merged Waterman-Eggert style suboptimal alignments and
+# SNP matching.
+#
 # Revision 1.28.2.3  2005/05/09 07:14:07  kpalin
 # Catch exception with faulty savealignGFF
 #
@@ -131,6 +137,7 @@ def memFormat(value):
         return "%dGB"%(value/(1024*1024*1024))
 
 def timeFormat(value):
+    value=int(value)
     s="%ds"%(value%60)
     value/=60
     if value>0:
@@ -460,8 +467,10 @@ If you use '.' as filename the local data are aligned."""
             print "Matching Sequence.",seqnumber,"of",len(self.seq.getNames())
             self.__comp[name]={}
             try:
+                startTime=time()
                 self.__comp[name]=Matrix.getAllTFBS(self.seq.sequence(name),
                                                     bound,self.matlist,absCutoff)
+                endTime=time()
             except (OverflowError,ValueError): # Zero, Negative
                 print "Need positive threshold!"
                 return
@@ -470,7 +479,7 @@ If you use '.' as filename the local data are aligned."""
             try:
                 foundMatches=sum([len(x) for x in self.__comp[name].values()])
                 totalMatches+=foundMatches
-                print "Found %d matches\n"%(foundMatches)
+                print "Found %d matches in %s\n"%(foundMatches,timeFormat(endTime-startTime))
             except TypeError:
                 print "name=",name
                 print "self.__comp=",self.__comp
