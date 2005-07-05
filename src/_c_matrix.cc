@@ -12,9 +12,13 @@
 #include <math.h>
 #include <float.h>
 #include <algorithm>
+
+
 using namespace std;
 
 #include "matrix.h"
+#include "debugTools.h"
+
 
 #ifndef SEQ_BUFFER_SIZE
 #define SEQ_BUFFER_SIZE 15000000
@@ -22,6 +26,10 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.12  2005/05/19 07:49:42  kpalin
+ * Merged Waterman-Eggert style suboptimal alignments and
+ * SNP matching.
+ *
  * Revision 1.11.2.1  2005/05/03 08:22:52  kpalin
  * Fixed crashes due to iterator invalidation for erase in deque.
  *
@@ -60,16 +68,24 @@ PyObject *TFBShit::buildPySNPs()
   int size=this->sigGenotype.size();
   int realSize=0;
   PyObject *ret=PyTuple_New(size);
+  assert(ret);
+  assert(PyTuple_Check(ret));
+  printDebug("refcount(new snp tuple of size %d)=%d",size,getRefCount(ret));
+  assert(PyTuple_Size(ret)==0 || getRefCount(ret)==1);
 
   for(unsigned int i=0;i<this->sigGenotype.size();i++) {
     if(this->sigGenotype[i].allele!='N' || this->sigGenotype[i].scoreDif>LARGE_AFFY_DELTA) {
       PyObject *obj=this->sigGenotype[i].buildPySNP(this->mat->length());
+      assert(getRefCount(obj)==1);
 #ifndef NDEBUG
       assert(PyTuple_Check(obj));
       char *al=PyString_AsString(PyTuple_GetItem(obj,1));
       assert(*al=='A'||*al=='C'||*al=='G'||*al=='T'||*al=='N');
 #endif
       PyTuple_SetItem(ret,realSize++,obj);
+      printDebug("refcount(ret)=%d (after SetItem)",getRefCount(ret));
+      assert(getRefCount(obj)==1);
+
     }
   }
   if(size!=realSize) {
@@ -77,6 +93,9 @@ PyObject *TFBShit::buildPySNPs()
     assert(rval==0);
     rval=0;
   }
+  printDebug("refcount(ret tuple of size %d)=%d",PyTuple_Size(ret),getRefCount(ret));
+  assert(PyTuple_Size(ret)==0 || getRefCount(ret)==1);
+
   return ret;
 }
 
@@ -197,7 +216,15 @@ void addMatch(PyObject *dict,int const pos,char const strand,double const score,
 {
   assert(snps!=NULL);
   assert(dict!=NULL);
+  printDebug("refcount(snps of size %d)=%d",PyTuple_Size(snps),getRefCount(snps));
+  assert(PyTuple_Check(snps));
+  assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
   PyObject *hitKey=Py_BuildValue("(icO)",pos,strand,snps);
+  assert(getRefCount(hitKey)==1);
+
+  printDebug("refcount(snps of size %d)=%d",PyTuple_Size(snps),getRefCount(snps));
+  assert(PyTuple_Check(snps));
+  assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
 
   if(PyErr_Occurred()!=NULL) {
 #ifndef NDEBUG
@@ -209,7 +236,14 @@ void addMatch(PyObject *dict,int const pos,char const strand,double const score,
   assert(hitKey!=NULL);
   assert(PyTuple_Check(hitKey));
   assert(PyDict_Check(dict));
-  PyDict_SetItem(dict, hitKey,Py_BuildValue("(dd)",score,altScore));
+
+  PyObject *scoreT=Py_BuildValue("(dd)",score,altScore);
+  assert(getRefCount(scoreT)==1);
+  PyDict_SetItem(dict, hitKey,scoreT);
+  Py_DECREF(scoreT);
+  Py_DECREF(hitKey);
+  assert(getRefCount(hitKey)==1);
+  assert(getRefCount(scoreT)==1);
 
 }
 
@@ -217,11 +251,21 @@ void addMatch(PyObject *dict,int const pos,char const strand,double const score,
 void addMatchWithKey(PyObject *dict,PyObject *key,int const pos,char const strand,double const score,PyObject *snps,double const altScore)
 {
   PyObject *subDict;
+
+  assert(getRefCount(dict)==1);
   if(!PyMapping_HasKey(dict,key)) {
     subDict=PyDict_New();
+    printDebug("refcount(subDict)=%d",getRefCount(subDict));
+    assert(getRefCount(subDict)==1);
     PyDict_SetItem(dict,key,subDict);
+    Py_DECREF(subDict);
+    printDebug("refcount(subDict)=%d",getRefCount(subDict));
+    assert(getRefCount(subDict)==1);
+
   } else {
     subDict=PyDict_GetItem(dict,key);
+    printDebug("refcount(subDict)=%d",getRefCount(subDict));
+    assert(getRefCount(subDict)==1);
   }
   if(PyErr_Occurred()!=NULL) {
     return;
@@ -258,9 +302,7 @@ char bg_getNextChar(matrix_bgObject *self)
   char ret=0;
 
   if(self->buf_p>=self->bytes_read) {
-    if(self->strBuf) {
-      Py_DECREF(self->strBuf);
-    }
+    Py_XDECREF(self->strBuf);
     self->strBuf=PyObject_CallObject(self->py_read,self->py_readParam);
     self->bytes_read=PyObject_Size(self->strBuf);
     self->buf_p=0;
@@ -273,27 +315,27 @@ char bg_getNextChar(matrix_bgObject *self)
 }
 
 
-char bg_getChar(matrix_bgObject *self,int i)
-{
-  char ret=0,*ret_str=NULL;
-  PyObject *py_ret=NULL;
+// char bg_getChar(matrix_bgObject *self,int i)
+// {
+//   char ret=0,*ret_str=NULL;
+//   PyObject *py_ret=NULL;
 
-  py_ret=PySequence_GetItem(self->bgSample,i);
-  //py_ret=PySequence_GetSlice(self->bgSample,i,min(i+2,(int)self->sampleLen));
-  //py_ret=PyString_FromString("A");
+//   py_ret=PySequence_GetItem(self->bgSample,i);
+//   //py_ret=PySequence_GetSlice(self->bgSample,i,min(i+2,(int)self->sampleLen));
+//   //py_ret=PyString_FromString("A");
 
-  if(!py_ret) {
-    cout<<"Null item from sequence position "<<i<<endl;
-    return 0;
-  }
-  ret_str=PyString_AsString(py_ret);
-  ret=ret_str[0];
+//   if(!py_ret) {
+//     cout<<"Null item from sequence position "<<i<<endl;
+//     return 0;
+//   }
+//   ret_str=PyString_AsString(py_ret);
+//   ret=ret_str[0];
 
-  Py_DECREF(py_ret);
+//   Py_DECREF(py_ret);
 
-  return ret;
+//   return ret;
 
-}
+// }
 
 
 bit32 addNucleotideToGram(bit32 gram,char nucleotide, bit32 shiftMask)
@@ -462,7 +504,10 @@ bg_init(matrix_bgObject *self, PyObject *args, PyObject *kwds)
   if(PyGramCount_Check(self->bgSample)) {   //Given a tupple of grams
     int size=PySequence_Length(self->bgSample);
     for(int i=0;i<size;i++) {
-      int value=PyInt_AsLong(PySequence_GetItem(self->bgSample,i));
+      PyObject *pyValue=PySequence_GetItem(self->bgSample,i);
+      assert(pyValue);
+      int value=PyInt_AsLong(pyValue);
+      Py_DECREF(pyValue);
       self->CP->counts[i]=value;
       self->totalCounts+=value;
       self->CP->shortCounts[i>>2]+=value;
@@ -782,7 +827,10 @@ bg_giveCounts(matrix_bgObject *self)
   
   for(unsigned int i=0;i<=self->shiftMask;i++) {
     bitCodeToStr(gram,self->qgram,i);
-    PyMapping_SetItemString(ret,gram,PyInt_FromLong(self->CP->counts[i]));
+    PyObject *pyCnt=PyInt_FromLong(self->CP->counts[i]);
+    PyMapping_SetItemString(ret,gram,pyCnt);
+    assert(getRefCount(pyCnt)==2); 
+    Py_DECREF(pyCnt);
   }
 
   free(gram);
@@ -1662,9 +1710,13 @@ void TFBShelper::doubleBackground()
   //		  this->bg.begin(),this->bg.end());
 }
 
-void TFBShelper::nextChar(char const chr)
+void TFBShelper::nextChar(char chr)
 {
+
+
   this->seqCount++;
+
+
 
   for(unsigned int i=0;i<this->SNPs.size();i++) {
     this->SNPs[i].pos++;
@@ -1710,6 +1762,15 @@ void TFBShelper::nextChar(char const chr)
   
   
   char *allels=getAllels(chr);
+
+
+  if(allels && this->SNPs.size()>=(unsigned int)2*MAX_SNP_COUNT) {
+    // Safety for long stretch of SNPs. 
+    printf("Hitting MAX_SNP_COUNT on position %d.\n",this->seqCount);
+    allels=NULL;
+    chr='N';
+  }
+
   if(allels) {
     for(int allel_p=0;allel_p<2;allel_p++) {
       this->SNPs.push_back(SNPdat(chr,allels[allel_p],0));
@@ -1782,11 +1843,17 @@ vector<TFBSscan*> parseMatricies(int *count,PyObject *mats,PyObject *cutoffs,dou
     //assert(PySequence_Check(ret[i].py_matrix));
 
     if(cutoffs) {
-      bound=PyFloat_AsDouble(PyNumber_Float(PySequence_GetItem(cutoffs,i)));
+      PyObject *pyBoundNumber=PySequence_GetItem(cutoffs,i);
+      PyObject *pyBound=PyNumber_Float(pyBoundNumber);
+      bound=PyFloat_AsDouble(pyBound);
+      Py_DECREF(pyBoundNumber);
+      Py_DECREF(pyBound);
     } else {
       bound=cutoff;
     }
-    ret.push_back(new TFBSscan(PySequence_GetItem(mats,i),bound));
+    PyObject *pySeq=PySequence_GetItem(mats,i);
+    ret.push_back(new TFBSscan(pySeq,bound));
+    Py_XDECREF(pySeq);
 
 
     if(PyErr_Occurred()!=NULL) {
@@ -1925,7 +1992,14 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
 	break;
       case '>':
 	cerr<<"Encountered unexpectedly an another sequence!"<<endl;
-	PyDict_SetItem(ret,PyString_FromString("NEXT_SEQ"),PyLong_FromUnsignedLong(py_fileLikeTell(py_infile)));
+	// DECREFING??????
+	{
+	  PyObject *pyNextSeq=PyString_FromString("NEXT_SEQ");
+	  PyObject *pyFilePos=PyLong_FromUnsignedLong(py_fileLikeTell(py_infile));
+	  PyDict_SetItem(ret,pyNextSeq,pyFilePos);
+	  Py_DECREF(pyNextSeq);
+	  Py_DECREF(pyFilePos);
+	}
 	loop_status=loop_break;
 	break;
       default:
@@ -1952,7 +2026,9 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
       //     }
       for(unsigned int i=0;i<hits.size();i++) {
 	PyObject *snps=hits[i]->buildPySNPs();
+	printDebug("refcount(snps of size %d)=%d",PyTuple_Size(snps),getRefCount(snps));
 	assert(PyTuple_Check(snps));
+	assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
 	assert(ret);
 	addMatchWithKey(ret,hits[i]->mat->py_matrix,hits[i]->pos,hits[i]->strand,hits[i]->score,snps,hits[i]->minScore);
 
