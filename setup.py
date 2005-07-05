@@ -11,6 +11,10 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.19  2005/05/19 07:49:25  kpalin
+##   Merged Waterman-Eggert style suboptimal alignments and
+##   SNP matching.
+##
 ##   Revision 1.18.2.1  2005/05/09 07:12:52  kpalin
 ##   Under development.
 ##
@@ -62,6 +66,10 @@ if len(sys.argv)>1:
     elif sys.argv[1]=='profile':
         common_compile_args=["-pg"]
         print "Using profiling settings"
+        del sys.argv[1]
+    elif sys.argv[1]=='lite_debug':
+        common_compile_args=["-g","-Wall","-O0"]
+        print "Using light debug settings"
         del sys.argv[1]
 
 
@@ -130,7 +138,7 @@ else:
 modMatrix = Extension('eellib._c_matrix',
                     libraries = commonLibs,
                     sources = ['src/_c_matrix.cc'],
-                    extra_compile_args = common_compile_args+["-DSEQ_BUFFER_SIZE=5000000"],
+                    extra_compile_args = common_compile_args+["-DSEQ_BUFFER_SIZE=5000000","-DLARGE_AFFY_DELTA=1.0","-DMAX_SNP_COUNT=7"],
                     extra_link_args = [])
 
 
@@ -169,7 +177,7 @@ ext_modList= [modMatrix,modAlignedCols,modAlign,modDist]
 #ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
 
 setup (name = 'EEL',
-       version = '1.0',
+       version = '1.1',
        url = "http://www.cs.helsinki.fi/u/kpalin/",
        author = "Kimmo Palin, Matthias Berg",
        author_email = "kimmo.palin@helsinki.fi",
