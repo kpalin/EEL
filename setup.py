@@ -11,6 +11,9 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.20  2005/07/05 11:22:32  kpalin
+##   Cap on SNPs in _c_matrix extension.
+##
 ##   Revision 1.19  2005/05/19 07:49:25  kpalin
 ##   Merged Waterman-Eggert style suboptimal alignments and
 ##   SNP matching.
@@ -98,14 +101,16 @@ from glob import glob
 if sys.platform=='win32':
     try:
         import py2exe
-        SDKdir=r"C:\Program Files\Microsoft.NET\SDK\v1.1\Bin"
-        extra_data.append((r"tcl\tix8.1",[x for x in glob(r"C:\Python*\tcl\tix8.1\*") if x[-7:] not in ("bitmaps",".1\\pref")]))
-        extra_data.append((r"tcl\tix8.1\bitmaps",glob(r"C:\Python*\tcl\tix8.1\bitmaps\*")))
-        extra_data.append((r"tcl\tix8.1\pref",glob(r"C:\Python*\tcl\tix8.1\pref\*")))
-        extra_data.append((".",glob(r"C:\Python*\DLLs\tix*.dll")+[SDKdir+r"\msvcr71.dll",SDKdir+r"\msvcp71.dll"]))
+        SDKdir=r"C:\Windows\system32"
+        PythonDir=r"D:\Program Files\Python24\\"
+        
+        extra_data.append((r"tcl\tix8.1",[x for x in glob(PythonDir+r"\tcl\tix8.1\*") if x[-7:] not in ("bitmaps",".1\\pref")]))
+        extra_data.append((r"tcl\tix8.1\bitmaps",glob(PythonDir+r"\tcl\tix8.1\bitmaps\*")))
+        extra_data.append((r"tcl\tix8.1\pref",glob(PythonDir+r"\tcl\tix8.1\pref\*")))
+        extra_data.append((".",glob(PythonDir+r"\DLLs\tix*.dll")+[SDKdir+r"\msvcr71.dll",SDKdir+r"\msvcp71.dll"]))
     except ImportError:
         pass
-    common_compile_args.extend([r"/O2", r"/IC:\Program Files\Microsoft Platform SDK for Windows XP SP2\Include",\
+    common_compile_args.extend([r"/O2", r"/IC:\Program Files\Microsoft Visual Studio .NET\Vc7\include",\
                                 r"/IC:\Program Files\Microsoft Visual C++ Toolkit 2003\include"])
     alignCompileArgs.extend([r"/DHAS_NO_TRUNC"])
     pass
