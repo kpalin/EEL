@@ -28,11 +28,18 @@ void _printDfun(char *file, unsigned int line,char *fmt,...)
 
 #define printDebug(...) _printDfun(__FILE__,__LINE__,__VA_ARGS__)
 #else
-#define printDebug(...) ;
+
+void printDebug(char *fmt,...)
+{
+  return;
+}
 #endif
    
 //
 // $Log$
+// Revision 1.1  2005/07/07 08:24:38  kpalin
+// Assist functions for debugging.
+//
 //
 
 #endif

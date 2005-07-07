@@ -36,6 +36,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.22  2005/06/10 06:54:29  kpalin
+ *  More descriptive error messages
+ *
  *  Revision 1.21  2005/05/19 07:57:18  kpalin
  *  Merged some last minute fixes. Nasty.
  *
@@ -1227,7 +1230,10 @@ alignMemorySaveObject(align_AlignmentObject *self)
  	   prevGood->second < entry.value ){  // If new or improved
  	  matCoord eCoord={x,y};
 	  if(prevGood==maxses.end()) { // If new
-	    MS_res balg={entry.value,sCoord,eCoord};
+	    MS_res balg; // ={entry.value,sCoord,eCoord};
+	    balg.value=entry.value;
+	    balg.bgin=sCoord;
+	    balg.end=eCoord;
 	    localBestAligns.push(balg);
 	  }
  	  maxses[sCoord]=pair<matCoord,store> (eCoord,entry.value);
@@ -1278,7 +1284,10 @@ alignMemorySaveObject(align_AlignmentObject *self)
    assert(maxses.size()==localBestAligns.size());
    for(map<matCoord,pair<matCoord,store> >::iterator iter=maxses.begin();
        iter!=maxses.end();iter++) {
-     MS_res balg={iter->second.second,iter->first,iter->second.first};
+     MS_res balg; // ={iter->second.second,iter->first,iter->second.first};
+     balg.value=iter->second.second;
+     balg.bgin=iter->first;
+     balg.end=iter->second.first;
      self->CP->bestAligns.push(balg);
 
    }

@@ -26,6 +26,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.13  2005/07/05 11:22:01  kpalin
+ * A cap for number of SNP:s under observation. Avoids memory problems.
+ *
  * Revision 1.12  2005/05/19 07:49:42  kpalin
  * Merged Waterman-Eggert style suboptimal alignments and
  * SNP matching.
@@ -450,6 +453,16 @@ int PyGramCount_Check(PyObject *self)
   return PyTuple_Check(self)||PyList_Check(self);
 }
 
+unsigned int posround(double val)
+{ 
+  int trunc_val=(int)val;
+
+  if((val-trunc_val)>0.5) {
+    trunc_val++;
+  }
+  return trunc_val;
+}
+
 extern "C" int
 bg_init(matrix_bgObject *self, PyObject *args, PyObject *kwds)
 {
@@ -468,7 +481,7 @@ bg_init(matrix_bgObject *self, PyObject *args, PyObject *kwds)
     int size=PySequence_Length(self->bgSample);
     double db_qgram=log((double)size)/log(4.0);
 
-    self->qgram=(int)round(db_qgram);
+    self->qgram=(int)posround(db_qgram);
     self->order=self->qgram-1;
     if(fabs(self->qgram-db_qgram)>0.1) {
       char errStr[256];
