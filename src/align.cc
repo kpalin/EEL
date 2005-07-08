@@ -36,6 +36,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.23  2005/07/07 09:24:10  kpalin
+ *  Fixed some compilation problems with Visual C++
+ *
  *  Revision 1.22  2005/06/10 06:54:29  kpalin
  *  More descriptive error messages
  *
@@ -293,14 +296,19 @@ int parseLine(string const &line,triple &tri,string &sequence)
     }
 
   //  if (! (help >> TF) || ! (help >> TF))
-  if (! getline(help,TF,'\t') || ! getline(help,TF,'\t'))
-    {
+  getline(help,junk,'\t');
+  getline(help,TF,'\t');
+
+  //if (! getline(help,TF,'\t') || ! getline(help,TF,'\t'))
+  if(junk.empty()||TF.empty()){
 #ifdef ALIGN_OUTPUT
       cerr<<"wrong format in feature part:"<<endl
 	  <<line<<endl;
 #endif
       return 0;
       }
+  junk.clear();
+
   if (! (help >> pos))
     {
 #ifdef ALIGN_OUTPUT
