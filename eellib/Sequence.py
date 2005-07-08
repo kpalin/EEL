@@ -15,6 +15,10 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.9  2005/05/19 07:49:35  kpalin
+# Merged Waterman-Eggert style suboptimal alignments and
+# SNP matching.
+#
 # Revision 1.8.2.1  2005/04/12 09:11:19  kpalin
 # Handles also the descriptions along with sequence names.
 #
@@ -176,15 +180,19 @@ class Sequences:
     def addSequence(self, filename):
         "adds Sequences from file"
         try:
-            try:
-                File=GzipFile(filename,'r')
-                File.read(1)
-                File.seek(0)
-            except (NameError,IOError):
-                File=open(filename,"r")
-            name=''
-            fileStr=File.read()
+            # Slightly cludgy system to make it work with named pipes (FIFOs)
+            # Can only read and open once and can't seek at all.
+            File=open(filename,"r")
+            fdata=File.read()
             File.close()
+            try:
+                GZFile=GzipFile(None,fileobj=StringIO(fdata))
+                fileStr=GZFile.read()
+            except (NameError,IOError):
+                # NameError for missing GzipFile class
+                # IOError for uncompressed data
+                fileStr=fdata
+            name=''
             if fileStr:
                 if fileStr[0]=='>':
                     toGetValue=self.readFasta(fileStr)
@@ -199,8 +207,12 @@ class Sequences:
 
 
             print filename, "added" 
-        except IOError, (errno, strerror):
-            print "I/O error(%s): %s" % (errno, strerror)
+        except IOError, e:
+            if type(e)==type((1,2)):
+                (errno, strerror)=e
+                print "I/O error(%s): %s" % (errno, strerror)
+            else:
+                print e
         except UnsupportedTypeException:
             print filename,"in not in supported format!"
 
