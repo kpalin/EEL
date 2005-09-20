@@ -36,6 +36,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.24  2005/07/08 07:55:47  kpalin
+ *  Added few linebreaks to make debugging easier.
+ *
  *  Revision 1.23  2005/07/07 09:24:10  kpalin
  *  Fixed some compilation problems with Visual C++
  *
@@ -952,7 +955,11 @@ inline matrixentry computeMatrixEntry(align_AlignmentObject *self,int const sx,i
       }
       
       assert(finite(help));
+#ifdef NO_SCORE_DECREASE
+      if(help>(double)self->CP->matrix[xx%slizeWidth][yy].value && help>entry.value){
+#else
       if(help>entry.value){
+#endif
 	entry.value= (store)help;
 	entry.x=xx;
 	entry.y=yy;
