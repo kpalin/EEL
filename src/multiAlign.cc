@@ -21,7 +21,11 @@
 #include <map>
 #include <algorithm>
 #include <queue>
+
 #include <limits>
+
+#include "alignPenalties.h"
+
 
 
 #include "alignedCols.h"
@@ -32,6 +36,9 @@
 /*
  *
  * $Log$
+ * Revision 1.9  2005/03/22 13:24:02  kpalin
+ * Totally different approach. Doing multi-D matrix.
+ *
  * Revision 1.8  2005/02/09 11:08:09  kpalin
  * Not really working version. As all others before this too.
  *
@@ -119,6 +126,7 @@ int toSite(siteCode code)
 
 PointerVec::PointerVec(Matrix *mat,Inputs *indata)
 {
+  this->limiterPvec=NULL;
   limData=indata;
   m=mat->dims();
   this->myMat=mat;
@@ -126,53 +134,235 @@ PointerVec::PointerVec(Matrix *mat,Inputs *indata)
   this->matrix_p.resize(this->m,0);
 
   // Not sure whether we'll need this.
-  this->p.resize(this->m,-1);
+
+  //this->p.resize(this->m,0);
+  while(!this->allHasFactor()) {
+    (*this)++;
+  }
+
   ok=1;
 
+
 }
 
 
-int PointerVec::difference(PointerVec const &other,int i) const {
+int PointerVec::difference(PointerVec const &other,int i) const  {
   assert(limData!=NULL);
   int otherRight=(int)(other.getSite(i).pos-this->getSite(i).epos);
-  int otherLeft=(int)(this->getSite(i).pos-other.getSite(i).epos);
-  return max(otherRight,otherLeft);
+  //int otherLeft=(int)(this->getSite(i).pos-other.getSite(i).epos);
+  return otherRight-1; //max(otherRight,otherLeft);
 }
 
 
 
-const PointerVec& PointerVec::operator--(int dummy)
+// TODO:: THIS MUST BE MADE MUCH MUCH MORE EFFICIENT
+// Return true if pointer is valid with respect to limiterPvec
+bool PointerVec::decFirst()
 {
-  uint i=0;
-  posind ero=-1;
+  bool validBacker=1;
 
   do {
-    ero=difference(i);
-    if( p[i]>0 &&
-	( limData==NULL || bound[i]==1 || // Bound decreasing to box within limitBP
-	  difference(i)<limitBP) ) {
-      p[i]--;
-      matrix_p-=(*dimFactors)[i];
-      // 	cout<<"("<<i<<":"<<ero<<")"<<flush;
-      break;
-    } else{
-      int delta_p=max((dimlen[i]-1)-p[i]-1,0);
-      p[i]+=delta_p;
-      matrix_p+=delta_p*(*dimFactors)[i];
-      i++;
-    } 
-    assert(i==m|| p[i]>=0 );
-    assert(i==m|| p[i]<dimlen[i]);
-  } while(i<m);
+    this->matrix_p[0]--;
+  } while(this->matrix_p[0]>=0 && !this->allHasFactor());
 
-  //this->output();
-  if(i>=m) {
-    cout<<"Invalidating";this->output();cout<<endl;
-    ok=0;
+  if(this->matrix_p[0]<0) {
+    this->ok=0;
   }
-  assert(matrix_p==dataPoint());
+  if(!this->ok || this->difference(*this->limiterPvec,0)<0) {
+    validBacker=0;
+    return validBacker;
+  }
 
-  return *this;
+
+  motifCode tfid=this->getMotif();
+
+  for(uint i=1;i<this->m;i++) {
+    this->matrix_p[i]=0;
+    while(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfid) && 
+	  this->difference(*this->limiterPvec,i)>=0) {
+      this->matrix_p[i]++;
+    }
+    if(this->matrix_p[i]>0) {  
+      this->matrix_p[i]--;
+    }
+    int dist=this->difference(*this->limiterPvec,i);
+//     if(dist>this->limitBP) {
+//       this->ok=0;
+//       validBacker=0;
+//     }
+    if(dist>this->limitBP || dist<0) {
+      validBacker=0;
+    }
+
+  }
+
+  return validBacker;
+} 
+
+bool PointerVec::checkLT()
+{
+  if(limiterPvec && !(*this<=*limiterPvec)) {
+    cout<<"###"<<endl;
+    
+    this->output();
+    limiterPvec->output();
+    for(uint i=0; i<this->m;i++) {
+      printf("\n%d: %g <=? %g",i,this->getSite(i).epos,limiterPvec->getSite(i).pos);
+    }
+    cout<<"###"<<endl;
+    return 0;
+  }
+  return 1;
+}
+
+// procedure nextLookBack():
+// Begin
+//   
+
+
+void PointerVec::nextLookBack() 
+{
+  seqCode seq;
+  bool done=0;
+
+
+  motifCode tfid=this->getMotif();
+  for(seq=this->m-1;seq>0;seq--) {
+    this->matrix_p[seq]--;
+    if(this->matrix_p[seq]>=0 && this->difference(*this->limiterPvec,seq)<=this->limitBP) {
+      return;
+    } else {
+	// Mentiin liian kauas rajoittajasta tai alun etupuolelle
+
+      this->matrix_p[seq]=max(0,this->matrix_p[seq]);
+
+      // Scan till the limiter
+      while(this->matrix_p[seq]<this->myMat->countTFinSeq(seq,tfid) && this->difference(*this->limiterPvec,seq)>0) {
+	this->matrix_p[seq]++;
+      }
+      
+      // Oops! Went too far.
+      this->matrix_p[seq]--;
+      
+      if(this->matrix_p[seq]<0 ||
+	 this->difference(*this->limiterPvec,seq)>this->limitBP) {
+	this->decFirst();
+	return;
+      }
+    }
+  }
+
+   if(seq==0) {
+     while(!this->decFirst() && this->ok);
+   }
+  if(this->matrix_p[0]<0) {
+    this->ok=0;
+  }
+
+
+  assert(!ok || checkLT());
+
+
+#ifndef NDEBUG
+   if(ok) {
+     motifCode tfid=this->getMotif();
+
+     assert(this->matrix_p[0]<this->myMat->dims(0));
+     for(uint i=1;i<this->m;i++) {
+       cout<<this->matrix_p[i]<<"<<"<<this->myMat->countTFinSeq(i,tfid)<<" "<<this->limData->factor(tfid)<<endl;
+       assert(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfid));
+     }
+   }
+#endif
+
+}
+
+// void PointerVec::nextLookBack() 
+// {
+//   seqCode seq;
+//   bool done=0;
+
+
+//   motifCode tfid=this->getMotif();
+//   for(seq=this->m-1;seq>0;seq--) {
+//     if(this->matrix_p[seq]>0 && this->difference(*this->limiterPvec,seq)<=this->limitBP) {
+//       this->matrix_p[seq]--;
+//       break;
+//     } else {
+//       // Start from the beginning of the dimension
+//       this->matrix_p[seq]=0;
+      
+//       // Scan till the limiter
+//       while(this->matrix_p[seq]<this->myMat->countTFinSeq(seq,tfid) && this->difference(*this->limiterPvec,seq)>0) {
+// 	this->matrix_p[seq]++;
+//       }
+      
+// 	// Oops! Went too far.
+//       this->matrix_p[seq]--;
+      
+//       if(this->matrix_p[seq]<0) {
+// 	this->decFirst();
+// 	return;
+//       }
+//     }
+//   }
+
+//   if(seq==0) {
+//     this->decFirst();
+//   }
+//   if(this->matrix_p[0]<0) {
+//     this->ok=0;
+//   }
+
+
+//   assert(!ok || checkLT());
+
+
+// #ifndef NDEBUG
+//    if(ok) {
+//      motifCode tfid=this->getMotif();
+
+//      assert(this->matrix_p[0]<this->myMat->dims(0));
+//      for(uint i=1;i<this->m;i++) {
+//        cout<<this->matrix_p[i]<<"<<"<<this->myMat->countTFinSeq(i,tfid)<<" "<<this->limData->factor(tfid)<<endl;
+//        assert(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfid));
+//      }
+//    }
+// #endif
+
+// }
+
+bool PointerVec::operator<=(const PointerVec &other) const
+{
+  bool lt=1;
+
+  for(uint i=0;lt && i<this->m;i++) {
+    //    lt=lt&&(this->matrix_p[i]<=other.matrix_p[i]);
+    lt=lt&&(this->getSite(i).epos<=other.getSite(i).pos);
+  }
+  return lt;
+}
+
+int PointerVec::operator[](int i) const
+{
+  int out;
+  if(i==0) {
+    out=this->matrix_p[i];
+  } else{
+    out=this->myMat->by_seq_tf_pos(i,this->getMotif(),this->matrix_p[i]); 
+  }
+  return out;
+}
+
+
+// Return zero if one of the sequences do not have this factor.
+int PointerVec::allHasFactor()
+{
+  int sites=1;
+  for(uint i=1;i<this->m;i++) 
+    sites*=this->myMat->countTFinSeq(i,this->getMotif());
+
+  return sites;
 }
 
 const PointerVec& PointerVec::operator++(int dummy)
@@ -180,7 +370,7 @@ const PointerVec& PointerVec::operator++(int dummy)
   seqCode seq;
 
   for(seq=this->m-1;seq>0;seq--) {
-    int sites=this->counTFinSeq(seq,this->limData->getSite(this->matrix_p[0],0));
+    int sites=this->myMat->countTFinSeq(seq,this->getMotif());
     if(this->matrix_p[seq]<(sites-1)) {
       this->matrix_p[seq]++;
       break;
@@ -188,12 +378,32 @@ const PointerVec& PointerVec::operator++(int dummy)
       this->matrix_p[seq]=0;
     }
   }
-  if(seq==0 && this->matrix_p[0]<(this->limData->sequenceLens(0)-1)) {
-    this->matrix_p[0]++;
-  } else {
-    this->matrix_p[0]=-1;
+  if(seq==0) {
+    do {
+      this->matrix_p[0]++;
+    } while(this->matrix_p[0]<this->myMat->dims(0) && !this->allHasFactor());
+    
+    if(this->matrix_p[0]<0 || this->matrix_p[0]>=this->myMat->dims(0)) {
+      this->matrix_p[0]=-1;
+      ok=0;
+    }
+  }
+
+  if(this->matrix_p[0]==-1 || this->matrix_p[0]==this->myMat->dims(0)) {
     ok=0;
   }
+
+#ifndef NDEBUG
+  else {
+    motifCode tfid=this->getMotif();
+    assert(this->matrix_p[0]<this->myMat->dims(0));
+    for(uint i=1;i<this->m;i++) {
+      cout<<this->matrix_p[i]<<"<"<<this->myMat->countTFinSeq(i,tfid)<<" "<<this->limData->factor(tfid)<<endl;
+      assert(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfid));
+    }
+  }
+#endif
+
   return *this;
 }
 
@@ -201,19 +411,25 @@ const PointerVec& PointerVec::operator++(int dummy)
 // Return either *vector<void*>  or *vector<matrixentry> for the last level
 void * Matrix::allocateData(seqCode level,motifCode mot)
 {
+  int const TFcount=this->countTFinSeq(level,mot);
+
+
   if(level<(this->dim-1)) {
     vector<void*> *curDat=new vector<void*>;
 
-    curDat->reserve(this->countTFinSeq(level,mot));
-    for(int i=0;i<curDat->size();i++) {
+    curDat->reserve(TFcount);
+
+
+    for(uint i=0;i<TFcount;i++) {
       curDat->push_back(this->allocateData(level+1,mot));
     }
     this->matSize+=sizeof(void*);
     return (void*)curDat;
   } else if(level==(this->dim-1)) {
     vector<matrixentry> *curDat=new vector<matrixentry>;
+    this->cells+=TFcount;
 
-    curDat->resize(this->countTFinSeq(level,mot));
+    curDat->resize(TFcount);
 
     this->matSize+=sizeof(matrixentry)*curDat->size();
     return (void*)curDat;
@@ -238,6 +454,8 @@ Matrix::Matrix(Inputs *indata)
 
   try {
     // Allocate the helpers for the sparse matrix
+
+    // TODO: Get rid of TFs that do not occur in some of the sequences.
     this->tfIndex.resize(indata->sequences());
     for(seqCode seq=0;seq<indata->sequences();seq++) {
       this->tfIndex[seq].resize(indata->factors());
@@ -247,13 +465,27 @@ Matrix::Matrix(Inputs *indata)
       }
 
     }
+#ifndef NDEBUG
+    for(int i=0;i<indata->factors();i++) {
+      int motifCount=countTFinSeq(0,i);
+      cout<<i<<" "<<indata->factor(i)<<" "<<motifCount<<flush;
+      for(int j=1;j<indata->sequences();j++) {
+	//assert(motifCount==countTFinSeq(j,i));
+	motifCount=countTFinSeq(j,i);
+	cout<<" "<<motifCount<<flush;
+      }
+      cout<<endl;
+    }
+#endif
+
     // Allocate the sparse matrix itself
 
     // First dimension straight away.
     this->data.reserve(this->dimLen[0]);
+    this->cells=0; //this->dimLen[0];
 
     for(posCode basePos=0;basePos<this->dimLen[0];basePos++) {
-      motifCode baseMot=indata->getSite(basePos,0);
+      motifCode baseMot=indata->getSite(basePos,0).ID;
       this->data.push_back(this->allocateData(1,baseMot));
     }
   }
@@ -265,7 +497,9 @@ Matrix::Matrix(Inputs *indata)
 
 PointerVec Matrix::getOrigin()
 {
-  return PointerVec(this,this->indata);
+  PointerVec *orig= new  PointerVec(this,this->indata);
+
+  return *orig;
 }
 
 PointerVec Matrix::argMax()
@@ -275,6 +509,7 @@ PointerVec Matrix::argMax()
   store maxval=0.0;
 
   while(p.isOK()) {
+    assert(p.getSite(0).ID==p.getSite(1).ID);
     if(this->getValue(p).getValue()>maxval) {
       for(backer=this->getValue(p).getBacktraceP();
 	  backer->isOK() && this->getValue(*backer).getValue()>=0.0;
@@ -306,9 +541,19 @@ matrixentry &Matrix::getValue(PointerVec const &p)
 
 matrixentry *Matrix::getValueP(PointerVec const &p)
 {
-  int pos=p.getMatrixCoord();
+  vector<void*> *d=&this->data;
+  //void *d=&this->data;
 
-  return &data[pos];
+  for(int dimI=0;dimI<(this->dim-1);dimI++) {
+    int mat_ind=p.matrixIndex(dimI);
+    //d=((vector<void*>*)d)->at(mat_ind);
+    //d=(vector<void*>*)d[mat_ind];
+    d=(vector<void*>*)d->at(mat_ind);
+  }
+
+  matrixentry *ret=&((vector<matrixentry>*)d)->at(p.matrixIndex(this->dim-1));
+
+  return ret;
 }
 
 void Matrix::setValue(PointerVec &p,matrixentry &val)
@@ -347,7 +592,7 @@ Inputs::Inputs(PyObject *inpSeq)
   }
   Py_DECREF(inpIter);
   
-  map<string,uint>::iterator seqName=sequenceNames();
+  map<string,motifCode>::iterator seqName=sequenceNames();
   for(int i=0;i<sequences();i++) {
     cout<<seqName->first<<",";
     seqName++;
@@ -384,7 +629,7 @@ int Inputs::addSite(PyObject *site)
   string &seqName=*(new string(PyString_AsString(PySequence_GetItem(site,0))));
   if(PyErr_Occurred()) return 0;
   
-  map<string,uint>::iterator seq_iter=SEQ_to_id.find(seqName);
+  map<string,motifCode>::iterator seq_iter=SEQ_to_id.find(seqName);
 
   if(seq_iter==SEQ_to_id.end()) {
     seqNames.push_back(seqName);
@@ -399,7 +644,7 @@ int Inputs::addSite(PyObject *site)
   string &TFname=*(new string(PyString_AsString(PySequence_GetItem(site,2))));
   if(PyErr_Occurred()) return 0;
   
-  map<string,uint>::iterator id_iter=TF_to_id.find(TFname);
+  map<string,motifCode>::iterator id_iter=TF_to_id.find(TFname);
 
   if(id_iter==TF_to_id.end()) {
     factorNames.push_back(TFname);
@@ -413,7 +658,6 @@ int Inputs::addSite(PyObject *site)
   // Create a struct for the new site
   id_triple new_site;
 
-  new_site.ID=tf_id;
   new_site.pos=(posind)PyInt_AsLong(PyNumber_Int(PySequence_GetItem(site,3)));
   if(PyErr_Occurred()) return 0;
   new_site.epos=(posind)PyInt_AsLong(PyNumber_Int(PySequence_GetItem(site,4)));
@@ -424,6 +668,8 @@ int Inputs::addSite(PyObject *site)
   char *strand_p=PyString_AsString(PySequence_GetItem(site,6));
   if(PyErr_Occurred()) return 0;
   new_site.strand=(char)strand_p[0];
+
+  new_site.ID=2*tf_id+(new_site.strand=='+'?0:1);
 
 
   // Finally add the new site to the input object
@@ -494,9 +740,16 @@ void PointerVec::output()
 {
   if(this->isOK()) {
    // cout<<"valid("<<m<<"): ";
+    cout<<"(";
     for(uint i=0;i<m;i++) {
-      cout<<p[i]<<",";
-    } } else { cout<<"Invalid!"; }
+      cout<<this->operator[](i);
+      if(i<(m-1)) {
+	 cout<<",";
+      } else {
+	cout<<"["<<this->limData->factor(this->getMotif())<<this->getSite(0).strand<<"])";
+      }
+    } 
+  } else { cout<<"Invalid)"; }
   //  cout<<endl; 
   cout<<flush;
 }
@@ -504,12 +757,13 @@ void PointerVec::output()
 
 void PointerVec::setValue(vector<int> &np)
 {
-  p=np;
+  // TODO: Something for this. Remove or fix.
+  //p=np;
 
 #ifndef NDEBUG
-  for(int i=0;i<m;i++) {
-    assert(p[i]<myMat.dims(i));
-    assert(p[i]>=0);
+  for(uint i=0;i<m;i++) {
+    //assert(p[i]<myMat->dims(i));
+    //assert(p[i]>=0);
   }
 #endif
 
@@ -519,13 +773,56 @@ void PointerVec::setValue(vector<int> &np)
 // Assist functions.
 store PointerVec::getValue() const { return myMat->getValueP(*this)->getValue(); }
 vector<id_triple>  PointerVec::getSites() { return limData->getSites(*this); }
-id_triple PointerVec::getSite(int i) const { return limData->getSite(this->p[i],i); }
+motifCode PointerVec::getMotif() const {  return this->limData->getSite(this->matrix_p[0],0).ID; }
 
+id_triple PointerVec::getSite(int i) const 
+{ 
+  assert(this->isOK());
+  if(i==0) {
+    return limData->getSite(this->matrix_p[i],i);
+  } else {
+    return limData->getSite(myMat->by_seq_tf_pos(i,this->getMotif(),this->matrix_p[i]),i); 
+  }
+}
+
+
+void PointerVec::setLimit(PointerVec &p,int limitbp)
+{
+  this->limitBP=limitbp;
+
+  if(this->limiterPvec) {
+    delete limiterPvec;
+  }
+  this->limiterPvec= new PointerVec(p);
+
+  while(this->matrix_p[0]>=0 && !this->decFirst());
+
+	//	(this->difference(*this->limiterPvec,0)<0 || this->difference(*this->limiterPvec,0)>this->limitBP)
+
+
+  if(this->matrix_p[0]<0) {
+    this->ok=0;
+    return;
+  }
+
+
+  for(uint i=1;i<this->m;i++) {
+    while(this->ok && this->difference(*this->limiterPvec,i)<0) {
+      matrix_p[i]--;
+      if(matrix_p[i]<=0) {
+	ok=0;
+      }
+    }
+  }
+
+  assert(!ok || this->checkLT());
+
+}
 
 // Return true, if the sites are the same in all dimensions.
 int PointerVec::allSame() 
 {
-  uint ID=this->getSite(0).ID;
+  motifCode ID=this->getSite(0).ID;
 
   for(uint i=1;i<m;i++) {
     if(this->getSite(i).ID!=ID) {
@@ -536,27 +833,53 @@ int PointerVec::allSame()
 }
 
 
+// // TODO: These penalty functions together with the ones in align.cc must go to one place.
 
-//returns the square of a mod 2 PI double
-inline double squaremodpi(double val)
-{
-  double f=fabs(val);
-  f-=2*PI*round(f/(2*PI));
+// //returns the square of a min_k(val-k2PI,k2PI-val)
+// inline double squaremodpi(double val)
+// {
+//   double f=fabs(val);
+//   f-=2*PI*trunc(f/(2*PI));
+//   if(f>PI) {
+//     f=2*PI-f;
+//   }
+// #ifndef NDEBUG
+//   double altF=(PI-f);
+//   altF-=2*PI*trunc(altF/(2*PI));  // altF % (2PI)
+//   altF=PI-altF;
 
-#ifndef NDEBUG
-  if(f>(PI+1e-6) || f<(-PI-1e-6)) {
-    printf("f=%g!=%g=PI\n",f,PI);
-  }
-#endif
 
-  if(fabs(val-round(val))>1.0) {
-    cout<<"round error: abs("<<fabs(val)<<"-"<<round(val)<<")=~"<<
-      fabs(fabs(val)-round(val))<<"<1.0"<<endl;
-  }
-  assert(f<(PI+1e-9));
-  assert(f>(-PI-1e-9));
-  return f * f;
-}
+//   assert(f<(altF+numeric_limits<float>::epsilon()));
+//   assert(f>(altF-numeric_limits<float>::epsilon()));
+// #endif
+
+
+//   assert(f<(PI+numeric_limits<float>::epsilon()));
+//   assert(f>(-PI-numeric_limits<float>::epsilon()));
+//   return f * f;
+// }
+
+
+// // //returns the square of a mod 2 PI double
+// // inline double squaremodpi(double val)
+// // {
+// //   double f=fabs(val);
+// //   f-=2*PI*round(f/(2*PI));
+
+// // #ifndef NDEBUG
+// //   if(f>(PI+1e-6) || f<(-PI-1e-6)) {
+// //     printf("f=%g!=%g=PI\n",f,PI);
+// //   }
+// // #endif
+
+// //   if(fabs(val-round(val))>1.0) {
+// //     cout<<"round error: abs("<<fabs(val)<<"-"<<round(val)<<")=~"<<
+// //       fabs(fabs(val)-round(val))<<"<1.0"<<endl;
+// //   }
+// //   assert(f<(PI+1e-9));
+// //   assert(f>(-PI-1e-9));
+// //   return f * f;
+// // }
 
 
 
@@ -711,7 +1034,9 @@ malignment_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
 static PyMethodDef malignment_methods[] = {
       {"nextBest", (PyCFunction)malignment_nextBest, METH_NOARGS,
-       "Return the next best alignment from the matrix."
+       "Return the next best alignment from the matrix."},
+      {"suboptimal", (PyCFunction)malignment_nextBest, METH_NOARGS,
+       "Return the next best alignment from the matrix. TODO:: Fix this to Waterman-Eggert like"
       },
     {NULL}  /* Sentinel */
 };
@@ -904,17 +1229,17 @@ malignment_nextBest(malign_AlignmentObject *self)
 
 
 
-inline double anglepenalty(double const d,double const D,double const nucl_per_rotation)
-{
-  double const theta=(d-D)*2.0*PI/nucl_per_rotation;
-  double const totlen=d+D;
+// inline double anglepenalty(double const d,double const D,double const nucl_per_rotation)
+// {
+//   double const theta=(d-D)*2.0*PI/nucl_per_rotation;
+//   double const totlen=d+D;
 
-  if(((PI*PI)/totlen)<FLT_EPSILON) { // Check that we can compute it.
-    return 0.0;
-  } else {
-    return squaremodpi(theta)/totlen;
-  }
-}
+//   if(((PI*PI)/totlen)<FLT_EPSILON) { // Check that we can compute it.
+//     return 0.0;
+//   } else {
+//     return squaremodpi(theta)/totlen;
+//   }
+// }
 
 
 inline double penalty(malign_AlignmentObject *dat,posind d1,posind d2)
@@ -948,7 +1273,8 @@ void outputMemory(double bytes)
 static PyObject *
 malignObject(malign_AlignmentObject *self)
 { 
-  store Score;
+  store Score=0.0,absBest=0.0;
+  store maxScore=SCORE_FAIL;
   // The main multiple alignment algorithm.
 
   int Empty=0,nonEmpty=0,unNecessary=0;
@@ -956,18 +1282,29 @@ malignObject(malign_AlignmentObject *self)
 
   // Iterate over the whole multi D matrix with the pointer entry.
   PointerVec entry=self->CP->dynmat->getOrigin();
-  if(!entry.allSame()){
-    entry++;  // Start from the first entry with same sites on all cordinates.
-  }
-  for(;entry.isOK();entry++) {
 
+  int n=self->CP->dynmat->dims();
+
+  for(;entry.isOK();entry++) {
+#ifndef NDEBUG
+    entry.output();
+    assert(entry.getSite(0).ID==entry.getSite(1).ID);
+    assert(entry.getSite(0).strand==entry.getSite(1).strand);
+    
+    int a=entry[0];
+    int b=entry[1];
+    if(a==b) {
+      cout<<"."<<flush; 
+    } else {
+      cout<<"x"<<flush;
+    }
+#endif
 
     vector<id_triple> sites=entry.getSites();
 
-    store maxScore=SCORE_FAIL;
 
-    siteCode maxSite=SITE_FAIL;
-    char maxStrand=STRAND_FAIL;
+    //siteCode maxSite=SITE_FAIL;
+    //char maxStrand=STRAND_FAIL;
 
     PointerVec *maxSourceP=NULL;
     maxScore=-DBL_MAX;
@@ -975,7 +1312,6 @@ malignObject(malign_AlignmentObject *self)
     store base=0;
 
     // Compute the fixed bonus part of the penalty function
-    int n=sites.size();
     for(int i=0;i<n;i++) {
       base+=sites[i].weight;
     }
@@ -988,9 +1324,9 @@ malignObject(malign_AlignmentObject *self)
 
     // Look for the previous alignments
     PointerVec k=PointerVec(entry);
-    for(k--;
-	k.isOK(); k--) {  // Exponential loop
-	 
+
+    for(k.setLimit(entry,1000);
+	k.isOK(); k.nextLookBack()) {  // Exponential loop
 	 
 #ifndef NDEBUG
       k.output();cout<<"s"<<endl;
@@ -1013,7 +1349,6 @@ malignObject(malign_AlignmentObject *self)
 	}
       }
 
-
       if(Score>maxScore) {
 	maxScore=Score;
 	delete maxSourceP;
@@ -1022,7 +1357,8 @@ malignObject(malign_AlignmentObject *self)
 
       if(PyErr_Occurred()) return NULL;
     }
-
+    if(maxScore>absBest)
+      absBest=maxScore;
     if(maxScore>0.0) {
 #ifndef NDEBUG
       entry.output();
@@ -1033,8 +1369,10 @@ malignObject(malign_AlignmentObject *self)
       cout<<endl;
 #endif
       (*self->CP->dynmat)[entry]=matrixentry(maxScore,maxSourceP);
+      nonEmpty++;
     } else {
       (*self->CP->dynmat)[entry]=matrixentry();
+      Empty++;
     }
   }
 #ifdef DEBUG_OUTPUT
@@ -1044,6 +1382,8 @@ malignObject(malign_AlignmentObject *self)
   }
   cout<<endl
       <<"Matrix size: "<<self->CP->dynmat->maxSize()<<endl
+      <<"Used Cells:  "<<self->CP->dynmat->usedCells()<<endl
+      <<"Max Value:   "<<absBest<<endl
       <<"Empty:       "<<Empty<<endl 
       <<"Non empty:   "<<nonEmpty<<endl 
       <<"share of non empty: "<<nonEmpty/(1.0*Empty+nonEmpty)<<endl
@@ -1060,7 +1400,7 @@ malignObject(malign_AlignmentObject *self)
 int setSeqNames(malign_AlignmentObject *self,Inputs &data)
 {
   int n=data.sequences();
-  map<string,uint>::iterator iter=data.sequenceNames();
+  map<string,motifCode>::iterator iter=data.sequenceNames();
 
   self->names=PyTuple_New(n);
 
@@ -1108,6 +1448,16 @@ malign_alignCommon( malign_AlignmentObject *self,PyObject *data,int result_ask,
   self->askedresults=result_ask;
   self->memSaveUsed=0;
   self->secs_to_align=0;
+
+#ifndef NDEBUG
+  cout
+    <<"Lambda:"<<lambda<<endl
+    <<"Xi    :"<<xi<<endl
+    <<"Mu    :"<<mu<<endl
+    <<"Nu    :"<<nu<<endl
+    <<"npr   :"<<nuc_per_rotation<<endl
+    <<"result:"<<result_ask<<endl;
+#endif
 
   if(!setSeqNames(self,*self->CP->indata)){
     return NULL;

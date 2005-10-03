@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.3  2005/03/22 13:24:02  kpalin
+ *Totally different approach. Doing multi-D matrix.
+ *
  *Revision 1.2  2004/07/30 12:06:55  kpalin
  *First basically working version. The problem is the immense
  *time and space complexity.
@@ -53,13 +56,15 @@ struct id_triple
   //uint pos;
   double weight;
   char strand;
-  bool operator<(const id_triple &other) const { return this->pos<other.pos; }
+  bool operator<(const id_triple &other) const { 
+    return this->epos<other.epos || (this->epos==other.epos && this->weight<other.weight);
+  }
 };
 
 class PointerVec {
-  vector<int> p;
+  //vector<int> p;
   vector<int> matrix_p;
-  vector<int> dimlen;
+  //vector<int> dimlen;
   uint m;
   int ok;
 
@@ -67,16 +72,22 @@ class PointerVec {
   int limitBP;
   int dataPoint() const ;
 
+  // Highest point of the limited lookback.
+  class PointerVec *limiterPvec;
   // Pointer to the matrix this pointer is associated with:
   class Matrix *myMat;
 
+  bool decFirst();
+  int allHasFactor();
+
 public:
-  PointerVec() {ok=0; limData=NULL; }
+  PointerVec() {ok=0; limiterPvec=NULL;limData=NULL; }
   //  PointerVec(const PointerVec &other);
   //PointerVec(vector<int> &,vector<int> &,vector<int>*);
   PointerVec(Matrix*,Inputs*);
   void setValue(vector<int> &np);
 
+  void setLimit(PointerVec &p,int limitbp);
   int isOK() const { return this && ok; }
   int allSame();
   //vector<int> &getValue() { return p; }
@@ -84,15 +95,15 @@ public:
 
   // Jump to the "next" entry in the matrix that has the same site on each dimension
   const PointerVec&  operator++(int);
-
-  // Jump to the "previous" entry in the matrix that has the same site on each dimension
-  // Constrained by limitBP distance.
-  const PointerVec & operator--(int);
+  bool operator<=(const PointerVec &other) const; 
+  bool checkLT();
 
 
-  int difference(PointerVec const &other,int i) const ;
-  int operator[](int i) const {return p[i]; }
+  int difference(PointerVec const &other,int i) const  ;
+  int operator[](int i) const;
+  int matrixIndex(int i) const {return this->matrix_p[i];}
 
+  void nextLookBack();
 
   void output();
   
@@ -103,6 +114,7 @@ public:
 
   vector<id_triple>  getSites();
   id_triple getSite(int i) const;
+  motifCode getMotif() const;
 
 };
 
@@ -121,9 +133,9 @@ public:
   Inputs(PyObject* data);
   int addSite(PyObject* item);
   int sequences() { return SEQ_to_id.size(); }
-  int factors() { return TF_to_id.size(); }
+  int factors() { return TF_to_id.size()*2; }
   char const *sequence(seqCode i) {return seqNames[(int)i].c_str(); }
-  char const *factor(motifCode i) {return factorNames[(int)i].c_str(); }
+  char const *factor(motifCode i) {return factorNames[((int)i)/2].c_str(); }
   vector<int> sequenceLens();
   int sequenceLens(seqCode seqC) {return seq[seqC].size(); }
 
@@ -134,7 +146,7 @@ public:
   vector<id_triple>  getSites(PointerVec &here);
 
   id_triple getSite(PointerVec const &p,seqCode i) const { return seq[i][p[i]]; }
-  id_triple getSite(posCode pos,seqCode i) const { return seq[i][pos]; }
+  id_triple getSite(posCode pos,seqCode i) const { return seq[i].at(pos); }
 };
 
 
@@ -153,7 +165,7 @@ class matrixentry
 
   void setInitData(store,PointerVec*);
 public:
-  matrixentry() { value=0.0;backTrack=NULL;}
+  matrixentry() { value=-1.0;backTrack=(PointerVec*)2;}
   matrixentry(store,PointerVec&);
   matrixentry(store,PointerVec*);
   store getValue()  const;
@@ -175,6 +187,8 @@ class Matrix {
 
   Inputs *indata;
 
+  int cells;
+
   // p=tfIndex[seqID][tfID][posCode] <=>  indata->seq[seqID][p] is the posCode:th 
   //                                      occurrence of motif tfID in sequence seqID
   vector< vector< vector<int> > > tfIndex;
@@ -187,6 +201,8 @@ public:
   PointerVec getOrigin();
   PointerVec argMax();
 
+  int usedCells() {return this->cells;}
+
   matrixentry &getValue(PointerVec const &) ;
   matrixentry *getValueP(PointerVec const &);
   void setValue(PointerVec &,matrixentry &);
@@ -195,13 +211,16 @@ public:
 
   int size() { return data.size(); }
   int maxSize() { int s=1;for(int i=0;i<dim;i++) s*=dimLen[i]; return s; }
-  int dims() {return dim; }
-  int dims(int i) { return dimLen[i]; }
-  int countTFinSeq(seqCode seq,motifCode tfID) { 
+  int dims() const {return dim; }
+  int dims(int i) const { return dimLen[i]; }
+  int countTFinSeq(seqCode seq,motifCode tfID) const { 
     return this->tfIndex[seq][tfID].size(); }
 
-  id_triple by_seq_tf_pos(int seqID, motifCode tfID,posCode pos) { 
-    return this->indata->getSite(this->tfIndex[seqID][tfID][pos],seqID); }
+
+  int by_seq_tf_pos(int seqID, motifCode tfID,posCode pos) const { 
+    //return this->tfIndex[seqID][tfID][pos]; 
+    return this->tfIndex.at(seqID).at(tfID).at(pos); 
+  }
 
 };
 

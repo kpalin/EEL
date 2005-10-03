@@ -5,7 +5,7 @@
 #include <string>
 #include <sstream>
 #include <stdio.h>
-#define PI 3.1415926
+
 
 #define ALIGN_OUTPUT
 #ifdef ALIGN_OUTPUT
@@ -23,6 +23,7 @@
 #include <queue>
 #include <limits>
 
+#include "alignPenalties.h"
 
 
 #ifdef HAVE_GZSTREAM
@@ -36,6 +37,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.25  2005/09/20 07:27:50  kpalin
+ *  Added a compile time switch to force monotonous alignment score.
+ *
  *  Revision 1.24  2005/07/08 07:55:47  kpalin
  *  Added few linebreaks to make debugging easier.
  *
@@ -226,35 +230,35 @@ struct matrixentry
 
 
 
-//returns the square of a min_k(val-k2PI,k2PI-val)
-inline double squaremod(double val)
-{
-  double f=fabs(val);
-  f-=2*PI*trunc(f/(2*PI));
-  if(f>PI) {
-    f=2*PI-f;
-  }
-#ifndef NDEBUG
-  double altF=(PI-f);
-  altF-=2*PI*trunc(altF/(2*PI));  // altF % (2PI)
-  altF=PI-altF;
+// //returns the square of a min_k(val-k2PI,k2PI-val)
+// inline double squaremod(double val)
+// {
+//   double f=fabs(val);
+//   f-=2*PI*trunc(f/(2*PI));
+//   if(f>PI) {
+//     f=2*PI-f;
+//   }
+// #ifndef NDEBUG
+//   double altF=(PI-f);
+//   altF-=2*PI*trunc(altF/(2*PI));  // altF % (2PI)
+//   altF=PI-altF;
 
 
-  assert(f<(altF+numeric_limits<float>::epsilon()));
-  assert(f>(altF-numeric_limits<float>::epsilon()));
-#endif
+//   assert(f<(altF+numeric_limits<float>::epsilon()));
+//   assert(f>(altF-numeric_limits<float>::epsilon()));
+// #endif
 
 
-  assert(f<(PI+numeric_limits<float>::epsilon()));
-  assert(f>(-PI-numeric_limits<float>::epsilon()));
-  return f * f;
-}
+//   assert(f<(PI+numeric_limits<float>::epsilon()));
+//   assert(f>(-PI-numeric_limits<float>::epsilon()));
+//   return f * f;
+// }
 
-inline double anglepenalty(double const d,double const D,double const nucl_per_rotation)
-{
-  double const theta=(d-D)*2.0*PI/nucl_per_rotation;
-  return squaremod(theta)/(d+D);
-}
+// inline double anglepenalty(double const d,double const D,double const nucl_per_rotation)
+// {
+//   double const theta=(d-D)*2.0*PI/nucl_per_rotation;
+//   return squaremod(theta)/(d+D);
+// }
 
 
 
