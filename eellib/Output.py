@@ -13,6 +13,10 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.21  2005/05/19 07:49:35  kpalin
+# Merged Waterman-Eggert style suboptimal alignments and
+# SNP matching.
+#
 # Revision 1.20.2.2  2005/05/10 13:12:14  kpalin
 # Added a 3rd row for the alignment noting the aligned motif.
 #
@@ -251,11 +255,11 @@ def formatMultiAlignGFF(alignment):
     # Header
     outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f time=%g\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation,alignment.secs_to_align))
 
-
     # For each module
     for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
         if len(goodAlign)==0:
             continue
+        DEBUGprevpos={}
 
         # For each sequence participating in the module
         modData=moduleData(goodAlign)
@@ -282,6 +286,14 @@ def formatMultiAlignGFF(alignment):
                                           as.motif, \
                                           begin,end,score,as.strand,\
                                           i,siteScore,colCode,annot.strip()))
+                try:
+                    assert(DEBUGprevpos.get(seq,(0,0))[1]<end)
+                    assert(0<=end-DEBUGprevpos.get(seq,(0,end-1))[1]<1000)
+                except AssertionError:
+                    print alignment.names[seq],"COL %d"%(colCode),DEBUGprevpos.get(seq,(0,0))[1],"<",end
+                    print outStrIO.getvalue()
+                    raise
+                DEBUGprevpos[seq]=(begin,end)
 
     return outStrIO.getvalue()
 
