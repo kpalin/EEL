@@ -36,6 +36,9 @@
 /*
  *
  * $Log$
+ * Revision 1.10  2005/10/03 10:18:41  kpalin
+ * Presumably working multiple alignment version. Not yet usable though.
+ *
  * Revision 1.9  2005/03/22 13:24:02  kpalin
  * Totally different approach. Doing multi-D matrix.
  *
@@ -159,6 +162,10 @@ int PointerVec::difference(PointerVec const &other,int i) const  {
 // Return true if pointer is valid with respect to limiterPvec
 bool PointerVec::decFirst()
 {
+#ifndef NDEBUG
+  cout<<"dF()"<<endl;
+#endif
+
   bool validBacker=1;
 
   do {
@@ -170,6 +177,8 @@ bool PointerVec::decFirst()
   }
   if(!this->ok || this->difference(*this->limiterPvec,0)<0) {
     validBacker=0;
+    //this->ok=0;
+    printf("limitrBreak\n");
     return validBacker;
   }
 
@@ -191,6 +200,8 @@ bool PointerVec::decFirst()
 //       validBacker=0;
 //     }
     if(dist>this->limitBP || dist<0) {
+      printf("afterBreak\n");
+      //this->ok=0;
       validBacker=0;
     }
 
@@ -219,17 +230,23 @@ bool PointerVec::checkLT()
 // Begin
 //   
 
-
 void PointerVec::nextLookBack() 
 {
   seqCode seq;
   bool done=0;
+  int tmpDelta;
 
-
+#ifndef NDEBUG
+  cout<<"nLB()"<<endl;
+#endif
   motifCode tfid=this->getMotif();
+
   for(seq=this->m-1;seq>0;seq--) {
     this->matrix_p[seq]--;
-    if(this->matrix_p[seq]>=0 && this->difference(*this->limiterPvec,seq)<=this->limitBP) {
+
+
+    if(this->matrix_p[seq]>=0 && (tmpDelta=this->difference(*this->limiterPvec,seq))<=this->limitBP) {
+      assert(tmpDelta>0);
       return;
     } else {
 	// Mentiin liian kauas rajoittajasta tai alun etupuolelle
@@ -243,17 +260,18 @@ void PointerVec::nextLookBack()
       
       // Oops! Went too far.
       this->matrix_p[seq]--;
-      
       if(this->matrix_p[seq]<0 ||
 	 this->difference(*this->limiterPvec,seq)>this->limitBP) {
-	this->decFirst();
+	this->ok=this->decFirst();
+	assert(!this->ok || this->difference(*this->limiterPvec,seq)>=0);
 	return;
       }
     }
   }
 
    if(seq==0) {
-     while(!this->decFirst() && this->ok);
+     while(!this->decFirst() && this->ok)
+       assert(this->difference(*this->limiterPvec,seq)>0);
    }
   if(this->matrix_p[0]<0) {
     this->ok=0;
@@ -663,6 +681,19 @@ int Inputs::addSite(PyObject *site)
   new_site.epos=(posind)PyInt_AsLong(PyNumber_Int(PySequence_GetItem(site,4)));
   if(PyErr_Occurred()) return 0;
   new_site.weight=(double)PyFloat_AsDouble(PyNumber_Float(PySequence_GetItem(site,5)));
+
+  PyObject *annotSlice=PySequence_GetSlice(site,8,99999);
+  PyObject *sep=PyString_FromString("\t");
+  PyObject *jStr=_PyString_Join(sep,annotSlice);
+  new_site.annot=string(PyString_AsString(jStr));
+
+  Py_XDECREF(jStr);
+  Py_XDECREF(sep);
+  Py_XDECREF(annotSlice);
+
+			
+
+
   if(PyErr_Occurred()) return 0;
 
   char *strand_p=PyString_AsString(PySequence_GetItem(site,6));
@@ -788,6 +819,10 @@ id_triple PointerVec::getSite(int i) const
 
 void PointerVec::setLimit(PointerVec &p,int limitbp)
 {
+#ifndef NDEBUG
+  cout<<"sL()"<<endl;
+#endif
+
   this->limitBP=limitbp;
 
   if(this->limiterPvec) {
@@ -1134,7 +1169,7 @@ malignment_nextBest(malign_AlignmentObject *self)
   //  PyObject *colTuple;
   PyObject *seqs;
   PyObject *coords;
-  PyObject *seqPos,*siteScore;
+  PyObject *seqPos,*siteScore,*annotations;
   int seqC=0;
 
 #ifndef NDEBUG
@@ -1165,6 +1200,7 @@ malignment_nextBest(malign_AlignmentObject *self)
 
     seqPos=PyTuple_New(self->CP->indata->sequences());
     siteScore=PyTuple_New(self->CP->indata->sequences());
+    annotations=PyTuple_New(self->CP->indata->sequences());
 
 
 
@@ -1188,6 +1224,8 @@ malignment_nextBest(malign_AlignmentObject *self)
 
 	PyTuple_SetItem(siteScore,seqC,PyFloat_FromDouble(sites[i].weight));
 
+	// Annotation
+	PyTuple_SetItem(annotations,seqC,PyString_FromString(sites[i].annot.c_str()));
 	seqC++; 
       }
     }
@@ -1197,6 +1235,7 @@ malignment_nextBest(malign_AlignmentObject *self)
     _PyTuple_Resize(&coords,seqC);
     _PyTuple_Resize(&seqPos,seqC);
     _PyTuple_Resize(&siteScore,seqC);
+    _PyTuple_Resize(&annotations,seqC);
 
 //     PyTuple_SetItem(colTuple,0,seqs);
 //     // The alignment score up till here
@@ -1209,7 +1248,7 @@ malignment_nextBest(malign_AlignmentObject *self)
     PyObject *alnRow=PyAln_New_Multi(self->CP->indata->factor(motifID),
 				    seqs,seqPos,coords,strand,
 				    self->CP->dynmat->getValue(*p).getValue(),
-				    siteScore,NULL);
+				    siteScore,annotations);
 
     PyList_Append(goodAlign,alnRow);
 
@@ -1246,6 +1285,9 @@ inline double penalty(malign_AlignmentObject *dat,posind d1,posind d2)
 {
   double val=dat->mu*(d1+d2)/2.0;
 
+  assert(d1>=0);
+  if(d2<0) {printf("d2=%d\n",d2);}
+  assert(d2>=0);
   if( (d1+d2)>0.0) {
     val=val+ dat->nu*(d1-d2)*(d1-d2)/(d1+d2)+
       dat->xi*anglepenalty(d1,d2,dat->nuc_per_rotation);
@@ -1329,7 +1371,13 @@ malignObject(malign_AlignmentObject *self)
 	k.isOK(); k.nextLookBack()) {  // Exponential loop
 	 
 #ifndef NDEBUG
-      k.output();cout<<"s"<<endl;
+      k.output();cout<<"s ";
+    cout<<"dists: (";
+    for(int i=0;i<n;i++) {
+      if(i>0) cout<<",";
+      cout<<k.difference(entry,i);
+    }
+    cout<<")"<<endl;
 #endif
 	 
       // Continuing alignment.
@@ -1405,9 +1453,8 @@ int setSeqNames(malign_AlignmentObject *self,Inputs &data)
   self->names=PyTuple_New(n);
 
   if(PyErr_Occurred()) return 0;
-
   for(int i=0;i<n;i++,iter++) {
-    PyTuple_SET_ITEM(self->names,i,
+    PyTuple_SET_ITEM(self->names,(int)iter->second,
 		       PyString_FromString(iter->first.c_str()));
     if(PyErr_Occurred()) return 0;
   }
