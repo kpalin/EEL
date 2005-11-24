@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.4  2005/10/03 10:18:41  kpalin
+ *Presumably working multiple alignment version. Not yet usable though.
+ *
  *Revision 1.3  2005/03/22 13:24:02  kpalin
  *Totally different approach. Doing multi-D matrix.
  *
@@ -56,8 +59,9 @@ struct id_triple
   //uint pos;
   double weight;
   char strand;
+  string annot;
   bool operator<(const id_triple &other) const { 
-    return this->epos<other.epos || (this->epos==other.epos && this->weight<other.weight);
+    return (int)this->epos<(int)other.epos || ((int)this->epos==(int)other.epos && this->weight<other.weight);
   }
 };
 
