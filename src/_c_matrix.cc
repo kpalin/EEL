@@ -26,6 +26,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.14  2005/07/07 09:24:10  kpalin
+ * Fixed some compilation problems with Visual C++
+ *
  * Revision 1.13  2005/07/05 11:22:01  kpalin
  * A cap for number of SNP:s under observation. Avoids memory problems.
  *
@@ -565,7 +568,9 @@ bg_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     self->CP=NULL;
     Py_INCREF(Py_None);
     self->bgSample=Py_None;
+#ifdef DEBUG_OUTPUT
     cout<<self->order<<endl;
+#endif
   } else {
     PyErr_NoMemory();
     return NULL;
@@ -941,7 +946,7 @@ matrix_computeBG(PyObject *self, PyObject *args)
     Py_INCREF(Py_None);
     return Py_None;
   }
-  cout<<"order: "<<order<<endl;
+  //cout<<"order: "<<order<<endl;
   int const seqLen=strlen(seq);
   int const qgram=order+1;
 
@@ -985,7 +990,9 @@ matrix_computeBG(PyObject *self, PyObject *args)
 
     case 'N': 
     case 'X':
-	  cout<<"."<<flush;
+#ifdef DEBUG_OUTPUT
+      cout<<"."<<flush;
+#endif
 	  i+=qgram;
 	  continue;
     case '>':
@@ -1779,7 +1786,9 @@ void TFBShelper::nextChar(char chr)
 
   if(allels && this->SNPs.size()>=(unsigned int)2*MAX_SNP_COUNT) {
     // Safety for long stretch of SNPs. 
+#ifdef DEBUG_OUTPUT
     printf("Hitting MAX_SNP_COUNT on position %d.\n",this->seqCount);
+#endif
     allels=NULL;
     chr='N';
   }
@@ -1988,8 +1997,9 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
       Seq[bytes_read]=0;
       buf_p=0;
       //cout<<"Read "<<bytes_read<<" more bytes"<<endl;
-
+#ifdef DEBUG_OUTPUT
       cout<<"."<<flush;
+#endif
       if(bytes_read==0) {
 	break;
       }
@@ -2004,7 +2014,7 @@ matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
 	loop_status=loop_continue;
 	break;
       case '>':
-	cerr<<"Encountered unexpectedly an another sequence!"<<endl;
+	PyErr_SetString(PyExc_ValueError,"Encountered unexpectedly an another sequence!");
 	// DECREFING??????
 	{
 	  PyObject *pyNextSeq=PyString_FromString("NEXT_SEQ");
