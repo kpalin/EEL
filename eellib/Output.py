@@ -13,6 +13,9 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.22  2005/11/24 13:29:13  kpalin
+# Added some debugging code for GFF alignment output.
+#
 # Revision 1.21  2005/05/19 07:49:35  kpalin
 # Merged Waterman-Eggert style suboptimal alignments and
 # SNP matching.
@@ -304,7 +307,7 @@ def formatalignGFF(alignment):
 
 
 
-def formatalign(alignment,seq=None):
+def formatalign2D(alignment,seq=None):
     "Formats the alignment for human use"
     if not alignment:
         return "No alignment\n"
@@ -406,4 +409,103 @@ def formatalign(alignment,seq=None):
 
     return outStrIO.getvalue()
 
+def formatalign(alignment,seq=None):
+    "Formats the alignment for human use"
+    if not alignment:
+        return "No alignment\n"
+
+    outStrIO=StringIO()
+
+    try:
+        assert(len(alignment.names)==2)  # Provoking AssertionError
+        from editdist import alignSeq
+        def alignSeqs(seqs,*rest):
+            distXY,X,Y=alignSeq(seqs[0],seqs[1],*rest)
+            return (distXY,[X,Y])
         
+    except(ImportError,AssertionError):
+        print "Using subb alignment"
+
+        def alignSeqs(seqs,*rest):
+            "Stubb for alignment. Does nothing really"
+            l=max(map(len,seqs))
+            return (0,[xseq.ljust(l).replace(" ","-") for xseq in seqs])
+
+
+            
+        
+    def formatAlnSeq(alns,names,starts,motifAln="",linelen=60):
+        """Formats the DNA sequence alignment output"""
+        outstr="\n".join(["Sequence %d: %s"%(seqI+1,iname) for (seqI,iname) in enumerate(names)])+"\n\n"
+        n=len(alns[0])
+        poses=[xstart+1 for xstart in starts]
+        for i in range(0,n,linelen):
+            lines=[xaln[i:i+linelen] for xaln in alns]
+            mline=motifAln[i:i+linelen]
+            outstr+="\n".join(["%7d : %s"%(xpos,xline) for (xpos,xline) in zip(poses,lines)])
+            outstr+="\n          %s\n\n"%(mline)
+            poses=[xpos+len(xline)-xline.count("-") for (xpos,xline) in zip(poses,lines)]
+        return outstr
+
+    outStrIO.write("### lambda=%g mu=%g nu=%g xi=%g Nucleotides per rotation=%g\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation))
+    outStrIO.write("### D%s\nNote! First nucleotide at position 1 (one) and binding site at zero!\n"%("".join(["[%s]"%(x) for x in alignment.names])))
+
+    #xname,yname=alignment.x_name,alignment.y_name
+    xe,ye=0,0
+    if seq:  #Must have all sequences available (Could relax this in future)
+        for xseq in alignment.names:
+            if not seq.has_key(xseq):
+                seq=None
+                break
+
+    if seq:
+        outStrIO.write("\n".join(["Sequence %s:\n%s\n"%(xseq,seq.describe(xseq)) for xseq in alignment.names])+"\n\n")
+        
+    # goodAlign= [ (x,y,Score,Motif,(startX,endX),(startY,endY),Strand) ]
+    for alnNo,goodAlign in enumerate(alignment.bestAlignments):
+        if len(goodAlign)==0:
+            continue
+        if seq:
+            starts=[max(spos-10,0) for (spos,epos) in goodAlign[0].beginEnd]
+            ends=[min(epos+10,len(seq[alignment.names[i]])) for (i,(spos,epos)) in enumerate(goodAlign[-1].beginEnd)]
+
+            seqs=[seq[alignment.names[i]][istart:iend] for (i,(istart,iend)) in enumerate(zip(starts,ends))]
+
+            alns=[""]*len(seqs)
+            maln=""
+            addeds=starts[:]
+
+
+        outStrIO.write("\n### Alignment No %d ###\n"%(alnNo+1,))
+        #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
+        for as in goodAlign:
+            coordStr="".join(["[%d]"%(x) for x in as.siteSeqPos])
+            seqCoordStr=" <=> ".join(["(%d,%d)"%(spos,epos) for (spos,epos) in as.beginEnd])
+            outStrIO.write("D%s=%.2f %s %s %s\n"%(coordStr,as.score,as.motif,seqCoordStr,as.strand))
+            if seq:
+                ToAdd=[xseq[xadded-xstart:beginX-1-xstart].lower() for (xseq,xadded,xstart,(beginX,endX)) in zip(seqs,addeds,starts,as.beginEnd)]
+                siteLen=as.beginEnd[0][1]-as.beginEnd[0][0]+1
+                alnFmt="%%s%%s%%-%ds"%(siteLen)
+
+                #assert(len(xseq[as.beginX-1-xstart:as.endX-xstart])==siteLen)
+                distYX,ToAdd=alignSeqs(ToAdd,1,1)
+                alns=[alnFmt%(xaln,x2add,xseq[beginX-1-xstart:endX-xstart].upper()) for (xaln,x2add,xseq,xstart,(beginX,endX)) in zip(alns,ToAdd,seqs,starts,as.beginEnd)]
+
+                maln=alnFmt%(maln," "*len(ToAdd[0]),as.motif[:siteLen])
+                addeds=[endX for (beginX,endX) in as.beginEnd]
+
+        if seq:
+            ToAdd=[seq[xseq][xadded-xstart:xend-xstart].lower() for (xseq,xadded,xstart,xend) in zip(alignment.names,addeds,starts,ends)]
+            distYX,ToAdd=alignSeqs(ToAdd)
+            alns=["".join(x) for x in zip(alns,ToAdd)]
+
+            outStrIO.write("\n"+formatAlnSeq([xaln.replace(" ","-") for xaln in alns],alignment.names,starts,maln))
+            #outstr+="%s\n%s\n"%(xaln.replace(" ","-"),yaln.replace(" ","-"))
+
+    outStrIO.write("### Alignment took %.1f CPU seconds.\n"%(alignment.secs_to_align))
+
+
+    return outStrIO.getvalue()
+
+        
+    
