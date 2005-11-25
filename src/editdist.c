@@ -163,6 +163,7 @@ spam_alignSeq(self, args)
 #define BT_MATCH 1
 #define BT_MININS 2
 #define BT_MAXINS 3
+#define BT_COORD(x,y) ((x)*(sminlen)+(y))
 #define BT_POS(mat,x,y) (char)mat[(x)*(sminlen)+(y)]
 
   prev=malloc(arrayLen*sizeof(int));
@@ -190,24 +191,30 @@ spam_alignSeq(self, args)
       /* Look for equality */
       if((useIUPAC&&IUPACmatch(smax[i],smin[j])) || smax[i]==smin[j]) {
 	if (prev[j]<curr[j]+delcost && prev[j]<prev[j+1]+delcost) {
-	  BT_POS(backTrace,i,j)=BT_MATCH;
+	  backTrace[BT_COORD(i,j)]=BT_MATCH;
+	  //BT_POS(backTrace,i,j)=BT_MATCH;
 	  curr[j+1]=prev[j];
 	} else if (prev[j]>curr[j]+delcost && prev[j+1]+delcost>curr[j]+delcost) {
-	  BT_POS(backTrace,i,j)=BT_MAXINS;
+	  //BT_POS(backTrace,i,j)=BT_MAXINS;
+	  backTrace[BT_COORD(i,j)]=BT_MAXINS;
 	  curr[j+1]=curr[j]+delcost;
 	} else {
-	  BT_POS(backTrace,i,j)=BT_MININS;
+	  backTrace[BT_COORD(i,j)]=BT_MININS;
+	  //BT_POS(backTrace,i,j)=BT_MININS;
 	  curr[j+1]=prev[j+1]+delcost;
 	}
       } else {
 	if (prev[j]+chgcost<curr[j]+delcost && prev[j]+chgcost<prev[j+1]+delcost) {
-	  BT_POS(backTrace,i,j)=BT_MATCH;
+	  backTrace[BT_COORD(i,j)]=BT_MATCH;
+	  //BT_POS(backTrace,i,j)=BT_MATCH;
 	  curr[j+1]=prev[j]+chgcost;
 	} else if (prev[j]+chgcost>curr[j]+delcost && prev[j+1]+delcost>curr[j]+delcost) {
-	  BT_POS(backTrace,i,j)=BT_MAXINS;
+	  backTrace[BT_COORD(i,j)]=BT_MAXINS;
+	  //BT_POS(backTrace,i,j)=BT_MAXINS;
 	  curr[j+1]=curr[j]+delcost;
 	} else {
-	  BT_POS(backTrace,i,j)=BT_MININS;
+	  backTrace[BT_COORD(i,j)]=BT_MININS;
+	  //BT_POS(backTrace,i,j)=BT_MININS;
 	  curr[j+1]=prev[j+1]+delcost;
 	}
       }
