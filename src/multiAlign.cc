@@ -36,6 +36,9 @@
 /*
  *
  * $Log$
+ * Revision 1.11  2005/11/24 13:28:34  kpalin
+ * Seamingly working version of multi D alignment.
+ *
  * Revision 1.10  2005/10/03 10:18:41  kpalin
  * Presumably working multiple alignment version. Not yet usable though.
  *
@@ -129,6 +132,7 @@ int toSite(siteCode code)
 
 PointerVec::PointerVec(Matrix *mat,Inputs *indata)
 {
+  this->ok=0;
   this->limiterPvec=NULL;
   limData=indata;
   m=mat->dims();
@@ -178,7 +182,9 @@ bool PointerVec::decFirst()
   if(!this->ok || this->difference(*this->limiterPvec,0)<0) {
     validBacker=0;
     //this->ok=0;
+#ifndef NDEBUG
     printf("limitrBreak\n");
+#endif
     return validBacker;
   }
 
@@ -200,7 +206,9 @@ bool PointerVec::decFirst()
 //       validBacker=0;
 //     }
     if(dist>this->limitBP || dist<0) {
+#ifndef NDEBUG
       printf("afterBreak\n");
+#endif
       //this->ok=0;
       validBacker=0;
     }
@@ -412,7 +420,7 @@ const PointerVec& PointerVec::operator++(int dummy)
   }
 
 #ifndef NDEBUG
-  else {
+  else if(ok) { // Need condition to avoid messing up with loop in getOrigin()
     motifCode tfid=this->getMotif();
     assert(this->matrix_p[0]<this->myMat->dims(0));
     for(uint i=1;i<this->m;i++) {
@@ -677,10 +685,26 @@ int Inputs::addSite(PyObject *site)
   id_triple new_site;
 
   new_site.pos=(posind)PyInt_AsLong(PyNumber_Int(PySequence_GetItem(site,3)));
-  if(PyErr_Occurred()) return 0;
+  if(PyErr_Occurred()) {
+    PyObject *errStr=PyObject_Str(PySequence_GetItem(site,4));
+    PyErr_Format(PyExc_TypeError,"Invalid format for start position '%s' (%s:%d)",PyString_AsString(errStr),__FILE__,__LINE__);
+    Py_DECREF(errStr);
+    return 0;
+  }
   new_site.epos=(posind)PyInt_AsLong(PyNumber_Int(PySequence_GetItem(site,4)));
-  if(PyErr_Occurred()) return 0;
+  if(PyErr_Occurred()) {
+    PyObject *errStr=PyObject_Str(PySequence_GetItem(site,4));
+    PyErr_Format(PyExc_TypeError,"Invalid format for end position '%s' (%s:%d)",PyString_AsString(errStr),__FILE__,__LINE__);
+    Py_DECREF(errStr);
+    return 0;
+  }
   new_site.weight=(double)PyFloat_AsDouble(PyNumber_Float(PySequence_GetItem(site,5)));
+  if(PyErr_Occurred()) {
+    PyObject *errStr=PyObject_Str(PySequence_GetItem(site,5));
+    PyErr_Format(PyExc_TypeError,"Invalid format for weight '%s' (%s:%d)",PyString_AsString(errStr),__FILE__,__LINE__);
+    Py_DECREF(errStr);
+    return 0;
+  }
 
   PyObject *annotSlice=PySequence_GetSlice(site,8,99999);
   PyObject *sep=PyString_FromString("\t");
@@ -693,8 +717,10 @@ int Inputs::addSite(PyObject *site)
 
 			
 
-
-  if(PyErr_Occurred()) return 0;
+  if(PyErr_Occurred()) {
+    //cout<<seqName<<" "<<TFname<<" "<<new_site.pos<<endl;
+    return 0;
+  }
 
   char *strand_p=PyString_AsString(PySequence_GetItem(site,6));
   if(PyErr_Occurred()) return 0;
@@ -983,6 +1009,7 @@ malignment_init(malign_AlignmentObject *self, PyObject *args, PyObject *kwds)
   int result_ask;
   PyObject *data;
   static char *kwlist[] = {"data","results_ask","lambda","xi","mu","nu","nuc_per_rotation",NULL};
+
   if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oiddddd", kwlist, 
 				  &data,&result_ask,
 			&lambda, &xi, &mu, &nu, &nuc_per_rotation)){
@@ -1005,14 +1032,14 @@ malignment_init(malign_AlignmentObject *self, PyObject *args, PyObject *kwds)
   self->bestAlignments=PyList_New(0);
   if (self->bestAlignments == NULL || PyErr_Occurred())
     {
-      CHECKING_DECREF(self);
+      //CHECKING_DECREF(self);
       return -1;
     }
 
   malign_alignCommon(self,data,result_ask,lambda,xi,mu,nu,nuc_per_rotation);
 
   if(PyErr_Occurred()) {
-    Py_XDECREF(self);
+    //Py_XDECREF(self);
     return -1;
   }
 
