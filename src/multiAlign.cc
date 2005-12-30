@@ -36,6 +36,9 @@
 /*
  *
  * $Log$
+ * Revision 1.12  2005/11/25 12:11:02  kpalin
+ * Fixed few bugs (input etc.)
+ *
  * Revision 1.11  2005/11/24 13:28:34  kpalin
  * Seamingly working version of multi D alignment.
  *
@@ -153,14 +156,80 @@ PointerVec::PointerVec(Matrix *mat,Inputs *indata)
 }
 
 
-int PointerVec::difference(PointerVec const &other,int i) const  {
+int PointerVec::difference(PointerVec const &other,seqCode const i,motifCode const thisTFid) const  {
   assert(limData!=NULL);
-  int otherRight=(int)(other.getSite(i).pos-this->getSite(i).epos);
+  assert(thisTFid==this->getMotif());
+  int otherRight=(int)(other.getSite(i).pos-this->getSite(i,thisTFid).epos);
   //int otherLeft=(int)(this->getSite(i).pos-other.getSite(i).epos);
   return otherRight-1; //max(otherRight,otherLeft);
 }
 
+int PointerVec::getPrevMatrixCoord(motifCode const tfID,seqCode const i) {
+  assert(this->limiterPvec);
+  assert(tfID==this->getMotif());
 
+  this->matrix_p[i]=this->coordUpdateCache[tfID][i];
+  //this->matrix_p[i]=0;
+
+  while(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfID) && 
+	this->difference(*this->limiterPvec,i,tfID)>=0) {
+    this->matrix_p[i]++;
+  }
+  if(this->matrix_p[i]>0) {  
+    this->matrix_p[i]--;
+  }
+
+  this->coordUpdateCache[tfID][i]=this->matrix_p[i];
+
+  return coordUpdateCache[tfID][i];
+}
+
+// bool PointerVec::updateRestCoords()
+// {
+
+//   motifCode tfid=this->getMotif();
+
+//   for(uint i=1;i<this->m;i++) {
+//     this->matrix_p[i]=0;
+//     while(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfid) && 
+// 	  this->difference(*this->limiterPvec,i)>=0) {
+//       this->matrix_p[i]++;
+//     }
+//     if(this->matrix_p[i]>0) {  
+//       this->matrix_p[i]--;
+//     }
+//     int dist=this->difference(*this->limiterPvec,i);
+//     if(dist>this->limitBP || dist<0) {
+// #ifndef NDEBUG
+//       printf("afterBreak\n");
+// #endif
+//       return 0;
+//     }
+
+//   }
+
+//   return 1;
+// }
+
+bool PointerVec::updateRestCoords()
+{
+  motifCode const tfid=this->getMotif();
+
+
+  for(uint i=1;i<this->m;i++) {
+    this->matrix_p[i]=this->getPrevMatrixCoord(tfid,i);
+    int dist=this->difference(*this->limiterPvec,i,tfid);
+    if(dist>this->limitBP || dist<0) {
+#ifndef NDEBUG
+      printf("afterBreak\n");
+#endif
+      return 0;
+    }
+
+  }
+
+  return 1;
+}
 
 // TODO:: THIS MUST BE MADE MUCH MUCH MORE EFFICIENT
 // Return true if pointer is valid with respect to limiterPvec
@@ -170,8 +239,6 @@ bool PointerVec::decFirst()
   cout<<"dF()"<<endl;
 #endif
 
-  bool validBacker=1;
-
   do {
     this->matrix_p[0]--;
   } while(this->matrix_p[0]>=0 && !this->allHasFactor());
@@ -179,43 +246,18 @@ bool PointerVec::decFirst()
   if(this->matrix_p[0]<0) {
     this->ok=0;
   }
+
+  // Here we dont need to know the new TF id because we only use dimension 0.
   if(!this->ok || this->difference(*this->limiterPvec,0)<0) {
-    validBacker=0;
     //this->ok=0;
 #ifndef NDEBUG
     printf("limitrBreak\n");
 #endif
-    return validBacker;
+    return 0;
   }
 
+  return this->updateRestCoords();
 
-  motifCode tfid=this->getMotif();
-
-  for(uint i=1;i<this->m;i++) {
-    this->matrix_p[i]=0;
-    while(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfid) && 
-	  this->difference(*this->limiterPvec,i)>=0) {
-      this->matrix_p[i]++;
-    }
-    if(this->matrix_p[i]>0) {  
-      this->matrix_p[i]--;
-    }
-    int dist=this->difference(*this->limiterPvec,i);
-//     if(dist>this->limitBP) {
-//       this->ok=0;
-//       validBacker=0;
-//     }
-    if(dist>this->limitBP || dist<0) {
-#ifndef NDEBUG
-      printf("afterBreak\n");
-#endif
-      //this->ok=0;
-      validBacker=0;
-    }
-
-  }
-
-  return validBacker;
 } 
 
 bool PointerVec::checkLT()
@@ -244,6 +286,7 @@ void PointerVec::nextLookBack()
   bool done=0;
   int tmpDelta;
 
+
 #ifndef NDEBUG
   cout<<"nLB()"<<endl;
 #endif
@@ -253,23 +296,16 @@ void PointerVec::nextLookBack()
     this->matrix_p[seq]--;
 
 
-    if(this->matrix_p[seq]>=0 && (tmpDelta=this->difference(*this->limiterPvec,seq))<=this->limitBP) {
+    if(this->matrix_p[seq]>=0 && (tmpDelta=this->difference(*this->limiterPvec,seq,tfid))<=this->limitBP) {
       assert(tmpDelta>0);
       return;
     } else {
-	// Mentiin liian kauas rajoittajasta tai alun etupuolelle
+      // Mentiin liian kauas rajoittajasta tai alun etupuolelle
 
-      this->matrix_p[seq]=max(0,this->matrix_p[seq]);
+      this->matrix_p[seq]=this->coordUpdateCache[tfid][seq];
 
-      // Scan till the limiter
-      while(this->matrix_p[seq]<this->myMat->countTFinSeq(seq,tfid) && this->difference(*this->limiterPvec,seq)>0) {
-	this->matrix_p[seq]++;
-      }
-      
-      // Oops! Went too far.
-      this->matrix_p[seq]--;
       if(this->matrix_p[seq]<0 ||
-	 this->difference(*this->limiterPvec,seq)>this->limitBP) {
+	 this->difference(*this->limiterPvec,seq,tfid)>this->limitBP) {
 	this->ok=this->decFirst();
 	assert(!this->ok || this->difference(*this->limiterPvec,seq)>=0);
 	return;
@@ -303,60 +339,6 @@ void PointerVec::nextLookBack()
 
 }
 
-// void PointerVec::nextLookBack() 
-// {
-//   seqCode seq;
-//   bool done=0;
-
-
-//   motifCode tfid=this->getMotif();
-//   for(seq=this->m-1;seq>0;seq--) {
-//     if(this->matrix_p[seq]>0 && this->difference(*this->limiterPvec,seq)<=this->limitBP) {
-//       this->matrix_p[seq]--;
-//       break;
-//     } else {
-//       // Start from the beginning of the dimension
-//       this->matrix_p[seq]=0;
-      
-//       // Scan till the limiter
-//       while(this->matrix_p[seq]<this->myMat->countTFinSeq(seq,tfid) && this->difference(*this->limiterPvec,seq)>0) {
-// 	this->matrix_p[seq]++;
-//       }
-      
-// 	// Oops! Went too far.
-//       this->matrix_p[seq]--;
-      
-//       if(this->matrix_p[seq]<0) {
-// 	this->decFirst();
-// 	return;
-//       }
-//     }
-//   }
-
-//   if(seq==0) {
-//     this->decFirst();
-//   }
-//   if(this->matrix_p[0]<0) {
-//     this->ok=0;
-//   }
-
-
-//   assert(!ok || checkLT());
-
-
-// #ifndef NDEBUG
-//    if(ok) {
-//      motifCode tfid=this->getMotif();
-
-//      assert(this->matrix_p[0]<this->myMat->dims(0));
-//      for(uint i=1;i<this->m;i++) {
-//        cout<<this->matrix_p[i]<<"<<"<<this->myMat->countTFinSeq(i,tfid)<<" "<<this->limData->factor(tfid)<<endl;
-//        assert(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfid));
-//      }
-//    }
-// #endif
-
-// }
 
 bool PointerVec::operator<=(const PointerVec &other) const
 {
@@ -369,7 +351,7 @@ bool PointerVec::operator<=(const PointerVec &other) const
   return lt;
 }
 
-int PointerVec::operator[](int i) const
+int PointerVec::operator[](seqCode const i) const
 {
   int out;
   if(i==0) {
@@ -560,14 +542,14 @@ PointerVec Matrix::argMax()
 
 
 
-matrixentry &Matrix::getValue(PointerVec const &p)
+matrixentry &Matrix::getValue(PointerVec const &p) const
 {
   return *this->getValueP(p);
 }
 
-matrixentry *Matrix::getValueP(PointerVec const &p)
+matrixentry *Matrix::getValueP(PointerVec const &p) const
 {
-  vector<void*> *d=&this->data;
+  vector<void*> const *d=&this->data;
   //void *d=&this->data;
 
   for(int dimI=0;dimI<(this->dim-1);dimI++) {
@@ -830,18 +812,46 @@ void PointerVec::setValue(vector<int> &np)
 // Assist functions.
 store PointerVec::getValue() const { return myMat->getValueP(*this)->getValue(); }
 vector<id_triple>  PointerVec::getSites() { return limData->getSites(*this); }
-motifCode PointerVec::getMotif() const {  return this->limData->getSite(this->matrix_p[0],0).ID; }
+motifCode const PointerVec::getMotif() const {  return this->limData->getSite(this->matrix_p[0],0).ID; }
 
-id_triple PointerVec::getSite(int i) const 
+id_triple PointerVec::getSite(seqCode const i) const 
 { 
   assert(this->isOK());
   if(i==0) {
     return limData->getSite(this->matrix_p[i],i);
   } else {
-    return limData->getSite(myMat->by_seq_tf_pos(i,this->getMotif(),this->matrix_p[i]),i); 
+    return this->getSite(i,this->getMotif());
   }
 }
 
+id_triple PointerVec::getSite(seqCode const i,motifCode const tfID) const 
+{ 
+  // !!! DOES NOT CHECK FOR CORRECT tfID 
+
+  assert(tfID==this->getMotif());
+
+  assert(this->isOK());
+  if(i==0) {
+    return limData->getSite(this->matrix_p[i],i);
+  } else {
+    return limData->getSite(myMat->by_seq_tf_pos(i,tfID,this->matrix_p[i]),i); 
+  }
+}
+
+
+void PointerVec::setCoordCache() {
+  this->coordUpdateCache.resize(this->limData->factors());
+  for(int tfid=0;tfid<this->coordUpdateCache.size();tfid++) {
+    //this->coordUpdateCache[tfid].clear();
+    this->coordUpdateCache[tfid].resize(this->m,0);
+//     for(int i=0;i<this->m;i++) {
+//       if(this->coordUpdateCache[tfid][i]>=this->myMat->countTFinSeq(i,tfid) || 
+// 	 this->difference(*this->limiterPvec,i)<0) {
+// 	this->coordUpdateCache[tfid][i]=0;
+//       }
+//     }
+  }
+}
 
 void PointerVec::setLimit(PointerVec &p,int limitbp)
 {
@@ -851,7 +861,17 @@ void PointerVec::setLimit(PointerVec &p,int limitbp)
 
   this->limitBP=limitbp;
 
+
+  this->setCoordCache();
   if(this->limiterPvec) {
+    // Trying to speed up box scanning
+    for(int i=1;i<this->m;i++) {
+      if(limiterPvec->matrix_p[i]<this->matrix_p[i]) {
+	for(int tf=0;tf<this->limData->factors();i++) {
+	  this->setPrevMatrixCoord(tf,i,0);
+	}
+      }
+    }
     delete limiterPvec;
   }
   this->limiterPvec= new PointerVec(p);
@@ -893,54 +913,6 @@ int PointerVec::allSame()
   return 1;
 }
 
-
-// // TODO: These penalty functions together with the ones in align.cc must go to one place.
-
-// //returns the square of a min_k(val-k2PI,k2PI-val)
-// inline double squaremodpi(double val)
-// {
-//   double f=fabs(val);
-//   f-=2*PI*trunc(f/(2*PI));
-//   if(f>PI) {
-//     f=2*PI-f;
-//   }
-// #ifndef NDEBUG
-//   double altF=(PI-f);
-//   altF-=2*PI*trunc(altF/(2*PI));  // altF % (2PI)
-//   altF=PI-altF;
-
-
-//   assert(f<(altF+numeric_limits<float>::epsilon()));
-//   assert(f>(altF-numeric_limits<float>::epsilon()));
-// #endif
-
-
-//   assert(f<(PI+numeric_limits<float>::epsilon()));
-//   assert(f>(-PI-numeric_limits<float>::epsilon()));
-//   return f * f;
-// }
-
-
-// // //returns the square of a mod 2 PI double
-// // inline double squaremodpi(double val)
-// // {
-// //   double f=fabs(val);
-// //   f-=2*PI*round(f/(2*PI));
-
-// // #ifndef NDEBUG
-// //   if(f>(PI+1e-6) || f<(-PI-1e-6)) {
-// //     printf("f=%g!=%g=PI\n",f,PI);
-// //   }
-// // #endif
-
-// //   if(fabs(val-round(val))>1.0) {
-// //     cout<<"round error: abs("<<fabs(val)<<"-"<<round(val)<<")=~"<<
-// //       fabs(fabs(val)-round(val))<<"<1.0"<<endl;
-// //   }
-// //   assert(f<(PI+1e-9));
-// //   assert(f>(-PI-1e-9));
-// //   return f * f;
-// // }
 
 
 
