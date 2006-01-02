@@ -36,6 +36,9 @@
 /*
  *
  * $Log$
+ * Revision 1.13  2005/12/30 12:43:18  kpalin
+ * Significantly (should be factor of n) faster.
+ *
  * Revision 1.12  2005/11/25 12:11:02  kpalin
  * Fixed few bugs (input etc.)
  *
@@ -168,7 +171,7 @@ int PointerVec::getPrevMatrixCoord(motifCode const tfID,seqCode const i) {
   assert(this->limiterPvec);
   assert(tfID==this->getMotif());
 
-  this->matrix_p[i]=this->coordUpdateCache[tfID][i];
+  this->matrix_p[i]=this->myMat->CoordCacheGet(tfID,i);
   //this->matrix_p[i]=0;
 
   while(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfID) && 
@@ -179,37 +182,12 @@ int PointerVec::getPrevMatrixCoord(motifCode const tfID,seqCode const i) {
     this->matrix_p[i]--;
   }
 
-  this->coordUpdateCache[tfID][i]=this->matrix_p[i];
+  this->myMat->CoordCacheSet(tfID,i,this->matrix_p[i]);
 
-  return coordUpdateCache[tfID][i];
+  return this->matrix_p[i];
 }
 
-// bool PointerVec::updateRestCoords()
-// {
 
-//   motifCode tfid=this->getMotif();
-
-//   for(uint i=1;i<this->m;i++) {
-//     this->matrix_p[i]=0;
-//     while(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfid) && 
-// 	  this->difference(*this->limiterPvec,i)>=0) {
-//       this->matrix_p[i]++;
-//     }
-//     if(this->matrix_p[i]>0) {  
-//       this->matrix_p[i]--;
-//     }
-//     int dist=this->difference(*this->limiterPvec,i);
-//     if(dist>this->limitBP || dist<0) {
-// #ifndef NDEBUG
-//       printf("afterBreak\n");
-// #endif
-//       return 0;
-//     }
-
-//   }
-
-//   return 1;
-// }
 
 bool PointerVec::updateRestCoords()
 {
@@ -260,6 +238,34 @@ bool PointerVec::decFirst()
 
 } 
 
+bool PointerVec::checkAtBorder()
+{
+  bool ret=1;
+
+  for(int i=1;i<this->m;i++) {
+    ret&=this->checkAtBorder(i);
+  };
+
+  return ret;
+}
+
+bool PointerVec::checkAtBorder(seqCode i)
+{
+  bool ret=1;
+  motifCode tfID=this->getMotif();
+
+  if(this->matrix_p[i]<(this->myMat->countTFinSeq(i,tfID)-1)){
+    ret&=(this->getSite(i).epos<this->limiterPvec->getSite(i).pos);
+    this->matrix_p[i]++;
+    ret&=(this->getSite(i).epos>=this->limiterPvec->getSite(i).pos);
+    this->matrix_p[i]--;
+  }
+
+  return ret;
+}
+
+
+
 bool PointerVec::checkLT()
 {
   if(limiterPvec && !(*this<=*limiterPvec)) {
@@ -302,7 +308,7 @@ void PointerVec::nextLookBack()
     } else {
       // Mentiin liian kauas rajoittajasta tai alun etupuolelle
 
-      this->matrix_p[seq]=this->coordUpdateCache[tfid][seq];
+      this->matrix_p[seq]=this->myMat->CoordCacheGet(tfid,seq);
 
       if(this->matrix_p[seq]<0 ||
 	 this->difference(*this->limiterPvec,seq,tfid)>this->limitBP) {
@@ -310,6 +316,7 @@ void PointerVec::nextLookBack()
 	assert(!this->ok || this->difference(*this->limiterPvec,seq)>=0);
 	return;
       }
+      assert(this->ok && this->checkAtBorder(seq));
     }
   }
 
@@ -500,6 +507,8 @@ Matrix::Matrix(Inputs *indata)
   catch (std::bad_alloc const&) {
     PyErr_SetString(PyExc_MemoryError,"Out of memory!");
   }
+
+  this->CoordCacheInit();
 
 }
 
@@ -839,17 +848,19 @@ id_triple PointerVec::getSite(seqCode const i,motifCode const tfID) const
 }
 
 
-void PointerVec::setCoordCache() {
-  this->coordUpdateCache.resize(this->limData->factors());
-  for(int tfid=0;tfid<this->coordUpdateCache.size();tfid++) {
-    //this->coordUpdateCache[tfid].clear();
-    this->coordUpdateCache[tfid].resize(this->m,0);
+void Matrix::CoordCacheInit() {
+  if(this->coordUpdateCache.empty()) {
+    this->coordUpdateCache.resize(this->indata->factors());
+    for(int tfid=0;tfid<this->coordUpdateCache.size();tfid++) {
+      //this->coordUpdateCache[tfid].clear();
+      this->coordUpdateCache[tfid].resize(this->indata->sequences(),0);
 //     for(int i=0;i<this->m;i++) {
 //       if(this->coordUpdateCache[tfid][i]>=this->myMat->countTFinSeq(i,tfid) || 
 // 	 this->difference(*this->limiterPvec,i)<0) {
 // 	this->coordUpdateCache[tfid][i]=0;
 //       }
 //     }
+    }
   }
 }
 
@@ -862,16 +873,7 @@ void PointerVec::setLimit(PointerVec &p,int limitbp)
   this->limitBP=limitbp;
 
 
-  this->setCoordCache();
   if(this->limiterPvec) {
-    // Trying to speed up box scanning
-    for(int i=1;i<this->m;i++) {
-      if(limiterPvec->matrix_p[i]<this->matrix_p[i]) {
-	for(int tf=0;tf<this->limData->factors();i++) {
-	  this->setPrevMatrixCoord(tf,i,0);
-	}
-      }
-    }
     delete limiterPvec;
   }
   this->limiterPvec= new PointerVec(p);
@@ -896,7 +898,8 @@ void PointerVec::setLimit(PointerVec &p,int limitbp)
     }
   }
 
-  assert(!ok || this->checkLT());
+
+  assert(!ok || this->checkAtBorder());
 
 }
 
