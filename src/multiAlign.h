@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.5  2005/11/24 13:29:45  kpalin
+ *Possibly irrelevant cast to int added.
+ *
  *Revision 1.4  2005/10/03 10:18:41  kpalin
  *Presumably working multiple alignment version. Not yet usable though.
  *
@@ -79,16 +82,21 @@ class PointerVec {
   // Highest point of the limited lookback.
   class PointerVec *limiterPvec;
   // Pointer to the matrix this pointer is associated with:
-  class Matrix *myMat;
+  class Matrix* myMat;
+
+  
 
   bool decFirst();
+  bool updateRestCoords();
   int allHasFactor();
+
+  int getPrevMatrixCoord(motifCode const tfID,seqCode const dimension); 
 
 public:
   PointerVec() {ok=0; limiterPvec=NULL;limData=NULL; }
   //  PointerVec(const PointerVec &other);
   //PointerVec(vector<int> &,vector<int> &,vector<int>*);
-  PointerVec(Matrix*,Inputs*);
+  PointerVec(Matrix* mat,Inputs* inp);
   void setValue(vector<int> &np);
 
   void setLimit(PointerVec &p,int limitbp);
@@ -101,11 +109,16 @@ public:
   const PointerVec&  operator++(int);
   bool operator<=(const PointerVec &other) const; 
   bool checkLT();
+  bool checkAtBorder();
+  bool checkAtBorder(seqCode i);
 
 
-  int difference(PointerVec const &other,int i) const  ;
-  int operator[](int i) const;
-  int matrixIndex(int i) const {return this->matrix_p[i];}
+  int difference(PointerVec const &other,seqCode const i,motifCode const tfID) const ;
+  int difference(PointerVec const &other,seqCode const i) const  {
+    return this->difference(other,i,this->getMotif());
+  }
+  int operator[](seqCode const i) const;
+  int matrixIndex(seqCode const i) const {return this->matrix_p[i];}
 
   void nextLookBack();
 
@@ -117,8 +130,9 @@ public:
   store getValue()  const;
 
   vector<id_triple>  getSites();
-  id_triple getSite(int i) const;
-  motifCode getMotif() const;
+  id_triple getSite(seqCode const i) const;
+  id_triple getSite(seqCode const  i,motifCode const tfID) const;
+  motifCode const getMotif() const;
 
 };
 
@@ -198,6 +212,11 @@ class Matrix {
   vector< vector< vector<int> > > tfIndex;
 
   void* allocateData(seqCode level,motifCode mot);
+
+  vector< vector<int> > coordUpdateCache;
+  void CoordCacheInit();
+
+
 public:
   Matrix() {return; }
   Matrix(Inputs* indata);
@@ -205,10 +224,19 @@ public:
   PointerVec getOrigin();
   PointerVec argMax();
 
+  int CoordCacheGet(motifCode const tfID,seqCode const i) const{
+    return this->coordUpdateCache[tfID][i];
+  }
+
+  void CoordCacheSet(motifCode const tfID,seqCode const i,int value) {
+    //assert(value>=this->coordUpdateCache[tfID][i]);
+    this->coordUpdateCache[tfID][i]=value;
+  }
+
   int usedCells() {return this->cells;}
 
-  matrixentry &getValue(PointerVec const &) ;
-  matrixentry *getValueP(PointerVec const &);
+  matrixentry &getValue(PointerVec const &) const;
+  matrixentry *getValueP(PointerVec const &) const;
   void setValue(PointerVec &,matrixentry &);
 
   matrixentry &operator[](PointerVec &p);
@@ -222,8 +250,14 @@ public:
 
 
   int by_seq_tf_pos(int seqID, motifCode tfID,posCode pos) const { 
-    //return this->tfIndex[seqID][tfID][pos]; 
-    return this->tfIndex.at(seqID).at(tfID).at(pos); 
+#ifndef NDEBUG
+    vector< vector<int> > seqTF=this->tfIndex.at(seqID);
+    vector<int>  TFid=seqTF.at(tfID);
+    int tfCode = TFid.at(pos);
+    return tfCode;
+#else
+    return this->tfIndex[seqID][tfID][pos]; 
+#endif
   }
 
 };
@@ -249,6 +283,8 @@ struct __CPSTUF {
   Matrix *dynmat;
 
 
+
+  friend class PointerVec;
   //priority_queue<MS_res> bestAligns;
 
   //map<store,pair<matCoord,matCoord> > bestAlignsTmp;
