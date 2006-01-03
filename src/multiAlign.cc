@@ -36,6 +36,9 @@
 /*
  *
  * $Log$
+ * Revision 1.14  2006/01/02 12:44:34  kpalin
+ * Cleaning up coordinate caching.
+ *
  * Revision 1.13  2005/12/30 12:43:18  kpalin
  * Significantly (should be factor of n) faster.
  *
@@ -199,10 +202,12 @@ bool PointerVec::updateRestCoords()
     int dist=this->difference(*this->limiterPvec,i,tfid);
     if(dist>this->limitBP || dist<0) {
 #ifndef NDEBUG
-      printf("afterBreak\n");
+      printf("afterBreak %d\n",dist);
 #endif
       return 0;
     }
+    assert(this->checkAtBorder(i));
+  
 
   }
 
@@ -217,6 +222,8 @@ bool PointerVec::decFirst()
   cout<<"dF()"<<endl;
 #endif
 
+  int dist;
+
   do {
     this->matrix_p[0]--;
   } while(this->matrix_p[0]>=0 && !this->allHasFactor());
@@ -226,10 +233,10 @@ bool PointerVec::decFirst()
   }
 
   // Here we dont need to know the new TF id because we only use dimension 0.
-  if(!this->ok || this->difference(*this->limiterPvec,0)<0) {
+  if(!this->ok || (dist=this->difference(*this->limiterPvec,0)<0) {
     //this->ok=0;
 #ifndef NDEBUG
-    printf("limitrBreak\n");
+    printf("limitrBreak %d\n",dist);
 #endif
     return 0;
   }
@@ -238,11 +245,29 @@ bool PointerVec::decFirst()
 
 } 
 
+bool PointerVec::checkWithinLimits()
+{
+  bool ret=1;
+
+  if(!this->limiterPvec) {
+    ret=0;
+  } else {
+    motifCode tfID=this->getMotif();
+
+    for(seqCode i=0;(unsigned int)i<(unsigned int)this->m;i++) {
+      int dist=this->difference(*this->limiterPvec,i,tfID);
+      ret&=(dist>=0);
+      ret&=(dist<=this->limitBP);
+    }
+  }
+  return ret;
+}
+
 bool PointerVec::checkAtBorder()
 {
   bool ret=1;
 
-  for(int i=1;i<this->m;i++) {
+  for(unsigned int i=1;i<this->m;i++) {
     ret&=this->checkAtBorder(i);
   };
 
@@ -259,6 +284,10 @@ bool PointerVec::checkAtBorder(seqCode i)
     this->matrix_p[i]++;
     ret&=(this->getSite(i).epos>=this->limiterPvec->getSite(i).pos);
     this->matrix_p[i]--;
+
+    if(!ret) {
+      this->output();
+    }
   }
 
   return ret;
@@ -289,9 +318,9 @@ bool PointerVec::checkLT()
 void PointerVec::nextLookBack() 
 {
   seqCode seq;
-  bool done=0;
   int tmpDelta;
 
+  assert(this->checkWithinLimits());
 
 #ifndef NDEBUG
   cout<<"nLB()"<<endl;
@@ -309,6 +338,7 @@ void PointerVec::nextLookBack()
       // Mentiin liian kauas rajoittajasta tai alun etupuolelle
 
       this->matrix_p[seq]=this->myMat->CoordCacheGet(tfid,seq);
+      assert(this->ok && this->checkAtBorder(seq));
 
       if(this->matrix_p[seq]<0 ||
 	 this->difference(*this->limiterPvec,seq,tfid)>this->limitBP) {
@@ -322,9 +352,9 @@ void PointerVec::nextLookBack()
 
    if(seq==0) {
      while(!this->decFirst() && this->ok)
-       assert(this->difference(*this->limiterPvec,seq)>0);
+       assert(this->difference(*this->limiterPvec,seq)>=0);
    }
-  if(this->matrix_p[0]<0) {
+  if(this->matrix_p[0]<0 || this->difference(*this->limiterPvec,0)>this->limitBP) {
     this->ok=0;
   }
 
@@ -343,6 +373,8 @@ void PointerVec::nextLookBack()
      }
    }
 #endif
+  assert(!this->ok || this->checkWithinLimits());
+
 
 }
 
@@ -373,11 +405,7 @@ int PointerVec::operator[](seqCode const i) const
 // Return zero if one of the sequences do not have this factor.
 int PointerVec::allHasFactor()
 {
-  int sites=1;
-  for(uint i=1;i<this->m;i++) 
-    sites*=this->myMat->countTFinSeq(i,this->getMotif());
-
-  return sites;
+  return this->myMat->allHasFactor(this->getMotif());
 }
 
 const PointerVec& PointerVec::operator++(int dummy)
@@ -426,7 +454,7 @@ const PointerVec& PointerVec::operator++(int dummy)
 // Return either *vector<void*>  or *vector<matrixentry> for the last level
 void * Matrix::allocateData(seqCode level,motifCode mot)
 {
-  int const TFcount=this->countTFinSeq(level,mot);
+  unsigned int const TFcount=this->countTFinSeq(level,mot);
 
 
   if(level<(this->dim-1)) {
@@ -454,6 +482,16 @@ void * Matrix::allocateData(seqCode level,motifCode mot)
 }
 
 
+void Matrix::initAllHaveFactor()
+{
+  for(motifCode tfID=0;tfID<this->indata->factors();tfID++) {
+    int sites=1;
+    for(seqCode i=1;(unsigned int)i<(unsigned int)this->dim;i++) 
+      sites*=this->countTFinSeq(i,tfID);
+    this->allHaveFactor.push_back((sites>0));
+  }
+    
+}
 
 Matrix::Matrix(Inputs *indata)
 {
@@ -509,7 +547,8 @@ Matrix::Matrix(Inputs *indata)
   }
 
   this->CoordCacheInit();
-
+  this->initAllHaveFactor();
+  
 }
 
 PointerVec Matrix::getOrigin()
@@ -851,7 +890,7 @@ id_triple PointerVec::getSite(seqCode const i,motifCode const tfID) const
 void Matrix::CoordCacheInit() {
   if(this->coordUpdateCache.empty()) {
     this->coordUpdateCache.resize(this->indata->factors());
-    for(int tfid=0;tfid<this->coordUpdateCache.size();tfid++) {
+    for(unsigned int tfid=0;tfid<this->coordUpdateCache.size();tfid++) {
       //this->coordUpdateCache[tfid].clear();
       this->coordUpdateCache[tfid].resize(this->indata->sequences(),0);
 //     for(int i=0;i<this->m;i++) {
@@ -864,7 +903,19 @@ void Matrix::CoordCacheInit() {
   }
 }
 
-void PointerVec::setLimit(PointerVec &p,int limitbp)
+
+PointerVec PointerVec::getLimited(int limitbp)
+{
+  PointerVec ret=PointerVec(*this);
+  ret.setLimit(limitbp);
+
+  assert(!ret.ok || ret.checkWithinLimits());
+
+
+  return ret;
+}
+
+void PointerVec::setLimit(int limitbp)
 {
 #ifndef NDEBUG
   cout<<"sL()"<<endl;
@@ -876,14 +927,14 @@ void PointerVec::setLimit(PointerVec &p,int limitbp)
   if(this->limiterPvec) {
     delete limiterPvec;
   }
-  this->limiterPvec= new PointerVec(p);
+  this->limiterPvec= new PointerVec(*this);
 
   while(this->matrix_p[0]>=0 && !this->decFirst());
 
 	//	(this->difference(*this->limiterPvec,0)<0 || this->difference(*this->limiterPvec,0)>this->limitBP)
 
 
-  if(this->matrix_p[0]<0) {
+  if(this->matrix_p[0]<0 || this->difference(*this->limiterPvec,0)>this->limitBP) {
     this->ok=0;
     return;
   }
@@ -896,6 +947,7 @@ void PointerVec::setLimit(PointerVec &p,int limitbp)
 	ok=0;
       }
     }
+    this->myMat->CoordCacheSet(this->getMotif(),i,this->matrix_p[i]);
   }
 
 
@@ -1288,7 +1340,7 @@ inline double penalty(malign_AlignmentObject *dat,posind d1,posind d2)
   double val=dat->mu*(d1+d2)/2.0;
 
   assert(d1>=0);
-  if(d2<0) {printf("d2=%d\n",d2);}
+  if(d2<0) {printf("d2=%g\n",d2);}
   assert(d2>=0);
   if( (d1+d2)>0.0) {
     val=val+ dat->nu*(d1-d2)*(d1-d2)/(d1+d2)+
@@ -1367,11 +1419,12 @@ malignObject(malign_AlignmentObject *self)
 
 
     // Look for the previous alignments
-    PointerVec k=PointerVec(entry);
+    //PointerVec k=PointerVec(entry);
 
-    for(k.setLimit(entry,1000);
+    for(PointerVec k=entry.getLimited(1000);
 	k.isOK(); k.nextLookBack()) {  // Exponential loop
 	 
+      assert(k.checkWithinLimits());
 #ifndef NDEBUG
       k.output();cout<<"s ";
     cout<<"dists: (";
