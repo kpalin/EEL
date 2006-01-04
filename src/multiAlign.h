@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.6  2006/01/02 12:44:16  kpalin
+ *Cleaning up limit coordinate caching.
+ *
  *Revision 1.5  2005/11/24 13:29:45  kpalin
  *Possibly irrelevant cast to int added.
  *
@@ -80,7 +83,7 @@ class PointerVec {
   int dataPoint() const ;
 
   // Highest point of the limited lookback.
-  class PointerVec *limiterPvec;
+  const class PointerVec *limiterPvec;
   // Pointer to the matrix this pointer is associated with:
   class Matrix* myMat;
 
@@ -99,21 +102,26 @@ public:
   PointerVec(Matrix* mat,Inputs* inp);
   void setValue(vector<int> &np);
 
-  void setLimit(PointerVec &p,int limitbp);
+
+  PointerVec getLimited(int limitbp) const;
   int isOK() const { return this && ok; }
   int allSame();
   //vector<int> &getValue() { return p; }
 
+  
 
   // Jump to the "next" entry in the matrix that has the same site on each dimension
   const PointerVec&  operator++(int);
   bool operator<=(const PointerVec &other) const; 
-  bool checkLT();
+  bool checkLT() const ;
   bool checkAtBorder();
   bool checkAtBorder(seqCode i);
+  bool checkWithinLimits() const ;
 
 
   int difference(PointerVec const &other,seqCode const i,motifCode const tfID) const ;
+
+  // Return the distance FROM the end of this TO the beginning of other on sequence i
   int difference(PointerVec const &other,seqCode const i) const  {
     return this->difference(other,i,this->getMotif());
   }
@@ -122,7 +130,7 @@ public:
 
   void nextLookBack();
 
-  void output();
+  void output() const;
   
 
 
@@ -207,6 +215,8 @@ class Matrix {
 
   int cells;
 
+  vector<bool> allHaveFactor;
+
   // p=tfIndex[seqID][tfID][posCode] <=>  indata->seq[seqID][p] is the posCode:th 
   //                                      occurrence of motif tfID in sequence seqID
   vector< vector< vector<int> > > tfIndex;
@@ -215,7 +225,7 @@ class Matrix {
 
   vector< vector<int> > coordUpdateCache;
   void CoordCacheInit();
-
+  void initAllHaveFactor();
 
 public:
   Matrix() {return; }
@@ -228,6 +238,10 @@ public:
     return this->coordUpdateCache[tfID][i];
   }
 
+
+  bool allHasFactor(motifCode tfID) {
+    return this->allHaveFactor[tfID];
+  }
   void CoordCacheSet(motifCode const tfID,seqCode const i,int value) {
     //assert(value>=this->coordUpdateCache[tfID][i]);
     this->coordUpdateCache[tfID][i]=value;
