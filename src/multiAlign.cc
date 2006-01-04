@@ -36,6 +36,9 @@
 /*
  *
  * $Log$
+ * Revision 1.16  2006/01/04 11:16:04  kpalin
+ * Maybe working but debugging version.
+ *
  * Revision 1.15  2006/01/03 14:03:39  kpalin
  * Again improved. Should be faster.
  *
@@ -248,7 +251,7 @@ bool PointerVec::decFirst()
 
 } 
 
-bool PointerVec::checkWithinLimits()
+bool PointerVec::checkWithinLimits() const
 {
   bool ret=1;
 
@@ -298,7 +301,7 @@ bool PointerVec::checkAtBorder(seqCode i)
 
 
 
-bool PointerVec::checkLT()
+bool PointerVec::checkLT() const
 {
   if(limiterPvec && !(*this<=*limiterPvec)) {
     cout<<"###"<<endl;
@@ -335,6 +338,7 @@ void PointerVec::nextLookBack()
 
 
     if(this->matrix_p[seq]>=0 && (tmpDelta=this->difference(*this->limiterPvec,seq,tfid))<=this->limitBP) {
+      // We are still within limits. We can stop now.
       assert(tmpDelta>0);
       return;
     } else {
@@ -826,7 +830,7 @@ store matrixentry::getValue() const
 }
 
 
-void PointerVec::output()
+void PointerVec::output() const
 {
   if(this->isOK()) {
    // cout<<"valid("<<m<<"): ";
@@ -907,69 +911,47 @@ void Matrix::CoordCacheInit() {
 }
 
 
-PointerVec PointerVec::getLimited(int limitbp)
+PointerVec PointerVec::getLimited(int limitbp) const
 {
   PointerVec ret=PointerVec(*this);
-  ret.setLimit(limitbp);
 
+
+  ret.limitBP=limitbp;
+
+  ret.limiterPvec=this;
+
+  
+  for(seqCode i=0;(unsigned int)i<(unsigned int)this->m;i++) {
+    while(ret.ok && ret.difference(*ret.limiterPvec,i)<0) {
+      ret.matrix_p[i]--;
+      if(ret.matrix_p[i]<0 || ret.difference(*ret.limiterPvec,i)>ret.limitBP) {
+	ret.ok=0;
+	goto finally;
+      }
+    }
+    ret.myMat->CoordCacheSet(ret.getMotif(),i,ret.matrix_p[i]);
+  }
+
+//   if(ok) {
+//     if(!ret.checkAtBorder()) {
+//       cout<<"Not at border:";
+//       ret.output();
+//     }
+//     if(!ret.checkWithinLimits()) {
+//       cout<<"Not within limits:";
+//       ret.output();
+//       ret.limiterPvec->output();
+//       for(uint i=0;i<this->m;i++) {
+// 	cout<<ret.difference(*ret.limiterPvec,i)<<",";
+//       }
+//       cout<<endl;
+//     }
+//   }
+ finally:
   assert(!ret.ok || ret.checkWithinLimits());
 
 
   return ret;
-}
-
-void PointerVec::setLimit(int limitbp)
-{
-#ifndef NDEBUG
-  cout<<"sL()"<<endl;
-#endif
-
-  this->limitBP=limitbp;
-
-
-  if(this->limiterPvec) {
-    delete limiterPvec;
-  }
-  this->limiterPvec= new PointerVec(*this);
-
-  while(this->matrix_p[0]>=0 && !this->decFirst());
-
-	//	(this->difference(*this->limiterPvec,0)<0 || this->difference(*this->limiterPvec,0)>this->limitBP)
-
-
-  if(this->matrix_p[0]<0 ) {//|| this->difference(*this->limiterPvec,0)>this->limitBP) {
-    this->ok=0;
-    return;
-  }
-
-
-  for(uint i=1;i<this->m;i++) {
-    while(this->ok && this->difference(*this->limiterPvec,i)<0) {
-      matrix_p[i]--;
-      if(matrix_p[i]<=0) {
-	ok=0;
-      }
-    }
-    this->myMat->CoordCacheSet(this->getMotif(),i,this->matrix_p[i]);
-  }
-
-  if(ok) {
-    if(!this->checkAtBorder()) {
-      cout<<"Not at border:";
-      this->output();
-    }
-    if(!this->checkWithinLimits()) {
-      cout<<"Not within limits:";
-      this->output();
-      this->limiterPvec->output();
-      for(int i=0;i<this->m;i++) {
-	cout<<this->difference(*this->limiterPvec,i)<<",";
-      }
-      cout<<endl;
-    }
-  }
-  assert(!ok || this->checkAtBorder());
-
 }
 
 // Return true, if the sites are the same in all dimensions.
