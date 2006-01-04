@@ -36,6 +36,9 @@
 /*
  *
  * $Log$
+ * Revision 1.15  2006/01/03 14:03:39  kpalin
+ * Again improved. Should be faster.
+ *
  * Revision 1.14  2006/01/02 12:44:34  kpalin
  * Cleaning up coordinate caching.
  *
@@ -233,7 +236,7 @@ bool PointerVec::decFirst()
   }
 
   // Here we dont need to know the new TF id because we only use dimension 0.
-  if(!this->ok || (dist=this->difference(*this->limiterPvec,0)<0) {
+  if(!this->ok || (dist=this->difference(*this->limiterPvec,0)<0)) {
     //this->ok=0;
 #ifndef NDEBUG
     printf("limitrBreak %d\n",dist);
@@ -340,8 +343,8 @@ void PointerVec::nextLookBack()
       this->matrix_p[seq]=this->myMat->CoordCacheGet(tfid,seq);
       assert(this->ok && this->checkAtBorder(seq));
 
-      if(this->matrix_p[seq]<0 ||
-	 this->difference(*this->limiterPvec,seq,tfid)>this->limitBP) {
+      if(this->matrix_p[seq]<0) {// ||
+	//this->difference(*this->limiterPvec,seq,tfid)>this->limitBP) {
 	this->ok=this->decFirst();
 	assert(!this->ok || this->difference(*this->limiterPvec,seq)>=0);
 	return;
@@ -354,7 +357,7 @@ void PointerVec::nextLookBack()
      while(!this->decFirst() && this->ok)
        assert(this->difference(*this->limiterPvec,seq)>=0);
    }
-  if(this->matrix_p[0]<0 || this->difference(*this->limiterPvec,0)>this->limitBP) {
+if(this->matrix_p[0]<0) {// || this->difference(*this->limiterPvec,0)>this->limitBP) {
     this->ok=0;
   }
 
@@ -934,7 +937,7 @@ void PointerVec::setLimit(int limitbp)
 	//	(this->difference(*this->limiterPvec,0)<0 || this->difference(*this->limiterPvec,0)>this->limitBP)
 
 
-  if(this->matrix_p[0]<0 || this->difference(*this->limiterPvec,0)>this->limitBP) {
+  if(this->matrix_p[0]<0 ) {//|| this->difference(*this->limiterPvec,0)>this->limitBP) {
     this->ok=0;
     return;
   }
@@ -950,7 +953,21 @@ void PointerVec::setLimit(int limitbp)
     this->myMat->CoordCacheSet(this->getMotif(),i,this->matrix_p[i]);
   }
 
-
+  if(ok) {
+    if(!this->checkAtBorder()) {
+      cout<<"Not at border:";
+      this->output();
+    }
+    if(!this->checkWithinLimits()) {
+      cout<<"Not within limits:";
+      this->output();
+      this->limiterPvec->output();
+      for(int i=0;i<this->m;i++) {
+	cout<<this->difference(*this->limiterPvec,i)<<",";
+      }
+      cout<<endl;
+    }
+  }
   assert(!ok || this->checkAtBorder());
 
 }
@@ -1419,9 +1436,11 @@ malignObject(malign_AlignmentObject *self)
 
 
     // Look for the previous alignments
-    //PointerVec k=PointerVec(entry);
+    PointerVec k=PointerVec(entry);
+
 
     for(PointerVec k=entry.getLimited(1000);
+	//for(k.setLimit(1000);
 	k.isOK(); k.nextLookBack()) {  // Exponential loop
 	 
       assert(k.checkWithinLimits());
