@@ -37,6 +37,9 @@
 /*
  *
  * $Log$
+ * Revision 1.19  2006/01/05 09:21:54  kpalin
+ * Fast and working version. Still needs cleanup.
+ *
  * Revision 1.18  2006/01/04 12:28:30  kpalin
  * Works with getLimited.
  *
@@ -266,7 +269,6 @@ bool PointerVec::decFirst()
 #ifdef DEBUG_OUTPUT
     printf("HighDist: %d\n",dist);
 #endif
-    this->myMat->CoordCacheInit();
     this->ok=0;
     return 0;
   } else {
@@ -918,6 +920,20 @@ PointerVec PointerVec::getLimited(int limitbp) const
   ret.limitBP=limitbp;
 
   ret.limiterPvec=this;
+
+  for(seqCode i=1;(unsigned int)i<(unsigned int)this->m;i++) {
+    if(ret.myMat->CoordCacheGet(ret.getMotif(),i)>ret.matrix_p[i]) {
+#ifdef DEBUG_OUTPUT
+      cout<<"Reseting "<<i<<" at "<<ret.myMat->CoordCacheGet(ret.getMotif(),i)<<endl;
+      ret.output();
+      cout<<endl;
+#endif
+      ret.myMat->CoordCacheReset(i);
+      break;
+      
+    }
+  }
+
   while(ret.isOK() && !ret.decFirst());
 
   if(!ret.isOK()) {
@@ -925,6 +941,7 @@ PointerVec PointerVec::getLimited(int limitbp) const
   }
 
   
+
   for(seqCode i=1;(unsigned int)i<(unsigned int)this->m;i++) {
     while(ret.isOK() && ret.difference(*ret.limiterPvec,i)<0) {
       ret.matrix_p[i]--;
@@ -1440,7 +1457,7 @@ malignObject(malign_AlignmentObject *self)
     PointerVec k=PointerVec(entry);
 
 
-    for(PointerVec k=entry.getLimited(1000);
+    for(PointerVec k=entry.getLimited(MAX_BP_DIST);
 	k.isOK(); k.nextLookBack()) {  // Exponential loop
 	 
       assert(k.checkWithinLimits());
