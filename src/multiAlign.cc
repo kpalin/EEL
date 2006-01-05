@@ -1,4 +1,5 @@
 #include <Python.h>
+#include <stdlib.h>
 #include "structmember.h"
 
 #include <fstream>
@@ -36,6 +37,9 @@
 /*
  *
  * $Log$
+ * Revision 1.18  2006/01/04 12:28:30  kpalin
+ * Works with getLimited.
+ *
  * Revision 1.16  2006/01/04 11:16:04  kpalin
  * Maybe working but debugging version.
  *
@@ -207,9 +211,11 @@ bool PointerVec::updateRestCoords()
     this->matrix_p[i]=this->getPrevMatrixCoord(tfid,i);
     int dist=this->difference(*this->limiterPvec,i,tfid);
     if(dist>this->limitBP || dist<0) {
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
       printf("afterBreak %d\n",dist);
 #endif
+
+      // this is out of bounds
       return 0;
     }
     assert(this->checkAtBorder(i));
@@ -222,9 +228,13 @@ bool PointerVec::updateRestCoords()
 
 // TODO:: THIS MUST BE MADE MUCH MUCH MORE EFFICIENT
 // Return true if pointer is valid with respect to limiterPvec
+
+// Return:
+//    True  if this is within limits
+//    Set this->ok to False, if this->difference(*this->limiterPvec,0)>this->limitBP
 bool PointerVec::decFirst()
 {
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
   cout<<"dF()"<<endl;
 #endif
 
@@ -236,20 +246,36 @@ bool PointerVec::decFirst()
 
   if(this->matrix_p[0]<0) {
     this->ok=0;
-  }
-
-  // Here we dont need to know the new TF id because we only use dimension 0.
-  if(!this->ok || (dist=this->difference(*this->limiterPvec,0)<0)) {
-    //this->ok=0;
-#ifndef NDEBUG
-    printf("limitrBreak %d\n",dist);
-#endif
     return 0;
   }
 
-  return this->updateRestCoords();
+  // Here we dont need to know the new TF id because we only use dimension 0.
 
+  dist=this->difference(*this->limiterPvec,0);
+
+  if(dist<0) {
+    //this->ok=0;
+#ifdef DEBUG_OUTPUT
+    printf("negDist %d\n",dist);
+#endif
+    // this is ahead of limiterPvec
+    return 0;
+  }
+  if(dist>this->limitBP) {
+    // this is out of bounds on sequence 0.
+#ifdef DEBUG_OUTPUT
+    printf("HighDist: %d\n",dist);
+#endif
+    this->myMat->CoordCacheInit();
+    this->ok=0;
+    return 0;
+  } else {
+    return this->updateRestCoords();
+  }
+  assert(0);
 } 
+
+
 
 bool PointerVec::checkWithinLimits() const 
 {
@@ -328,7 +354,7 @@ void PointerVec::nextLookBack()
 
   assert(this->checkWithinLimits());
 
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
   cout<<"nLB()"<<endl;
 #endif
   motifCode tfid=this->getMotif();
@@ -346,33 +372,22 @@ void PointerVec::nextLookBack()
       this->matrix_p[seq]=this->myMat->CoordCacheGet(tfid,seq);
       assert(this->ok && this->checkAtBorder(seq));
 
-      if(this->matrix_p[seq]<0) {// ||
-	//this->difference(*this->limiterPvec,seq,tfid)>this->limitBP) {
-	this->ok=this->decFirst();
-	assert(!this->ok || this->difference(*this->limiterPvec,seq)>=0);
-	return;
-      }
-      assert(this->ok && this->checkAtBorder(seq));
     }
   }
 
    if(seq==0) {
-     while(!this->decFirst() && this->ok)
+     while(!this->decFirst() && this->isOK())
        assert(this->difference(*this->limiterPvec,seq)>=0);
    }
-if(this->matrix_p[0]<0) {// || this->difference(*this->limiterPvec,0)>this->limitBP) {
-    this->ok=0;
-  }
+   
 
 
-  assert(!ok || checkLT());
-
-
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
    if(ok) {
      motifCode tfid=this->getMotif();
 
      assert(this->matrix_p[0]<this->myMat->dims(0));
+     printf("dist[0]= %d\n",this->difference(*this->limiterPvec,0));
      for(uint i=1;i<this->m;i++) {
        cout<<this->matrix_p[i]<<"<<"<<this->myMat->countTFinSeq(i,tfid)<<" "<<this->limData->factor(tfid)<<endl;
        assert(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfid));
@@ -442,7 +457,7 @@ const PointerVec& PointerVec::operator++(int dummy)
     ok=0;
   }
 
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
   else if(ok) { // Need condition to avoid messing up with loop in getOrigin()
     motifCode tfid=this->getMotif();
     assert(this->matrix_p[0]<this->myMat->dims(0));
@@ -524,7 +539,7 @@ Matrix::Matrix(Inputs *indata)
       }
 
     }
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
     for(int i=0;i<indata->factors();i++) {
       int motifCount=countTFinSeq(0,i);
       cout<<i<<" "<<indata->factor(i)<<" "<<motifCount<<flush;
@@ -585,7 +600,7 @@ PointerVec Matrix::argMax()
     }
     p++;
   }
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
   if(!maxstore.isOK()) {
     cout<<"Busted matrix, all zeros"<<endl;
   }
@@ -852,13 +867,7 @@ void PointerVec::setValue(vector<int> &np)
 {
   // TODO: Something for this. Remove or fix.
   //p=np;
-
-#ifndef NDEBUG
-  for(uint i=0;i<m;i++) {
-    //assert(p[i]<myMat->dims(i));
-    //assert(p[i]>=0);
-  }
-#endif
+  abort();
 
   ok=0;
 }
@@ -894,18 +903,10 @@ id_triple PointerVec::getSite(seqCode const i,motifCode const tfID) const
 
 
 void Matrix::CoordCacheInit() {
-  if(this->coordUpdateCache.empty()) {
-    this->coordUpdateCache.resize(this->indata->factors());
-    for(unsigned int tfid=0;tfid<this->coordUpdateCache.size();tfid++) {
-      //this->coordUpdateCache[tfid].clear();
-      this->coordUpdateCache[tfid].resize(this->indata->sequences(),0);
-//     for(int i=0;i<this->m;i++) {
-//       if(this->coordUpdateCache[tfid][i]>=this->myMat->countTFinSeq(i,tfid) || 
-// 	 this->difference(*this->limiterPvec,i)<0) {
-// 	this->coordUpdateCache[tfid][i]=0;
-//       }
-//     }
-    }
+  this->coordUpdateCache.clear();
+  this->coordUpdateCache.resize(this->indata->sequences());
+  for(seqCode seq=0;seq<this->coordUpdateCache.size();seq++) {
+    this->coordUpdateCache[seq].resize(this->indata->factors(),0);
   }
 }
 
@@ -917,14 +918,15 @@ PointerVec PointerVec::getLimited(int limitbp) const
   ret.limitBP=limitbp;
 
   ret.limiterPvec=this;
-  while(ret.matrix_p[0]>=0 && !ret.decFirst());
-  if(ret.matrix_p[0]<0) {
-    ret.ok=0;
+  while(ret.isOK() && !ret.decFirst());
+
+  if(!ret.isOK()) {
     goto finally;
   }
+
   
   for(seqCode i=1;(unsigned int)i<(unsigned int)this->m;i++) {
-    while(ret.ok && ret.difference(*ret.limiterPvec,i)<0) {
+    while(ret.isOK() && ret.difference(*ret.limiterPvec,i)<0) {
       ret.matrix_p[i]--;
       if(ret.matrix_p[i]<0 || ret.difference(*ret.limiterPvec,i)>ret.limitBP) {
 	ret.ok=0;
@@ -951,6 +953,7 @@ PointerVec PointerVec::getLimited(int limitbp) const
 //   }
  finally:
   assert(!ret.ok || ret.checkWithinLimits());
+  assert(!ret.ok || ret.checkAtBorder());
 
 
   return ret;
@@ -969,59 +972,6 @@ PointerVec PointerVec::getLimited(int limitbp) const
 
 
 
-void PointerVec::setLimit(int limitbp)
-{
-#ifndef NDEBUG
-  cout<<"sL()"<<endl;
-#endif
-
-  this->limitBP=limitbp;
-
-
-  if(this->limiterPvec) {
-    delete limiterPvec;
-  }
-  this->limiterPvec= new PointerVec(*this);
-
-  while(this->matrix_p[0]>=0 && !this->decFirst());
-
-	//	(this->difference(*this->limiterPvec,0)<0 || this->difference(*this->limiterPvec,0)>this->limitBP)
-
-
-  if(this->matrix_p[0]<0 ) {//|| this->difference(*this->limiterPvec,0)>this->limitBP) {
-    this->ok=0;
-    return;
-  }
-
-
-  for(uint i=1;i<this->m;i++) {
-    while(this->ok && this->difference(*this->limiterPvec,i)<0) {
-      matrix_p[i]--;
-      if(matrix_p[i]<=0) {
-	ok=0;
-      }
-    }
-    this->myMat->CoordCacheSet(this->getMotif(),i,this->matrix_p[i]);
-  }
-
-  if(ok) {
-    if(!this->checkAtBorder()) {
-      cout<<"Not at border:";
-      this->output();
-    }
-    if(!this->checkWithinLimits()) {
-      cout<<"Not within limits:";
-      this->output();
-      this->limiterPvec->output();
-      for(int i=0;i<this->m;i++) {
-	cout<<this->difference(*this->limiterPvec,i)<<",";
-      }
-      cout<<endl;
-    }
-  }
-  assert(!ok || this->checkAtBorder());
-
-}
 
 // Return true, if the sites are the same in all dimensions.
 int PointerVec::allSame() 
@@ -1294,7 +1244,7 @@ malignment_nextBest(malign_AlignmentObject *self)
   PyObject *seqPos,*siteScore,*annotations;
   int seqC=0;
 
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
   p=&start;  
   cout<<"eka:"<<flush;
   start.output();
@@ -1377,7 +1327,7 @@ malignment_nextBest(malign_AlignmentObject *self)
 
     matVal->negate();
 
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
     cout<<"Kierretään :"<<flush;
     p->output();
     cout<<"="<<self->CP->dynmat->getValue(*p).getValue()<<endl;
@@ -1450,7 +1400,7 @@ malignObject(malign_AlignmentObject *self)
   int n=self->CP->dynmat->dims();
 
   for(;entry.isOK();entry++) {
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
     entry.output();
     assert(entry.getSite(0).ID==entry.getSite(1).ID);
     assert(entry.getSite(0).strand==entry.getSite(1).strand);
@@ -1491,11 +1441,10 @@ malignObject(malign_AlignmentObject *self)
 
 
     for(PointerVec k=entry.getLimited(1000);
-	//for(k.setLimit(1000);
 	k.isOK(); k.nextLookBack()) {  // Exponential loop
 	 
       assert(k.checkWithinLimits());
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
       k.output();cout<<"s ";
     cout<<"dists: (";
     for(int i=0;i<n;i++) {
@@ -1533,7 +1482,7 @@ malignObject(malign_AlignmentObject *self)
     if(maxScore>absBest)
       absBest=maxScore;
     if(maxScore>0.0) {
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
       entry.output();
       cout<<"="<<maxScore<<"<-";
       if(maxSourceP) {
@@ -1621,7 +1570,7 @@ malign_alignCommon( malign_AlignmentObject *self,PyObject *data,int result_ask,
   self->memSaveUsed=0;
   self->secs_to_align=0;
 
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
   cout
     <<"Lambda:"<<lambda<<endl
     <<"Xi    :"<<xi<<endl
@@ -1731,7 +1680,7 @@ initmultiAlign(void)
     PyModule_AddObject(m, "MultiAlignment", (PyObject *)&malign_AlignmentType);
 
 
-#ifndef NDEBUG
+#ifdef DEBUG_OUTPUT
     cout<<"MultiAlignLoaded"<<endl;
 #endif
 }
