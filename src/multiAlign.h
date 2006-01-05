@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.7  2006/01/04 12:29:39  kpalin
+ *Almost compatible with multiALign.cc:1.18
+ *
  *Revision 1.6  2006/01/02 12:44:16  kpalin
  *Cleaning up limit coordinate caching.
  *
@@ -76,7 +79,7 @@ class PointerVec {
   vector<int> matrix_p;
   //vector<int> dimlen;
   uint m;
-  int ok;
+  bool ok;
 
   class Inputs *limData;
   int limitBP;
@@ -104,7 +107,7 @@ public:
 
 
   PointerVec getLimited(int limitbp) const;
-  int isOK() const { return this && ok; }
+  int isOK() const { return this && this->ok; }
   int allSame();
   //vector<int> &getValue() { return p; }
 
@@ -224,7 +227,6 @@ class Matrix {
   void* allocateData(seqCode level,motifCode mot);
 
   vector< vector<int> > coordUpdateCache;
-  void CoordCacheInit();
   void initAllHaveFactor();
 
 public:
@@ -234,8 +236,10 @@ public:
   PointerVec getOrigin();
   PointerVec argMax();
 
+  void CoordCacheInit();
   int CoordCacheGet(motifCode const tfID,seqCode const i) const{
-    return this->coordUpdateCache[tfID][i];
+    return this->coordUpdateCache[i][tfID];
+    //return 0;
   }
 
 
@@ -244,7 +248,12 @@ public:
   }
   void CoordCacheSet(motifCode const tfID,seqCode const i,int value) {
     //assert(value>=this->coordUpdateCache[tfID][i]);
-    this->coordUpdateCache[tfID][i]=value;
+    this->coordUpdateCache[i][tfID]=value;
+  }
+
+  void CoordCacheReset(seqCode const i) {
+    this->coordUpdateCache[i].clear();
+    this->coordUpdateCache[i].resize(this->indata->factors(),0);
   }
 
   int usedCells() {return this->cells;}
