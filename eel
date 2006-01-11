@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: UTF-8 -*- 
         
 """The basic command that starts up the commandline interface"""
@@ -9,6 +9,10 @@ import sys
 
 
 # $Log$
+# Revision 1.7  2005/05/19 07:49:25  kpalin
+# Merged Waterman-Eggert style suboptimal alignments and
+# SNP matching.
+#
 # Revision 1.6.2.1  2005/05/19 06:49:50  kpalin
 # renamed class eelgui to eelGUI
 #
