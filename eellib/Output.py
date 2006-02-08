@@ -13,6 +13,9 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.23  2005/11/25 12:09:55  kpalin
+# Human readable format for multiple alignment.
+#
 # Revision 1.22  2005/11/24 13:29:13  kpalin
 # Added some debugging code for GFF alignment output.
 #
@@ -290,9 +293,11 @@ def formatMultiAlignGFF(alignment):
                                           begin,end,score,as.strand,\
                                           i,siteScore,colCode,annot.strip()))
                 try:
-                    assert(DEBUGprevpos.get(seq,(0,0))[1]<end)
-                    assert(0<=end-DEBUGprevpos.get(seq,(0,end-1))[1]<1000)
+                    assert(DEBUGprevpos.get(seq,(0,0))[1]<begin)
+                    assert(0<=begin-DEBUGprevpos.get(seq,(0,begin-1))[1]<1000)
                 except AssertionError:
+                    print DEBUGprevpos.get(seq,(0,0))[1],"<",begin
+                    print "0<=",begin,"-",DEBUGprevpos.get(seq,(0,begin-1))[1],"<",1000
                     print alignment.names[seq],"COL %d"%(colCode),DEBUGprevpos.get(seq,(0,0))[1],"<",end
                     print outStrIO.getvalue()
                     raise
