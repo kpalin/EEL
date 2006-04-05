@@ -22,6 +22,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.30  2005/06/10 06:55:08  kpalin
+# TIming for matrix matching.
+#
 # Revision 1.29  2005/05/19 07:49:35  kpalin
 # Merged Waterman-Eggert style suboptimal alignments and
 # SNP matching.
@@ -227,7 +230,23 @@ class Interface:
     def show(self,text):
         print text
             
+    def head(self,sitesCount):
 
+        allSites={}
+        allLimits={}
+        for sequence in self.__comp.keys():
+            allSites[sequence]=[]
+            for sites in self.__comp[sequence].values():
+                allSites[sequence].extend([x[0] for x in sites])
+            allSites[sequence].sort()
+            if allSites[sequence]>sitesCount:
+                allLimits[sequence]=allSites[sequence][sitesCount]+1
+            else:
+                allLimits[sequence]=allSites[-1]+1
+            for matrix in self.__comp[sequence].keys():
+                self.__comp[sequence][matrix]=dict([(x,y) for (x,y) in self.__comp[sequence][matrix].items() if x[0]<allLimits[sequence]])
+        self.show("Cut site sequences to length %d\n"%(sitesCount))
+        
     def multiAlignGreedy(self,arglist):
         """Arguments: pairwiseGFFfiles
         Join the given pairwise alignment GFF files to multiple alignment."""
@@ -275,7 +294,10 @@ If you use '.' as filename the local data are aligned."""
                 nuc_per_rotation=10.4
 
 
-            data=[x.split() for x in open(filename).readlines() ]
+            data=[x.strip().split() for x in open(filename).readlines() ]
+            while(len(data[-1])==0):
+                del data[-1]
+
             self.alignment=multiAlign.MultiAlignment(data,int(num_of_align),
                                                      float(Lambda), float(xi),
                                                      float(mu), float(nu),float(nuc_per_rotation))
@@ -283,12 +305,14 @@ If you use '.' as filename the local data are aligned."""
                 print "No multiple alignment for a reason or an other"
             else:
                 print "Done"
-                self.moreAlignments(1)
+                self.moreAlignments(int(num_of_align))
                 print len(self.alignment.bestAlignments)
-                for y in [(x.motif,x.score,zip(self.alignment.names,x.beginEnd,x.siteScore,x.siteSeqPos)) for x in self.alignment.bestAlignments[0]]:print y
+                #for y in [(x.motif,x.score,zip(self.alignment.names,x.beginEnd,x.siteScore,x.siteSeqPos)) for x in self.alignment.bestAlignments[0]]:print y
+                #print Output.formatalignGFF(self.alignment)
 #                print "goodAlign=",map(str,self.alignment.nextBest())
-        except ValueError:
-            print "Error: unallowed arguments passed to 'multipleAlign'"
+        except ValueError,e:
+            print "Error:",e
+            #print "Error: unallowed arguments passed to 'multipleAlign'"
 
         
     def showMultiAlign(self,arglist):

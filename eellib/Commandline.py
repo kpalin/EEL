@@ -16,6 +16,10 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.20  2005/05/19 07:49:35  kpalin
+# Merged Waterman-Eggert style suboptimal alignments and
+# SNP matching.
+#
 # Revision 1.19.2.3  2005/05/09 07:14:57  kpalin
 # Matrix distances with hidden command.
 #
@@ -175,11 +179,12 @@ class Commandline(Interface):
                          'more':               (self.moreAlignment,0),
                          'suboptimals':               (self.suboptimalAlignment,0),
                          '__multipleAlignGreedy':      (self.multiAlignGreedy,1),
-                         '__multipleAlign':      (self.multiAlign,0),
+                         'multipleAlign':      (self.multiAlign,0),
                          '__showMultiAlign':     (self.showMultiAlign,0),
                          '__saveMultiAlign':     (self.saveMultiAlign,1),
                          'no-gui':               (self.no_gui,0),
-                         '__computeKLdistances': (self.showKLdist,1)
+                         '__computeKLdistances': (self.showKLdist,1),
+                         '__head': (self.getHead,1)
                          }
         # Add directory commands if available.
         if globals().has_key("os") and hasattr(os,"getcwd") and hasattr(os,"chdir"):
@@ -251,6 +256,11 @@ class Commandline(Interface):
         return self.__commands.has_key(command)
 
 
+
+    def getHead(self,arglist):
+        "Arguments: sites\nCut site sequences to length sites"
+        self.head(int(arglist[0]))
+        
     def no_gui(self,arglist=None):
         "Arguments: none\nGives command line interface"
         try:

@@ -15,6 +15,10 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.10  2005/07/08 07:56:43  kpalin
+# Fixed a problem with seek() and multiple open()s in addSequence().
+# Now it should work better with pipes.
+#
 # Revision 1.9  2005/05/19 07:49:35  kpalin
 # Merged Waterman-Eggert style suboptimal alignments and
 # SNP matching.
@@ -231,9 +235,11 @@ class Sequences:
         return outs
 
 
-    def removeSequence(self, name):
+    def removeSequence(self, namePat):
         "Remove sequence by name"
-        if self.__Seq.has_key(name):
+        import re
+        pat=re.compile(namePat)
+        for name in [x for x in  self.__Seq.keys() if pat.match(x)]:
             del self.__Seq[name]
         
     def getNames(self):
