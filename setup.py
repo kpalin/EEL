@@ -11,6 +11,10 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.22  2006/05/03 10:12:57  kpalin
+##   Fixed a nasty bug giving false results depending on order of input
+##   sequences.
+##
 ##   Revision 1.21  2005/07/07 09:23:34  kpalin
 ##   Improved Windows compilation, especially py2exe
 ##
@@ -89,6 +93,10 @@ alignCompileArgs = []
 
 #Save memory if the matrix would be larger than 512MB
 alignCompileArgs = ["-DSAVE_MEM","-DSAVE_MEM_LIMIT=536870912"]
+
+if 0:
+    print "No alignment score decrease allowed"
+    alignCompileArgs.append("-DNO_SCORE_DECREASE")
 alignLibs=[]
 
 
@@ -182,11 +190,10 @@ modMultiAlign = Extension('eellib.multiAlign',
 
 
 ext_modList= [modMatrix,modAlignedCols,modAlign,modDist]
-
 ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
 
 setup (name = 'EEL',
-       version = '2.1',
+       version = '2.0pre2',
        url = "http://www.cs.helsinki.fi/u/kpalin/",
        author = "Kimmo Palin, Matthias Berg",
        author_email = "kimmo.palin@helsinki.fi",
