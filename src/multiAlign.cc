@@ -37,6 +37,10 @@
 /*
  *
  * $Log$
+ * Revision 1.21  2006/05/03 10:11:17  kpalin
+ * Fixed a bug resulting wrong alignments depending on order of the input
+ * sequences.
+ *
  * Revision 1.20  2006/01/05 10:33:45  kpalin
  * Fast and working version.
  *
@@ -153,6 +157,11 @@ int toSite(siteCode code)
 }
 
 
+// Return zero if one of the sequences do not have this factor.
+int PointerVec::allHasFactor() {
+  return this->myMat->allHasFactor(this->getMotif());
+}
+
 
 
 PointerVec::PointerVec(Matrix *mat,Inputs *indata)
@@ -261,6 +270,7 @@ bool PointerVec::decFirst()
     return 0;
   }
 
+  this->curMotifCode=this->getMotifLaborous();
   // Here we dont need to know the new TF id because we only use dimension 0.
 
   dist=this->difference(*this->limiterPvec,0);
@@ -434,11 +444,6 @@ int PointerVec::operator[](seqCode const i) const
 }
 
 
-// Return zero if one of the sequences do not have this factor.
-int PointerVec::allHasFactor()
-{
-  return this->myMat->allHasFactor(this->getMotif());
-}
 
 const PointerVec& PointerVec::operator++(int dummy)
 {
@@ -458,15 +463,12 @@ const PointerVec& PointerVec::operator++(int dummy)
       this->matrix_p[0]++;
     } while(this->matrix_p[0]<this->myMat->dims(0) && !this->allHasFactor());
     
-    if(this->matrix_p[0]<0 || this->matrix_p[0]>=this->myMat->dims(0)) {
+    if(this->matrix_p[0]>=this->myMat->dims(0)) {
       this->matrix_p[0]=-1;
       ok=0;
     }
   }
 
-  if(this->matrix_p[0]==-1 || this->matrix_p[0]==this->myMat->dims(0)) {
-    ok=0;
-  }
 
 #ifdef DEBUG_OUTPUT
   else if(ok) { // Need condition to avoid messing up with loop in getOrigin()
@@ -886,7 +888,14 @@ void PointerVec::setValue(vector<int> &np)
 // Assist functions.
 store PointerVec::getValue() const { return myMat->getValueP(*this)->getValue(); }
 vector<id_triple>  PointerVec::getSites() const { return limData->getSites(*this); }
-motifCode const PointerVec::getMotif() const {  return this->limData->getSite(this->matrix_p[0],0).ID; }
+
+
+
+motifCode const PointerVec::getMotifLaborous() const {  return this->limData->getSite(this->matrix_p[0],0).ID; }
+//motifCode const PointerVec::getMotif() const {  return this->curMotifCode; }
+//motifCode const PointerVec::getMotif() const {  return this->limData->getSite(this->matrix_p[0],0).ID; }
+
+
 
 id_triple const &PointerVec::getSite(seqCode const i) const 
 { 
@@ -916,7 +925,7 @@ id_triple const &PointerVec::getSite(seqCode const i,motifCode const tfID) const
 void Matrix::CoordCacheInit() {
   this->coordUpdateCache.clear();
   this->coordUpdateCache.resize(this->indata->sequences());
-  for(seqCode seq=0;seq<this->coordUpdateCache.size();seq++) {
+  for(seqCode seq=0;(unsigned int)seq<this->coordUpdateCache.size();seq++) {
     this->coordUpdateCache[seq].resize(this->indata->factors(),0);
   }
 }

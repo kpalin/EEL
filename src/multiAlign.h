@@ -5,6 +5,10 @@
 /*
  *
  *$Log$
+ *Revision 1.9  2006/05/03 10:11:22  kpalin
+ *Fixed a bug resulting wrong alignments depending on order of the input
+ *sequences.
+ *
  *Revision 1.8  2006/01/05 09:22:09  kpalin
  *Fast and working version.
  *
@@ -81,26 +85,31 @@ class PointerVec {
   //vector<int> p;
   vector<int> matrix_p;
   //vector<int> dimlen;
+  //static 
   uint m;
   bool ok;
 
+  //static 
   class Inputs *limData;
-  int limitBP;
+  //static 
+int limitBP;
   int dataPoint() const ;
 
   // Highest point of the limited lookback.
   const class PointerVec *limiterPvec;
+  //static const class PointerVec *limiterPvec;
   // Pointer to the matrix this pointer is associated with:
-  class Matrix* myMat;
+  //static 
+class Matrix* myMat;
 
   
 
+  motifCode curMotifCode;
   bool decFirst();
   bool updateRestCoords();
   int allHasFactor();
 
   int getPrevMatrixCoord(motifCode const tfID,seqCode const dimension); 
-
 public:
   PointerVec() {ok=0; limiterPvec=NULL;limData=NULL; }
   //  PointerVec(const PointerVec &other);
@@ -143,10 +152,12 @@ public:
   // Assist functions:
   store getValue()  const;
 
+  motifCode const getMotif() const { return this->getMotifLaborous(); }
+  motifCode const getMotifLaborous() const;
+
   vector<id_triple>  getSites() const;
   id_triple const &getSite(seqCode const i) const;
   id_triple const &getSite(seqCode const  i,motifCode const tfID) const;
-  motifCode const getMotif() const;
 
 };
 
@@ -197,7 +208,7 @@ class matrixentry
 
   void setInitData(store,PointerVec*);
 public:
-  matrixentry() { value=-1.0;backTrack=(PointerVec*)2;}
+  matrixentry() { value=-1.0;backTrack=(PointerVec*)0;}
   matrixentry(store,PointerVec&);
   matrixentry(store,PointerVec*);
   store getValue()  const;
