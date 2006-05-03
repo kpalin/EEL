@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.8  2006/01/05 09:22:09  kpalin
+ *Fast and working version.
+ *
  *Revision 1.7  2006/01/04 12:29:39  kpalin
  *Almost compatible with multiALign.cc:1.18
  *
@@ -140,9 +143,9 @@ public:
   // Assist functions:
   store getValue()  const;
 
-  vector<id_triple>  getSites();
-  id_triple getSite(seqCode const i) const;
-  id_triple getSite(seqCode const  i,motifCode const tfID) const;
+  vector<id_triple>  getSites() const;
+  id_triple const &getSite(seqCode const i) const;
+  id_triple const &getSite(seqCode const  i,motifCode const tfID) const;
   motifCode const getMotif() const;
 
 };
@@ -161,21 +164,21 @@ public:
   Inputs() { return; }
   Inputs(PyObject* data);
   int addSite(PyObject* item);
-  int sequences() { return SEQ_to_id.size(); }
-  int factors() { return TF_to_id.size()*2; }
-  char const *sequence(seqCode i) {return seqNames[(int)i].c_str(); }
-  char const *factor(motifCode i) {return factorNames[((int)i)/2].c_str(); }
+  int sequences() const  { return SEQ_to_id.size(); }
+  int factors() const { return TF_to_id.size()*2; }
+  char const *sequence(seqCode i) const {return seqNames[(int)i].c_str(); }
+  char const *factor(motifCode i) const {return factorNames[((int)i)/2].c_str(); }
   vector<int> sequenceLens();
-  int sequenceLens(seqCode seqC) {return seq[seqC].size(); }
+  int sequenceLens(seqCode seqC) const {return seq[seqC].size(); }
 
 
   map<string,seqCode>::iterator sequenceNames() { return SEQ_to_id.begin(); }
   map<string,motifCode>::iterator transfacNames() { return TF_to_id.begin(); }
 
-  vector<id_triple>  getSites(PointerVec &here);
+  vector<id_triple>  getSites(PointerVec const &here) const;
 
-  id_triple getSite(PointerVec const &p,seqCode i) const { return seq[i][p[i]]; }
-  id_triple getSite(posCode pos,seqCode i) const { return seq[i].at(pos); }
+  id_triple const &getSite(PointerVec const &p,seqCode i) const { return seq[i][p[i]]; }
+  id_triple const &getSite(posCode pos,seqCode i) const { return seq[i].at(pos); }
 };
 
 
@@ -268,11 +271,11 @@ public:
   int maxSize() { int s=1;for(int i=0;i<dim;i++) s*=dimLen[i]; return s; }
   int dims() const {return dim; }
   int dims(int i) const { return dimLen[i]; }
-  int countTFinSeq(seqCode seq,motifCode tfID) const { 
+  const int countTFinSeq(seqCode const seq,motifCode const tfID) const { 
     return this->tfIndex[seq][tfID].size(); }
 
 
-  int by_seq_tf_pos(int seqID, motifCode tfID,posCode pos) const { 
+  const int by_seq_tf_pos(int const seqID, motifCode const tfID,posCode const pos) const { 
 #ifndef NDEBUG
     vector< vector<int> > seqTF=this->tfIndex.at(seqID);
     vector<int>  TFid=seqTF.at(tfID);

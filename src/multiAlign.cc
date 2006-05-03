@@ -37,6 +37,9 @@
 /*
  *
  * $Log$
+ * Revision 1.20  2006/01/05 10:33:45  kpalin
+ * Fast and working version.
+ *
  * Revision 1.19  2006/01/05 09:21:54  kpalin
  * Fast and working version. Still needs cleanup.
  *
@@ -187,8 +190,14 @@ int PointerVec::getPrevMatrixCoord(motifCode const tfID,seqCode const i) {
   assert(this->limiterPvec);
   assert(tfID==this->getMotif());
 
-  this->matrix_p[i]=this->myMat->CoordCacheGet(tfID,i);
-  //this->matrix_p[i]=0;
+  int newCoord=this->myMat->CoordCacheGet(tfID,i);
+  if(this->matrix_p[i]<newCoord) {
+    this->myMat->CoordCacheReset(i);
+    this->matrix_p[i]=0;
+  } else {
+    this->matrix_p[i]=newCoord;
+    //this->matrix_p[i]=0;
+  }
 
   while(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfID) && 
 	this->difference(*this->limiterPvec,i,tfID)>=0) {
@@ -789,7 +798,7 @@ int Inputs::addSite(PyObject *site)
 }
 
 
-vector<id_triple> Inputs::getSites(PointerVec &p)
+vector<id_triple> Inputs::getSites(PointerVec const &p) const
 {
   vector<id_triple> out=vector<id_triple>();
 
@@ -876,10 +885,10 @@ void PointerVec::setValue(vector<int> &np)
 
 // Assist functions.
 store PointerVec::getValue() const { return myMat->getValueP(*this)->getValue(); }
-vector<id_triple>  PointerVec::getSites() { return limData->getSites(*this); }
+vector<id_triple>  PointerVec::getSites() const { return limData->getSites(*this); }
 motifCode const PointerVec::getMotif() const {  return this->limData->getSite(this->matrix_p[0],0).ID; }
 
-id_triple PointerVec::getSite(seqCode const i) const 
+id_triple const &PointerVec::getSite(seqCode const i) const 
 { 
   assert(this->isOK());
   if(i==0) {
@@ -889,7 +898,7 @@ id_triple PointerVec::getSite(seqCode const i) const
   }
 }
 
-id_triple PointerVec::getSite(seqCode const i,motifCode const tfID) const 
+id_triple const &PointerVec::getSite(seqCode const i,motifCode const tfID) const 
 { 
   // !!! DOES NOT CHECK FOR CORRECT tfID 
 
@@ -1431,7 +1440,7 @@ malignObject(malign_AlignmentObject *self)
     }
 #endif
 
-    vector<id_triple> sites=entry.getSites();
+    //vector<id_triple> sites=entry.getSites();
 
 
     //siteCode maxSite=SITE_FAIL;
@@ -1444,7 +1453,8 @@ malignObject(malign_AlignmentObject *self)
 
     // Compute the fixed bonus part of the penalty function
     for(int i=0;i<n;i++) {
-      base+=sites[i].weight;
+      const id_triple &site=entry.getSite(i);
+      base+=site.weight;
     }
     base*=self->lambda*n*(n-1)/2;
 
@@ -1454,7 +1464,7 @@ malignObject(malign_AlignmentObject *self)
 
 
     // Look for the previous alignments
-    PointerVec k=PointerVec(entry);
+    //PointerVec k=PointerVec(entry);
 
 
     for(PointerVec k=entry.getLimited(MAX_BP_DIST);
