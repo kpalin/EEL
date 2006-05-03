@@ -11,6 +11,9 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.21  2005/07/07 09:23:34  kpalin
+##   Improved Windows compilation, especially py2exe
+##
 ##   Revision 1.20  2005/07/05 11:22:32  kpalin
 ##   Cap on SNPs in _c_matrix extension.
 ##
@@ -179,10 +182,11 @@ modMultiAlign = Extension('eellib.multiAlign',
 
 
 ext_modList= [modMatrix,modAlignedCols,modAlign,modDist]
-#ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
+
+ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
 
 setup (name = 'EEL',
-       version = '1.1',
+       version = '2.1',
        url = "http://www.cs.helsinki.fi/u/kpalin/",
        author = "Kimmo Palin, Matthias Berg",
        author_email = "kimmo.palin@helsinki.fi",
