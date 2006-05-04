@@ -37,6 +37,9 @@
 /*
  *
  * $Log$
+ * Revision 1.22  2006/05/03 11:00:13  kpalin
+ * Merged. Merged a fix with the main devel. branch.
+ *
  * Revision 1.21  2006/05/03 10:11:17  kpalin
  * Fixed a bug resulting wrong alignments depending on order of the input
  * sequences.
@@ -158,13 +161,13 @@ int toSite(siteCode code)
 
 
 // Return zero if one of the sequences do not have this factor.
-int PointerVec::allHasFactor() {
+const int PointerVec::allHasFactor() const {
   return this->myMat->allHasFactor(this->getMotif());
 }
 
 
 
-PointerVec::PointerVec(Matrix *mat,Inputs *indata)
+PointerVec::PointerVec(Matrix *mat,Inputs const *indata)
 {
   this->ok=0;
   this->limiterPvec=NULL;
@@ -187,13 +190,6 @@ PointerVec::PointerVec(Matrix *mat,Inputs *indata)
 }
 
 
-int PointerVec::difference(PointerVec const &other,seqCode const i,motifCode const thisTFid) const  {
-  assert(limData!=NULL);
-  assert(thisTFid==this->getMotif());
-  int otherRight=(int)(other.getSite(i).pos-this->getSite(i,thisTFid).epos);
-  //int otherLeft=(int)(this->getSite(i).pos-other.getSite(i).epos);
-  return otherRight-1; //max(otherRight,otherLeft);
-}
 
 int PointerVec::getPrevMatrixCoord(motifCode const tfID,seqCode const i) {
   assert(this->limiterPvec);
@@ -420,6 +416,11 @@ void PointerVec::nextLookBack()
 
 }
 
+BasicPointerVec::BasicPointerVec(class PointerVec &p)
+{
+  this->matrix_p=p.matrix_p;
+}
+
 
 bool PointerVec::operator<=(const PointerVec &other) const
 {
@@ -430,17 +431,6 @@ bool PointerVec::operator<=(const PointerVec &other) const
     lt=lt&&(this->getSite(i).epos<=other.getSite(i).pos);
   }
   return lt;
-}
-
-int PointerVec::operator[](seqCode const i) const
-{
-  int out;
-  if(i==0) {
-    out=this->matrix_p[i];
-  } else{
-    out=this->myMat->by_seq_tf_pos(i,this->getMotif(),this->matrix_p[i]); 
-  }
-  return out;
 }
 
 
@@ -520,8 +510,9 @@ void Matrix::initAllHaveFactor()
 {
   for(motifCode tfID=0;tfID<this->indata->factors();tfID++) {
     int sites=1;
-    for(seqCode i=1;(unsigned int)i<(unsigned int)this->dim;i++) 
+    for(seqCode i=1;(unsigned int)i<(unsigned int)this->dim;i++) {
       sites*=this->countTFinSeq(i,tfID);
+    }
     this->allHaveFactor.push_back((sites>0));
   }
     
@@ -624,43 +615,10 @@ PointerVec Matrix::argMax()
 
 
 
-matrixentry &Matrix::getValue(PointerVec const &p) const
-{
-  return *this->getValueP(p);
-}
-
-matrixentry *Matrix::getValueP(PointerVec const &p) const
-{
-  vector<void*> const *d=&this->data;
-  //void *d=&this->data;
-
-  for(int dimI=0;dimI<(this->dim-1);dimI++) {
-    int mat_ind=p.matrixIndex(dimI);
-    //d=((vector<void*>*)d)->at(mat_ind);
-    //d=(vector<void*>*)d[mat_ind];
-    d=(vector<void*>*)d->at(mat_ind);
-  }
-
-  matrixentry *ret=&((vector<matrixentry>*)d)->at(p.matrixIndex(this->dim-1));
-
-  return ret;
-}
-
-void Matrix::setValue(PointerVec &p,matrixentry &val)
-{
-  matrixentry *matVal=this->getValueP(p);
-
-  *matVal=val;
-
-}
 
 
 
 
-matrixentry &Matrix::operator[](PointerVec &p)
-{ 
-  return this->getValue(p); 
-}
 
 Inputs::Inputs(PyObject *inpSeq)
 {
@@ -851,11 +809,6 @@ matrixentry::matrixentry(store v,PointerVec *p)
 //   siteEtStrand=site;
 }
 
-store matrixentry::getValue() const
-{
-  return value;
-}
-
 
 void PointerVec::output() const 
 {
@@ -886,40 +839,16 @@ void PointerVec::setValue(vector<int> &np)
 }
 
 // Assist functions.
-store PointerVec::getValue() const { return myMat->getValueP(*this)->getValue(); }
+//store PointerVec::getValue() const { return myMat->getValueP(*this)->getValue(); }
 vector<id_triple>  PointerVec::getSites() const { return limData->getSites(*this); }
 
 
 
-motifCode const PointerVec::getMotifLaborous() const {  return this->limData->getSite(this->matrix_p[0],0).ID; }
+//motifCode const PointerVec::getMotifLaborous() const {  return this->limData->getSite(this->matrix_p[0],0).ID; }
 //motifCode const PointerVec::getMotif() const {  return this->curMotifCode; }
 //motifCode const PointerVec::getMotif() const {  return this->limData->getSite(this->matrix_p[0],0).ID; }
 
 
-
-id_triple const &PointerVec::getSite(seqCode const i) const 
-{ 
-  assert(this->isOK());
-  if(i==0) {
-    return limData->getSite(this->matrix_p[i],i);
-  } else {
-    return this->getSite(i,this->getMotif());
-  }
-}
-
-id_triple const &PointerVec::getSite(seqCode const i,motifCode const tfID) const 
-{ 
-  // !!! DOES NOT CHECK FOR CORRECT tfID 
-
-  assert(tfID==this->getMotif());
-
-  assert(this->isOK());
-  if(i==0) {
-    return limData->getSite(this->matrix_p[i],i);
-  } else {
-    return limData->getSite(myMat->by_seq_tf_pos(i,tfID,this->matrix_p[i]),i); 
-  }
-}
 
 
 void Matrix::CoordCacheInit() {
@@ -1388,12 +1317,15 @@ malignment_nextBest(malign_AlignmentObject *self)
 // }
 
 
-inline double penalty(malign_AlignmentObject *dat,posind d1,posind d2)
+
+inline const double penalty(const malign_AlignmentObject* const dat,const posind d1,const posind d2)
 {
   double val=dat->mu*(d1+d2)/2.0;
 
   assert(d1>=0);
+#ifndef NDEBUG
   if(d2<0) {printf("d2=%g\n",d2);}
+#endif
   assert(d2>=0);
   if( (d1+d2)>0.0) {
     val=val+ dat->nu*(d1-d2)*(d1-d2)/(d1+d2)+
@@ -1403,6 +1335,20 @@ inline double penalty(malign_AlignmentObject *dat,posind d1,posind d2)
 }
 
 
+inline const double multiPenalty(const malign_AlignmentObject* const self,const PointerVec &left,const PointerVec &right,const int n) 
+{
+  double Score=0.0;
+
+  const motifCode leftTF=left.getMotif();
+  const motifCode rightTF=right.getMotif();
+
+  for(seqCode i=0;i<n;i++) {
+    for(seqCode j=i+1;j<n;j++) {
+      Score+=penalty(self,left.difference(right,i,leftTF,rightTF),left.difference(right,j,leftTF,rightTF));
+    }
+  }
+  return Score;
+}
 
 
 
@@ -1420,7 +1366,7 @@ void outputMemory(double bytes)
 
 
 static PyObject *
-malignObject(malign_AlignmentObject *self)
+malignObject(malign_AlignmentObject * const self)
 { 
   store Score=0.0,absBest=0.0;
   store maxScore=SCORE_FAIL;
@@ -1457,6 +1403,7 @@ malignObject(malign_AlignmentObject *self)
 
     PointerVec *maxSourceP=NULL;
     maxScore=-DBL_MAX;
+    //const motifCode entryTF=entry.getMotif().
 
     store base=0;
 
@@ -1498,14 +1445,15 @@ malignObject(malign_AlignmentObject *self)
 #endif
       
       // Add the score from the lookup table
-      Score=base+k.getValue();
+      //Score=base+k.getValue();
 
       // Compute the negative penalty
-      for(int i=0;i<n;i++) {
-	for(int j=i+1;j<n;j++) {
-	  Score=Score - penalty(self,k.difference(entry,i),k.difference(entry,j));
-	}
-      }
+      //for(int i=0;i<n;i++) {
+      //	for(int j=i+1;j<n;j++) {
+      //	  Score=Score - penalty(self,k.difference(entry,i),k.difference(entry,j));
+      //	}
+      //}
+      Score=base+k.getValue()-multiPenalty(self,k,entry,n);
 
       if(Score>maxScore) {
 	maxScore=Score;

@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.10  2006/05/03 11:00:17  kpalin
+ *Merged. Merged a fix with the main devel. branch.
+ *
  *Revision 1.9  2006/05/03 10:11:22  kpalin
  *Fixed a bug resulting wrong alignments depending on order of the input
  *sequences.
@@ -67,6 +70,7 @@ typedef int seqCode;
 typedef int posCode;
 
 
+
 struct id_triple
 {
   motifCode ID;
@@ -81,18 +85,27 @@ struct id_triple
   }
 };
 
-class PointerVec {
-  //vector<int> p;
+class BasicPointerVec {
+ protected:
   vector<int> matrix_p;
+  BasicPointerVec() {};
+ public:
+  BasicPointerVec(class PointerVec &);
+};
+
+
+class PointerVec: public BasicPointerVec {
+  //vector<int> p;
+  //vector<int> matrix_p;
   //vector<int> dimlen;
   //static 
   uint m;
   bool ok;
 
   //static 
-  class Inputs *limData;
+  class Inputs const * limData;
   //static 
-int limitBP;
+  int limitBP;
   int dataPoint() const ;
 
   // Highest point of the limited lookback.
@@ -100,21 +113,21 @@ int limitBP;
   //static const class PointerVec *limiterPvec;
   // Pointer to the matrix this pointer is associated with:
   //static 
-class Matrix* myMat;
+  class Matrix* myMat;
 
   
 
   motifCode curMotifCode;
   bool decFirst();
   bool updateRestCoords();
-  int allHasFactor();
+  const int allHasFactor() const;
 
   int getPrevMatrixCoord(motifCode const tfID,seqCode const dimension); 
 public:
   PointerVec() {ok=0; limiterPvec=NULL;limData=NULL; }
   //  PointerVec(const PointerVec &other);
   //PointerVec(vector<int> &,vector<int> &,vector<int>*);
-  PointerVec(Matrix* mat,Inputs* inp);
+  PointerVec(Matrix* mat,Inputs const *inp);
   void setValue(vector<int> &np);
 
 
@@ -134,7 +147,25 @@ public:
   bool checkWithinLimits() const ;
 
 
-  int difference(PointerVec const &other,seqCode const i,motifCode const tfID) const ;
+
+  int difference(PointerVec const &other,seqCode const i,motifCode const thisTFid, motifCode const otherTFid) const {
+    assert(limData!=NULL);
+    assert(thisTFid==this->getMotif());
+    int otherRight=(int)(other.getSite(i,otherTFid).pos-this->getSite(i,thisTFid).epos);
+
+    assert((otherRight-1)==this->difference(other,i,thisTFid));
+    return otherRight-1; //max(otherRight,otherLeft);
+  } ;
+
+
+
+  int difference(PointerVec const &other,seqCode const i,motifCode const thisTFid) const {
+    assert(limData!=NULL);
+    assert(thisTFid==this->getMotif());
+    int otherRight=(int)(other.getSite(i).pos-this->getSite(i,thisTFid).epos);
+    //int otherLeft=(int)(this->getSite(i).pos-other.getSite(i).epos);
+    return otherRight-1; //max(otherRight,otherLeft);
+  } ;
 
   // Return the distance FROM the end of this TO the beginning of other on sequence i
   int difference(PointerVec const &other,seqCode const i) const  {
@@ -150,10 +181,10 @@ public:
 
 
   // Assist functions:
-  store getValue()  const;
+  store getValue()  const; // inline
 
   motifCode const getMotif() const { return this->getMotifLaborous(); }
-  motifCode const getMotifLaborous() const;
+  motifCode const getMotifLaborous() const; // inline
 
   vector<id_triple>  getSites() const;
   id_triple const &getSite(seqCode const i) const;
@@ -189,7 +220,9 @@ public:
   vector<id_triple>  getSites(PointerVec const &here) const;
 
   id_triple const &getSite(PointerVec const &p,seqCode i) const { return seq[i][p[i]]; }
-  id_triple const &getSite(posCode pos,seqCode i) const { return seq[i].at(pos); }
+  id_triple const &getSite(posCode const pos,seqCode const i) const { return seq[i][pos]; 
+    // return seq.at(i).at(pos);
+  }
 };
 
 
@@ -211,7 +244,7 @@ public:
   matrixentry() { value=-1.0;backTrack=(PointerVec*)0;}
   matrixentry(store,PointerVec&);
   matrixentry(store,PointerVec*);
-  store getValue()  const;
+  store getValue()  const  { return value;};
   PointerVec *getBacktraceP() const{return backTrack; }
 
   void negate() { value*=-1.0; }
@@ -228,7 +261,7 @@ class Matrix {
 
   vector<void*> data;
 
-  Inputs *indata;
+  Inputs const *  indata;
 
   int cells;
 
@@ -257,7 +290,7 @@ public:
   }
 
 
-  bool allHasFactor(motifCode tfID) {
+  const bool allHasFactor(motifCode const tfID) const {
     return this->allHaveFactor[tfID];
   }
   void CoordCacheSet(motifCode const tfID,seqCode const i,int value) {
@@ -272,11 +305,11 @@ public:
 
   int usedCells() {return this->cells;}
 
-  matrixentry &getValue(PointerVec const &) const;
+  matrixentry &getValue(PointerVec const &p) const { return *this->getValueP(p);};
   matrixentry *getValueP(PointerVec const &) const;
-  void setValue(PointerVec &,matrixentry &);
+  void setValue(PointerVec &p,matrixentry &val) { *(this->getValueP(p))=val; };
 
-  matrixentry &operator[](PointerVec &p);
+  matrixentry &operator[](PointerVec &p) { return this->getValue(p); };
 
   int size() { return data.size(); }
   int maxSize() { int s=1;for(int i=0;i<dim;i++) s*=dimLen[i]; return s; }
@@ -358,5 +391,63 @@ malign_alignCommon(  malign_AlignmentObject *self,PyObject *data,int result_ask,
 
 static PyObject*
 malignment_nextBest(malign_AlignmentObject *self);
+
+
+inline store PointerVec::getValue()  const { return this->myMat->getValueP(*this)->getValue(); } ;
+inline motifCode const PointerVec::getMotifLaborous() const {  return this->limData->getSite(this->matrix_p[0],0).ID; };
+
+inline matrixentry *Matrix::getValueP(PointerVec const &p) const
+{
+  vector<void*> const *d=&this->data;
+  //void *d=&this->data;
+
+  for(int dimI=0;dimI<(this->dim-1);dimI++) {
+    int mat_ind=p.matrixIndex(dimI);
+    //d=((vector<void*>*)d)->at(mat_ind);
+    //d=(vector<void*>*)d[mat_ind];
+    d=(vector<void*>*)d->at(mat_ind);
+  }
+
+  matrixentry *ret=&((vector<matrixentry>*)d)->at(p.matrixIndex(this->dim-1));
+
+  return ret;
+}
+
+inline int PointerVec::operator[](seqCode const i) const {
+  int out;
+  if(i==0) {
+    out=this->matrix_p[i];
+  } else{
+    out=this->myMat->by_seq_tf_pos(i,this->getMotif(),this->matrix_p[i]); 
+  }
+  return out;
+} 
+
+
+inline id_triple const &PointerVec::getSite(seqCode const i) const 
+{ 
+  assert(this->isOK());
+  if(i==0) {
+    return limData->getSite(this->matrix_p[i],i);
+  } else {
+    return this->getSite(i,this->getMotif());
+  }
+}
+
+inline id_triple const &PointerVec::getSite(seqCode const i,motifCode const tfID) const 
+{ 
+  // !!! DOES NOT CHECK FOR CORRECT tfID 
+
+  assert(tfID==this->getMotif());
+
+  assert(this->isOK());
+  if(i==0) {
+    return limData->getSite(this->matrix_p[i],i);
+  } else {
+    return limData->getSite(myMat->by_seq_tf_pos(i,tfID,this->matrix_p[i]),i); 
+  }
+}
+
+
 
 #endif
