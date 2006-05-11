@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.11  2006/05/04 07:58:53  kpalin
+ *Speed improvements.
+ *
  *Revision 1.10  2006/05/03 11:00:17  kpalin
  *Merged. Merged a fix with the main devel. branch.
  *
@@ -88,11 +91,16 @@ struct id_triple
 class BasicPointerVec {
  protected:
   vector<int> matrix_p;
-  BasicPointerVec() {};
+  bool ok;
  public:
-  BasicPointerVec(class PointerVec &);
+  BasicPointerVec(): ok(0) { };
+    BasicPointerVec(class PointerVec &p);
+    int matrixIndex(seqCode const i) const {return this->matrix_p[i];}
+    int isOK() const { return this && this->ok; }
 };
 
+
+class Matrix;
 
 class PointerVec: public BasicPointerVec {
   //vector<int> p;
@@ -100,7 +108,6 @@ class PointerVec: public BasicPointerVec {
   //vector<int> dimlen;
   //static 
   uint m;
-  bool ok;
 
   //static 
   class Inputs const * limData;
@@ -113,7 +120,7 @@ class PointerVec: public BasicPointerVec {
   //static const class PointerVec *limiterPvec;
   // Pointer to the matrix this pointer is associated with:
   //static 
-  class Matrix* myMat;
+  class Matrix * myMat;
 
   
 
@@ -128,11 +135,12 @@ public:
   //  PointerVec(const PointerVec &other);
   //PointerVec(vector<int> &,vector<int> &,vector<int>*);
   PointerVec(Matrix* mat,Inputs const *inp);
+
+  PointerVec(BasicPointerVec &p,class Matrix * mat,class Inputs  *inp);
   void setValue(vector<int> &np);
 
 
   PointerVec getLimited(int limitbp) const;
-  int isOK() const { return this && this->ok; }
   int allSame();
   //vector<int> &getValue() { return p; }
 
@@ -172,7 +180,6 @@ public:
     return this->difference(other,i,this->getMotif());
   }
   int operator[](seqCode const i) const;
-  int matrixIndex(seqCode const i) const {return this->matrix_p[i];}
 
   void nextLookBack();
 
@@ -229,27 +236,47 @@ public:
 
 
 
-
-
-
 class matrixentry
 {
   store value;
 
   //following values are for the backtracing
-  PointerVec *backTrack;
+  BasicPointerVec *backTrack;
 
-  void setInitData(store,PointerVec*);
+  void setInitData(store,BasicPointerVec*);
 public:
-  matrixentry() { value=-1.0;backTrack=(PointerVec*)0;}
-  matrixentry(store,PointerVec&);
-  matrixentry(store,PointerVec*);
-  store getValue()  const  { return value;};
-  PointerVec *getBacktraceP() const{return backTrack; }
+  matrixentry() { value=-1.0;backTrack=(BasicPointerVec*)NULL;}
+  matrixentry(store,BasicPointerVec&);
+  matrixentry(store,BasicPointerVec*);
+  store getValue()  const;
+  BasicPointerVec *getBacktraceP() const{return backTrack; }
 
   void negate() { value*=-1.0; }
 
 };
+
+
+
+
+
+/* class matrixentry */
+/* { */
+/*   store value; */
+
+/*   //following values are for the backtracing */
+/*   BasicPointerVec backTrack; */
+  
+/*   //void setInitData(store,BasicPointerVec*); */
+/*  public: */
+/*   matrixentry(): value(0.0) { }  */
+/*     matrixentry(store v ,BasicPointerVec &p): value(0.0),backTrack(p) { assert(p.isOK()); printf("value=%g\n",v); }  */
+/*       //matrixentry(store,BasicPointerVec*); */
+/*       store getValue()  const  { return value;} */
+/*       BasicPointerVec *getBacktraceP() {return &backTrack; } */
+      
+/*       void negate() { value*=-1.0; } */
+      
+/* }; */
 
 
 class Matrix {
@@ -276,12 +303,15 @@ class Matrix {
   vector< vector<int> > coordUpdateCache;
   void initAllHaveFactor();
 
+  void freeData(vector<void*> *d,int dimI);
+  void freeData(vector<matrixentry> *d);
 public:
   Matrix() {return; }
   Matrix(Inputs* indata);
 
+  ~Matrix(); 
   PointerVec getOrigin();
-  PointerVec argMax();
+  BasicPointerVec argMax();
 
   void CoordCacheInit();
   int CoordCacheGet(motifCode const tfID,seqCode const i) const{
@@ -305,11 +335,11 @@ public:
 
   int usedCells() {return this->cells;}
 
-  matrixentry &getValue(PointerVec const &p) const { return *this->getValueP(p);};
-  matrixentry *getValueP(PointerVec const &) const;
-  void setValue(PointerVec &p,matrixentry &val) { *(this->getValueP(p))=val; };
+  matrixentry &getValue(BasicPointerVec const &p) const { return *this->getValueP(p);};
+  matrixentry *getValueP(BasicPointerVec const &) const;
+  void setValue(BasicPointerVec &p,matrixentry &val) { *(this->getValueP(p))=val; };
 
-  matrixentry &operator[](PointerVec &p) { return this->getValue(p); };
+  matrixentry &operator[](BasicPointerVec &p) { return this->getValue(p); };
 
   int size() { return data.size(); }
   int maxSize() { int s=1;for(int i=0;i<dim;i++) s*=dimLen[i]; return s; }
@@ -392,11 +422,14 @@ malign_alignCommon(  malign_AlignmentObject *self,PyObject *data,int result_ask,
 static PyObject*
 malignment_nextBest(malign_AlignmentObject *self);
 
+inline BasicPointerVec::BasicPointerVec(class PointerVec &p):matrix_p(p.matrix_p), ok(p.ok) 
+{ 
+}
 
 inline store PointerVec::getValue()  const { return this->myMat->getValueP(*this)->getValue(); } ;
 inline motifCode const PointerVec::getMotifLaborous() const {  return this->limData->getSite(this->matrix_p[0],0).ID; };
 
-inline matrixentry *Matrix::getValueP(PointerVec const &p) const
+inline matrixentry *Matrix::getValueP(BasicPointerVec const &p) const
 {
   vector<void*> const *d=&this->data;
   //void *d=&this->data;
@@ -448,6 +481,10 @@ inline id_triple const &PointerVec::getSite(seqCode const i,motifCode const tfID
   }
 }
 
+inline PointerVec::PointerVec(BasicPointerVec &p,class Matrix * mat,class Inputs  *inp):BasicPointerVec(p),limData(inp),myMat(mat)
+{
+  this->m=mat->dims();
+}
 
 
 #endif

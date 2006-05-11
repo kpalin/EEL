@@ -37,6 +37,9 @@
 /*
  *
  * $Log$
+ * Revision 1.23  2006/05/04 07:58:38  kpalin
+ * Speed improvements.
+ *
  * Revision 1.22  2006/05/03 11:00:13  kpalin
  * Merged. Merged a fix with the main devel. branch.
  *
@@ -180,11 +183,13 @@ PointerVec::PointerVec(Matrix *mat,Inputs const *indata)
   // Not sure whether we'll need this.
 
   //this->p.resize(this->m,0);
-  while(!this->allHasFactor()) {
+  if(!this->allHasFactor()) {
     (*this)++;
   }
-
-  ok=1;
+  // Fail if there are no common motifs.
+  if(this->allHasFactor()) {
+    ok=1;
+  }
 
 
 }
@@ -227,7 +232,7 @@ bool PointerVec::updateRestCoords()
   for(uint i=1;i<this->m;i++) {
     this->matrix_p[i]=this->getPrevMatrixCoord(tfid,i);
     int dist=this->difference(*this->limiterPvec,i,tfid);
-    if(dist>this->limitBP || dist<0) {
+    if(dist>=this->limitBP || dist<0) {
 #ifdef DEBUG_OUTPUT
       printf("afterBreak %d\n",dist);
 #endif
@@ -248,7 +253,7 @@ bool PointerVec::updateRestCoords()
 
 // Return:
 //    True  if this is within limits
-//    Set this->ok to False, if this->difference(*this->limiterPvec,0)>this->limitBP
+//    Set this->ok to False, if this->difference(*this->limiterPvec,0)>=this->limitBP
 bool PointerVec::decFirst()
 {
 #ifdef DEBUG_OUTPUT
@@ -279,7 +284,7 @@ bool PointerVec::decFirst()
     // this is ahead of limiterPvec
     return 0;
   }
-  if(dist>this->limitBP) {
+  if(dist>=this->limitBP) {
     // this is out of bounds on sequence 0.
 #ifdef DEBUG_OUTPUT
     printf("HighDist: %d\n",dist);
@@ -306,7 +311,7 @@ bool PointerVec::checkWithinLimits() const
     for(seqCode i=0;(unsigned int)i<(unsigned int)this->m;i++) {
       int dist=this->difference(*this->limiterPvec,i,tfID);
       ret&=(dist>=0);
-      ret&=(dist<=this->limitBP);
+      ret&=(dist<this->limitBP);
     }
   }
   return ret;
@@ -348,7 +353,7 @@ bool PointerVec::checkLT() const
 {
   if(limiterPvec && !(*this<=*limiterPvec)) {
     cout<<"###"<<endl;
-    
+     
     this->output();
     limiterPvec->output();
     for(uint i=0; i<this->m;i++) {
@@ -380,7 +385,7 @@ void PointerVec::nextLookBack()
     this->matrix_p[seq]--;
 
 
-    if(this->matrix_p[seq]>=0 && (tmpDelta=this->difference(*this->limiterPvec,seq,tfid))<=this->limitBP) {
+    if(this->matrix_p[seq]>=0 && (tmpDelta=this->difference(*this->limiterPvec,seq,tfid))<this->limitBP) {
       assert(tmpDelta>0);
       return;
     } else {
@@ -416,10 +421,11 @@ void PointerVec::nextLookBack()
 
 }
 
-BasicPointerVec::BasicPointerVec(class PointerVec &p)
-{
-  this->matrix_p=p.matrix_p;
-}
+// BasicPointerVec::BasicPointerVec(class PointerVec &p)
+// {
+//   this->matrix_p=p.matrix_p;
+//   this->ok=p.ok;
+// }
 
 
 bool PointerVec::operator<=(const PointerVec &other) const
@@ -474,6 +480,38 @@ const PointerVec& PointerVec::operator++(int dummy)
   return *this;
 }
 
+// Recursively free the allocated memory
+void Matrix::freeData(vector<matrixentry> *d)
+{
+  delete d;
+  d=NULL;
+}
+
+// Recursively free the allocated memory
+void Matrix::freeData(vector<void*> *d,int dimI)
+{
+  if(dimI==(this->dim-1)) {
+    freeData((vector<matrixentry>*)d);
+  } else if(dimI<(this->dim-1)) {
+    for(unsigned int i=0;i<d->size();i++) {
+      freeData((vector<void*> *)d->at(i),dimI+1);
+      d->at(i)=NULL;
+    }
+    if(dimI>0) {
+      delete d;
+      d=NULL;
+    }
+  } else {
+    cerr<<"It's just a flesh wound!"<<endl;
+    abort();
+  }
+
+}
+
+Matrix::~Matrix()
+{
+  freeData(&this->data,0);
+}
 
 // Return either *vector<void*>  or *vector<matrixentry> for the last level
 void * Matrix::allocateData(seqCode level,motifCode mot)
@@ -578,31 +616,30 @@ Matrix::Matrix(Inputs *indata)
 
 PointerVec Matrix::getOrigin()
 {
-  PointerVec *orig= new  PointerVec(this,this->indata);
+  PointerVec orig=PointerVec(this,this->indata);
 
-  return *orig;
+  return orig;
 }
 
-PointerVec Matrix::argMax()
+BasicPointerVec Matrix::argMax()
 {
-  PointerVec p=this->getOrigin();
-  PointerVec maxstore,*backer;
+  BasicPointerVec maxstore,*backer;
   store maxval=0.0;
 
-  while(p.isOK()) {
-    assert(p.getSite(0).ID==p.getSite(1).ID);
+  for(PointerVec p=this->getOrigin();p.isOK();p++) {
+    assert( p.getSite(0).ID==p.getSite(1).ID );
+    assert( (!p.isOK()) || (this->getValue(p).getValue()>=0.0) );
     if(this->getValue(p).getValue()>maxval) {
       for(backer=this->getValue(p).getBacktraceP();
 	  backer->isOK() && this->getValue(*backer).getValue()>=0.0;
 	  backer=this->getValue(*backer).getBacktraceP()) {
 	/* pass*/
       }
-      if(!backer->isOK()) { // Only store, if we do not backtrack to negative.
+      if(!backer->isOK()) { // Store only if we do not backtrack to negative.
 	maxstore=p;
 	maxval=this->getValueP(p)->getValue();
       }
     }
-    p++;
   }
 #ifdef DEBUG_OUTPUT
   if(!maxstore.isOK()) {
@@ -637,8 +674,10 @@ Inputs::Inputs(PyObject *inpSeq)
       return;
     }
     Py_DECREF(inSite);
+    inSite=NULL;
   }
   Py_DECREF(inpIter);
+  inpIter=NULL;
   
   map<string,motifCode>::iterator seqName=sequenceNames();
   for(int i=0;i<sequences();i++) {
@@ -672,9 +711,18 @@ int Inputs::addSite(PyObject *site)
     PyErr_SetString(PyExc_ValueError,"Not enough fields in the site data");
     return 0;
   }
+
+  
  
   // Sequence name and id
-  string &seqName=*(new string(PyString_AsString(PySequence_GetItem(site,0))));
+  PyObject *tmp_obj;
+  if(!(tmp_obj=PySequence_GetItem(site,0))) {
+    PyErr_SetString(PyExc_ValueError,"No sequence name!!");
+    return 0;
+  }
+  string seqName=string(PyString_AsString(tmp_obj));
+  Py_DECREF(tmp_obj);
+  tmp_obj=NULL;
   if(PyErr_Occurred()) return 0;
   
   map<string,motifCode>::iterator seq_iter=SEQ_to_id.find(seqName);
@@ -689,8 +737,16 @@ int Inputs::addSite(PyObject *site)
   }
 
   // Transcription factor name name and id
-  string &TFname=*(new string(PyString_AsString(PySequence_GetItem(site,2))));
+  if(!(tmp_obj=PySequence_GetItem(site,2))) {
+    PyErr_SetString(PyExc_ValueError,"No TF name!!");
+    return 0;
+  }
+  string TFname=string(PyString_AsString(tmp_obj));
+  Py_DECREF(tmp_obj);
+  tmp_obj=NULL;
   if(PyErr_Occurred()) return 0;
+
+
   
   map<string,motifCode>::iterator id_iter=TF_to_id.find(TFname);
 
@@ -706,25 +762,46 @@ int Inputs::addSite(PyObject *site)
   // Create a struct for the new site
   id_triple new_site;
 
-  new_site.pos=(posind)PyInt_AsLong(PyNumber_Int(PySequence_GetItem(site,3)));
+
+  if( (tmp_obj=PyNumber_Int(PySequence_GetItem(site,3))) ) {
+    new_site.pos=(posind)PyInt_AsLong(tmp_obj);
+    Py_DECREF(tmp_obj);
+    tmp_obj=NULL;
+  }
   if(PyErr_Occurred()) {
     PyObject *errStr=PyObject_Str(PySequence_GetItem(site,4));
     PyErr_Format(PyExc_TypeError,"Invalid format for start position '%s' (%s:%d)",PyString_AsString(errStr),__FILE__,__LINE__);
     Py_DECREF(errStr);
+    errStr=NULL;
     return 0;
   }
-  new_site.epos=(posind)PyInt_AsLong(PyNumber_Int(PySequence_GetItem(site,4)));
+
+  if( (tmp_obj=PyNumber_Int(PySequence_GetItem(site,4))) ) {
+    new_site.epos=(posind)PyInt_AsLong(tmp_obj);
+    Py_DECREF(tmp_obj);
+    tmp_obj=NULL;
+  }
+
   if(PyErr_Occurred()) {
     PyObject *errStr=PyObject_Str(PySequence_GetItem(site,4));
     PyErr_Format(PyExc_TypeError,"Invalid format for end position '%s' (%s:%d)",PyString_AsString(errStr),__FILE__,__LINE__);
     Py_DECREF(errStr);
+    errStr=NULL;
     return 0;
   }
-  new_site.weight=(double)PyFloat_AsDouble(PyNumber_Float(PySequence_GetItem(site,5)));
+
+  if( (tmp_obj=PyNumber_Float(PySequence_GetItem(site,5))) ) {
+    new_site.weight=(double)PyFloat_AsDouble(tmp_obj);
+    Py_DECREF(tmp_obj);
+    tmp_obj=NULL;
+  }
+
+
   if(PyErr_Occurred()) {
     PyObject *errStr=PyObject_Str(PySequence_GetItem(site,5));
     PyErr_Format(PyExc_TypeError,"Invalid format for weight '%s' (%s:%d)",PyString_AsString(errStr),__FILE__,__LINE__);
     Py_DECREF(errStr);
+    errStr=NULL;
     return 0;
   }
 
@@ -733,9 +810,13 @@ int Inputs::addSite(PyObject *site)
   PyObject *jStr=_PyString_Join(sep,annotSlice);
   new_site.annot=string(PyString_AsString(jStr));
 
-  Py_XDECREF(jStr);
-  Py_XDECREF(sep);
-  Py_XDECREF(annotSlice);
+  Py_DECREF(jStr);
+  jStr=NULL;
+  Py_DECREF(sep);
+  sep=NULL;
+  Py_DECREF(annotSlice);
+  annotSlice=NULL;
+
 
 			
 
@@ -744,7 +825,13 @@ int Inputs::addSite(PyObject *site)
     return 0;
   }
 
-  char *strand_p=PyString_AsString(PySequence_GetItem(site,6));
+  if(!(tmp_obj=PySequence_GetItem(site,6))) {
+    PyErr_SetString(PyExc_ValueError,"No strand!!");
+    return 0;
+  }
+  char *strand_p=PyString_AsString(tmp_obj);
+  Py_DECREF(tmp_obj);
+  tmp_obj=NULL;
   if(PyErr_Occurred()) return 0;
   new_site.strand=(char)strand_p[0];
 
@@ -779,12 +866,12 @@ vector<int> Inputs::sequenceLens()
 }
 
 
-void matrixentry::setInitData(store v,PointerVec *p)
+void matrixentry::setInitData(store v,BasicPointerVec *p)
 {
-  assert(&p);
+  assert(p);
 
   if(p && p->isOK()) {
-    backTrack=new PointerVec(*p);
+    backTrack=new BasicPointerVec(*p);
   } else {
     backTrack=NULL;
   }
@@ -792,12 +879,13 @@ void matrixentry::setInitData(store v,PointerVec *p)
 }
 
 
-matrixentry::matrixentry(store v,PointerVec &p)
+
+matrixentry::matrixentry(store v,BasicPointerVec &p)
 {
   this->setInitData(v,&p);
 }
 
-matrixentry::matrixentry(store v,PointerVec *p)
+matrixentry::matrixentry(store v,BasicPointerVec *p)
 {
   this->setInitData(v,p);
 //   if(p && p->isOK()) {
@@ -809,9 +897,15 @@ matrixentry::matrixentry(store v,PointerVec *p)
 //   siteEtStrand=site;
 }
 
+store matrixentry::getValue() const
+{
+  return value;
+}
+
+
 
 void PointerVec::output() const 
-{
+{ 
   if(this->isOK()) {
    // cout<<"valid("<<m<<"): ";
     cout<<"(";
@@ -892,7 +986,7 @@ PointerVec PointerVec::getLimited(int limitbp) const
   for(seqCode i=1;(unsigned int)i<(unsigned int)this->m;i++) {
     while(ret.isOK() && ret.difference(*ret.limiterPvec,i)<0) {
       ret.matrix_p[i]--;
-      if(ret.matrix_p[i]<0 || ret.difference(*ret.limiterPvec,i)>ret.limitBP) {
+      if(ret.matrix_p[i]<0 || ret.difference(*ret.limiterPvec,i)>=ret.limitBP) {
 	ret.ok=0;
 	goto finally;
       }
@@ -1001,7 +1095,16 @@ malignment_dealloc(malign_AlignmentObject* self)
 {
     
     delete self->CP;
-    
+    self->CP=NULL;
+
+    if(self->names) {
+      Py_DECREF(self->names);
+      self->names=NULL;
+    }
+    if(self->bestAlignments) {
+      Py_DECREF(self->bestAlignments);
+      self->bestAlignments=NULL;
+    }
 
     self->ob_type->tp_free((PyObject*)self);
 }
@@ -1199,7 +1302,8 @@ malignment_nextBest(malign_AlignmentObject *self)
                  ( (start1,end1)..(startk,endk )) , Strand )..]
    */
 
-  PointerVec *p,start=self->CP->dynmat->argMax();
+  BasicPointerVec *p;
+  BasicPointerVec start=self->CP->dynmat->argMax();
 
   PyObject *goodAlign=PyList_New(0);
   //  PyObject *colTuple;
@@ -1209,9 +1313,8 @@ malignment_nextBest(malign_AlignmentObject *self)
   int seqC=0;
 
 #ifdef DEBUG_OUTPUT
-  p=&start;  
   cout<<"eka:"<<flush;
-  start.output();
+  //start.output();
 #endif
 
   matrixentry *matVal=NULL;
@@ -1219,11 +1322,12 @@ malignment_nextBest(malign_AlignmentObject *self)
 
   for(p=&start;p && p->isOK();p=matVal->getBacktraceP()) {
 
-
     matVal=self->CP->dynmat->getValueP(*p);
 
-    char strand=p->getSite(0).strand;
-    siteCode motifID=p->getSite(0).ID;
+    
+    PointerVec pp=PointerVec(*p,self->CP->dynmat,self->CP->indata);
+    char strand=pp.getSite(0).strand;
+    siteCode motifID=pp.getSite(0).ID;
 
     // Tuple for one column of the alignment
     //    colTuple=PyTuple_New(5);
@@ -1242,7 +1346,7 @@ malignment_nextBest(malign_AlignmentObject *self)
 
 
     seqC=0;
-    vector<id_triple>  sites=self->CP->indata->getSites(*p);
+    vector<id_triple>  sites=self->CP->indata->getSites(pp);
 
     for(uint i=0;i<sites.size();i++) {
       if((siteCode)sites[i].ID==motifID && sites[i].strand==strand) {
@@ -1256,7 +1360,7 @@ malignment_nextBest(malign_AlignmentObject *self)
 	PyTuple_SetItem(coords,seqC,coord);
 
 	// Position on the site sequence
-	PyTuple_SetItem(seqPos,seqC,PyInt_FromLong((*p)[i]));
+	PyTuple_SetItem(seqPos,seqC,PyInt_FromLong(pp[i]));
 
 	PyTuple_SetItem(siteScore,seqC,PyFloat_FromDouble(sites[i].weight));
 
@@ -1283,18 +1387,20 @@ malignment_nextBest(malign_AlignmentObject *self)
     
     PyObject *alnRow=PyAln_New_Multi(self->CP->indata->factor(motifID),
 				    seqs,seqPos,coords,strand,
-				    self->CP->dynmat->getValue(*p).getValue(),
+				    self->CP->dynmat->getValue(pp).getValue(),
 				    siteScore,annotations);
 
     PyList_Append(goodAlign,alnRow);
+    Py_DECREF(alnRow);
+    alnRow=NULL;
 
 
     matVal->negate();
 
 #ifdef DEBUG_OUTPUT
     cout<<"Kierretään :"<<flush;
-    p->output();
-    cout<<"="<<self->CP->dynmat->getValue(*p).getValue()<<endl;
+    pp.output();
+    cout<<"="<<self->CP->dynmat->getValue(pp).getValue()<<endl;
 #endif
 
   }
@@ -1401,7 +1507,7 @@ malignObject(malign_AlignmentObject * const self)
     //siteCode maxSite=SITE_FAIL;
     //char maxStrand=STRAND_FAIL;
 
-    PointerVec *maxSourceP=NULL;
+    BasicPointerVec maxSource;
     maxScore=-DBL_MAX;
     //const motifCode entryTF=entry.getMotif().
 
@@ -1454,32 +1560,41 @@ malignObject(malign_AlignmentObject * const self)
       //	}
       //}
       Score=base+k.getValue()-multiPenalty(self,k,entry,n);
-
+      assert(k.getValue()>=0.0);
+      //printf("k.ok=%d  maxSource.ok=%d maxScore=%g Score=%g k.value=%g\n",k.isOK(),maxSource.isOK(),maxScore,Score,k.getValue());
+      assert(maxScore>=base);
       if(Score>maxScore) {
 	maxScore=Score;
-	delete maxSourceP;
-	maxSourceP=new PointerVec(k);
+	maxSource=BasicPointerVec(k);
+	//if(!k.isOK() || !maxSource.isOK()) {
+	//printf("k.ok=%d  maxSource.ok=%d maxScore=%g\n",k.isOK(),maxSource.isOK(),maxScore);
+	  //}
+	assert(k.isOK()==maxSource.isOK());
       }
 
       if(PyErr_Occurred()) return NULL;
     }
     if(maxScore>absBest)
       absBest=maxScore;
+    if(maxScore<0.0)
+      printf("BUSTED\n");
+    assert(maxScore>0.0);
     if(maxScore>0.0) {
 #ifdef DEBUG_OUTPUT
       entry.output();
       cout<<"="<<maxScore<<"<-";
-      if(maxSourceP) {
-	maxSourceP->output();
-      }else { cout<<"NULL";  }
+      maxSource.output();
       cout<<endl;
 #endif
-      (*self->CP->dynmat)[entry]=matrixentry(maxScore,maxSourceP);
+      //printf("maxscore OK %d %g  > %g > %g\n",maxSource.isOK(),Score,maxScore,base);
+      (*self->CP->dynmat)[entry]=matrixentry(maxScore,maxSource);
+      //printf("value=%g  %g\n\n",(*self->CP->dynmat)[entry].getValue(),entry.getValue());
       nonEmpty++;
     } else {
       (*self->CP->dynmat)[entry]=matrixentry();
       Empty++;
     }
+    maxSource=BasicPointerVec();
   }
 #ifdef DEBUG_OUTPUT
   cout<<"Matrix dimensions: ";
