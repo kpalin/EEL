@@ -6,6 +6,9 @@
 
 /*
  * $Log$
+ * Revision 1.3  2005/02/24 11:37:13  kpalin
+ * Site annotations.
+ *
  * Revision 1.2  2004/12/22 11:14:34  kpalin
  * Some fixes for better distributability
  *
@@ -215,6 +218,31 @@ site_new_multi(const char *motifName,
 static void site_dealloc(align_siteObject* self)
 {
   delete [] self->motifName;
+  self->motifName=NULL;
+
+  if(self->seqID) {
+    Py_DECREF(self->seqID);
+    self->seqID=NULL;
+  }
+  if(self->beginEnd) {
+    Py_DECREF(self->beginEnd);
+    self->beginEnd=NULL;
+  }
+  if(self->siteScore) {
+    Py_DECREF(self->siteScore);
+    self->siteScore=NULL;
+  }
+
+  if(self->siteSeqPos) {
+    Py_DECREF(self->siteSeqPos);
+    self->siteSeqPos=NULL;
+  }
+
+  if(self->annotation) {
+    Py_DECREF(self->annotation);
+    self->annotation=NULL;
+  }
+
 
   self->ob_type->tp_free((PyObject*)self);
 }
