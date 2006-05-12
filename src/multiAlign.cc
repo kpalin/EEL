@@ -37,6 +37,9 @@
 /*
  *
  * $Log$
+ * Revision 1.24  2006/05/11 12:44:43  kpalin
+ * Works. But leaks a bit of memory in matrixentry.
+ *
  * Revision 1.23  2006/05/04 07:58:38  kpalin
  * Speed improvements.
  *
@@ -623,7 +626,8 @@ PointerVec Matrix::getOrigin()
 
 BasicPointerVec Matrix::argMax()
 {
-  BasicPointerVec maxstore,*backer;
+  BasicPointerVec maxstore;
+  const BasicPointerVec *backer;
   store maxval=0.0;
 
   for(PointerVec p=this->getOrigin();p.isOK();p++) {
@@ -866,41 +870,17 @@ vector<int> Inputs::sequenceLens()
 }
 
 
-void matrixentry::setInitData(store v,BasicPointerVec *p)
-{
-  assert(p);
-
-  if(p && p->isOK()) {
-    backTrack=new BasicPointerVec(*p);
-  } else {
-    backTrack=NULL;
-  }
-  value=v;
-}
 
 
 
-matrixentry::matrixentry(store v,BasicPointerVec &p)
-{
-  this->setInitData(v,&p);
-}
+// matrixentry::matrixentry(store v,BasicPointerVec &p):value(v),backTrack2(p)
+// {
+// }
 
-matrixentry::matrixentry(store v,BasicPointerVec *p)
-{
-  this->setInitData(v,p);
-//   if(p && p->isOK()) {
-//     backTrack=new PointerVec(*p);
-//   } else {
-//     backTrack=NULL;
-//   }
-//   value=v;
-//   siteEtStrand=site;
-}
+// matrixentry::matrixentry(store v,BasicPointerVec *p):value(v),backTrack2(*p)
+// {
+// }
 
-store matrixentry::getValue() const
-{
-  return value;
-}
 
 
 
@@ -1302,7 +1282,7 @@ malignment_nextBest(malign_AlignmentObject *self)
                  ( (start1,end1)..(startk,endk )) , Strand )..]
    */
 
-  BasicPointerVec *p;
+  const BasicPointerVec *p;
   BasicPointerVec start=self->CP->dynmat->argMax();
 
   PyObject *goodAlign=PyList_New(0);

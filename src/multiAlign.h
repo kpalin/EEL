@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.12  2006/05/11 12:45:05  kpalin
+ *Works. But leaks a bit of memory in matrixentry.
+ *
  *Revision 1.11  2006/05/04 07:58:53  kpalin
  *Speed improvements.
  *
@@ -84,15 +87,17 @@ struct id_triple
   char strand;
   string annot;
   bool operator<(const id_triple &other) const { 
-    return (int)this->epos<(int)other.epos || ((int)this->epos==(int)other.epos && this->weight<other.weight);
+    return (int)this->epos<(int)other.epos || 
+      ((int)this->epos==(int)other.epos && this->weight<other.weight) ||
+      ((int)this->epos==(int)other.epos && this->weight==other.weight && this->strand<other.strand);
   }
 };
 
 class BasicPointerVec {
  protected:
+ public:
   vector<int> matrix_p;
   bool ok;
- public:
   BasicPointerVec(): ok(0) { };
     BasicPointerVec(class PointerVec &p);
     int matrixIndex(seqCode const i) const {return this->matrix_p[i];}
@@ -136,7 +141,7 @@ public:
   //PointerVec(vector<int> &,vector<int> &,vector<int>*);
   PointerVec(Matrix* mat,Inputs const *inp);
 
-  PointerVec(BasicPointerVec &p,class Matrix * mat,class Inputs  *inp);
+  PointerVec(const BasicPointerVec &p,class Matrix * mat,class Inputs  *inp);
   void setValue(vector<int> &np);
 
 
@@ -241,15 +246,16 @@ class matrixentry
   store value;
 
   //following values are for the backtracing
-  BasicPointerVec *backTrack;
-
-  void setInitData(store,BasicPointerVec*);
+  BasicPointerVec backTrack2;
 public:
-  matrixentry() { value=-1.0;backTrack=(BasicPointerVec*)NULL;}
-  matrixentry(store,BasicPointerVec&);
-  matrixentry(store,BasicPointerVec*);
-  store getValue()  const;
-  BasicPointerVec *getBacktraceP() const{return backTrack; }
+  matrixentry() { value=-1.0;  }
+  matrixentry(store v,BasicPointerVec &p):value(v),backTrack2(p) { };
+  matrixentry(store v,BasicPointerVec *p):value(v),backTrack2(*p) { } ;
+  store getValue()  const {
+    return this->value;
+  }
+  const BasicPointerVec *getBacktraceP() const {
+    return &backTrack2; }
 
   void negate() { value*=-1.0; }
 
@@ -481,7 +487,7 @@ inline id_triple const &PointerVec::getSite(seqCode const i,motifCode const tfID
   }
 }
 
-inline PointerVec::PointerVec(BasicPointerVec &p,class Matrix * mat,class Inputs  *inp):BasicPointerVec(p),limData(inp),myMat(mat)
+inline PointerVec::PointerVec(const BasicPointerVec &p,class Matrix * mat,class Inputs  *inp):BasicPointerVec(p),limData(inp),myMat(mat)
 {
   this->m=mat->dims();
 }
