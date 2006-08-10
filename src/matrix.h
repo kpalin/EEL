@@ -1,5 +1,8 @@
 //
 // $Log$
+// Revision 1.5  2006/08/10 11:38:44  kpalin
+// Port to 64bit. Changed custom bit32 type to uint32_t.
+//
 // Revision 1.4  2005/05/19 07:49:42  kpalin
 // Merged Waterman-Eggert style suboptimal alignments and
 // SNP matching.
@@ -48,11 +51,11 @@ typedef struct {
   unsigned int order;
   unsigned int qgram;
 
-  bit32 shiftMask;
+  uint32_t shiftMask;
 
   int totalCounts;
 
-  bit32 streamHistory;
+  uint32_t streamHistory;
 
   // Number of nucleotides added to the stream.
   unsigned int streamCount;
