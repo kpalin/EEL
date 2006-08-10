@@ -26,6 +26,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.15  2005/11/25 12:13:49  kpalin
+ * Removed direct stdout output from C.
+ *
  * Revision 1.14  2005/07/07 09:24:10  kpalin
  * Fixed some compilation problems with Visual C++
  *
@@ -283,7 +286,7 @@ void addMatchWithKey(PyObject *dict,PyObject *key,int const pos,char const stran
 
 
 
-bit32 const nucl_A=0,nucl_C=1,nucl_G=2,nucl_T=3;
+uint32_t const nucl_A=0,nucl_C=1,nucl_G=2,nucl_T=3;
 
 static void
 bg_dealloc(matrix_bgObject* self) 
@@ -344,7 +347,7 @@ char bg_getNextChar(matrix_bgObject *self)
 // }
 
 
-bit32 addNucleotideToGram(bit32 gram,char nucleotide, bit32 shiftMask)
+uint32_t addNucleotideToGram(uint32_t gram,char nucleotide, uint32_t shiftMask)
 {
   
   switch(nucleotide) {
@@ -370,7 +373,7 @@ bit32 addNucleotideToGram(bit32 gram,char nucleotide, bit32 shiftMask)
 }
 
 
-void bitCodeToStr(char *gram,int len,bit32 code)
+void bitCodeToStr(char *gram,int len,uint32_t code)
 {
   for(int j=0;j<len;j++) {
     switch(code&3) {
@@ -398,7 +401,7 @@ static PyObject*
 bg_countGrams(matrix_bgObject *self)
 {
   char prevChr=0;
-  bit32 bitInd=0;
+  uint32_t bitInd=0;
   
   int gramFeed=self->qgram;
 
@@ -593,7 +596,7 @@ bg_stringProb(matrix_bgObject *self, PyObject *args)
   double ret;
   unsigned long qgramCnt,contextCnt;
   char *str;
-  bit32 gram=0;
+  uint32_t gram=0;
 
 
   if (!PyArg_ParseTuple(args, "s", &str)) {
@@ -625,7 +628,7 @@ bg_stringProb(matrix_bgObject *self, PyObject *args)
   
 }
 
-void bit32toStr(char *bitStr,bit32 val)
+void uint32_ttoStr(char *bitStr,uint32_t val)
 {
   for(int i=0;i<32;i++) {
     //cout<<i<<endl;
@@ -663,20 +666,20 @@ double logPnextInStream(matrix_bgObject *self, char nucl)
       qgramCnt=0;
       contextCnt=0;
 
-      bit32 startMask=(1<<(2*(self->qgram - self->streamCount)))-1;
+      uint32_t startMask=(1<<(2*(self->qgram - self->streamCount)))-1;
       int startShift=2*self->streamCount;
 
       /*
       printf("Stream item %d (%c)\n",self->streamCount,nucl);
 
       char bitStr[33];
-      bit32toStr(bitStr,self->shiftMask);
+      uint32_ttoStr(bitStr,self->shiftMask);
       cout<<"Shift Mask:"<<bitStr<<endl;
 
-      bit32toStr(bitStr,startMask<<startShift);
+      uint32_ttoStr(bitStr,startMask<<startShift);
       cout<<"Start Mask:"<<bitStr<<endl;
 
-      bit32toStr(bitStr,self->streamHistory);
+      uint32_ttoStr(bitStr,self->streamHistory);
       cout<<"History:   "<<bitStr<<endl;
 
 
@@ -692,10 +695,10 @@ double logPnextInStream(matrix_bgObject *self, char nucl)
 
 
       for(unsigned int i=0;i<= startMask;i++) {
-	bit32 gram=(i<<startShift)|self->streamHistory;
+	uint32_t gram=(i<<startShift)|self->streamHistory;
 	/*
 	bitCodeToStr(gramStr,self->qgram,gram);
-	bit32toStr(bitStr,gram);
+	uint32_ttoStr(bitStr,gram);
 	cout<<gramStr<<" "<<bitStr<<endl;
 	*/
 	qgramCnt+=self->CP->counts[gram];
@@ -715,9 +718,9 @@ double logBestP(matrix_bgObject *self)
   int qgramCnt,contextCnt;
   static double const ln2=log(2.0);
   char *nucls="ACGT";
-  bit32 gram;
+  uint32_t gram;
 
-  for(bit32 context=0;context<(self->shiftMask>>2);context++) {
+  for(uint32_t context=0;context<(self->shiftMask>>2);context++) {
     contextCnt=self->CP->shortCounts[context];
     for(int i=0;i<4;i++) {
       gram=addNucleotideToGram(context,nucls[i],self->shiftMask);
@@ -939,7 +942,7 @@ matrix_computeBG(PyObject *self, PyObject *args)
 
   char *seq,prevChr=0;
   int order=3;
-  bit32 bitInd=0;
+  uint32_t bitInd=0;
   vector<unsigned long> *counts;
 
   if (!PyArg_ParseTuple(args, "s|i", &seq,&order)){
@@ -955,7 +958,7 @@ matrix_computeBG(PyObject *self, PyObject *args)
     Py_INCREF(Py_None);
     return Py_None;
   }
-  bit32 const shiftMask=(1<<(qgram*2))-1;
+  uint32_t const shiftMask=(1<<(qgram*2))-1;
 
 
   counts=new vector<unsigned long>;
@@ -1022,7 +1025,7 @@ matrix_computeBG(PyObject *self, PyObject *args)
   gram[qgram]=0;
 
   for(unsigned int i=0;i<=shiftMask;i++) {
-    bitInd=(bit32)i;
+    bitInd=(uint32_t)i;
     for(int j=0;j<qgram;j++) {
       switch(bitInd&3) {
       case nucl_A:
@@ -1130,7 +1133,7 @@ void TFBSscan::halfHistories()
 void printIntBits(int val)
 {
    char str[33];
-   bit32toStr(str,(bit32)val);
+   uint32_ttoStr(str,(uint32_t)val);
    printf("%s %d\n",str,val);
 }
 

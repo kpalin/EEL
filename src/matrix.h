@@ -1,5 +1,9 @@
 //
 // $Log$
+// Revision 1.4  2005/05/19 07:49:42  kpalin
+// Merged Waterman-Eggert style suboptimal alignments and
+// SNP matching.
+//
 // Revision 1.3.2.3  2005/05/12 11:07:12  kpalin
 // Made matrix to compile.
 //
@@ -25,13 +29,7 @@
 #define LARGE_AFFY_DELTA 1.0
 #endif
 
-#if SIZEOF_LONG==4
-typedef unsigned long int bit32;
-#elif SIZEOF_INT==4
-typedef unsigned int bit32;
-#else
-#error "Don't know how to define 32-bit variable!"
-#endif
+#include<stdint.h>
 
 struct __BGdataCPP {
   vector<unsigned long int> counts;
