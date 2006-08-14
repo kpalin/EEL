@@ -13,6 +13,9 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.24  2006/02/08 07:44:46  kpalin
+# Fixed faulty asserts.
+#
 # Revision 1.23  2005/11/25 12:09:55  kpalin
 # Human readable format for multiple alignment.
 #
@@ -164,6 +167,7 @@ def get(data):
     data must have the following format:
     dictionary from Sequence to Matrix to (position,strand,[ambig,allele,snpPos,scoreDif]) to (Score,altScore)"""
     #output=''
+    # data = {'Sequence':{Matrix:{(position,strand,[ambig,allele,snpPos,scoreDif]):(Score,altScore)}}}
 
     def flatten(mlist):
         olist=[]
