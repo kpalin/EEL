@@ -16,6 +16,9 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.21  2006/04/05 08:30:07  kpalin
+# Regular expressions for sequence removal and commands for multiple alignment.
+#
 # Revision 1.20  2005/05/19 07:49:35  kpalin
 # Merged Waterman-Eggert style suboptimal alignments and
 # SNP matching.
@@ -184,7 +187,9 @@ class Commandline(Interface):
                          '__saveMultiAlign':     (self.saveMultiAlign,1),
                          'no-gui':               (self.no_gui,0),
                          '__computeKLdistances': (self.showKLdist,1),
-                         '__head': (self.getHead,1)
+                         '__computeEscores': (self.showExpectedScores,1),
+                         '__head': (self.getHead,1),
+                         '__randomize_full': (self.randomize_full,0)
                          }
         # Add directory commands if available.
         if globals().has_key("os") and hasattr(os,"getcwd") and hasattr(os,"chdir"):
@@ -456,7 +461,7 @@ The default value for cutoff is 9.0"""
         except IOEerror,e:
             print "Could not save %s:"%(arglist[0]),e
             return
-        
+
         for m in self.matlist:
             for n in self.matlist:
                 KL[m.name][n.name]=m.minimumKLdistance(n)
@@ -464,6 +469,25 @@ The default value for cutoff is 9.0"""
         names=KL.keys()
         names.sort()
         fout.write("\t".join(["names"]+names)+"\n")
+        fout.writelines(["%s\t%s\n"%(name,"\t".join([str(KL[name][n][0]) for n in names])) for name in names])
+
+
+    def showExpectedScores(self,arglist):
+        "Arguments: File to save the result\nComputes the expected scores of matrices, given the other."
+        KL=dict([(m.name,{}) for m in self.matlist])
+        try:
+            fout=open(arglist[0],"w")
+        except IOEerror,e:
+            print "Could not save %s:"%(arglist[0]),e
+            return
+
+        for m in self.matlist:
+            for n in self.matlist:
+                KL[m.name][n.name]=m.maximumExpectedScore(n)
+
+        names=KL.keys()
+        names.sort()
+        fout.write("\t".join(["RowGivenCol"]+names)+"\n")
         fout.writelines(["%s\t%s\n"%(name,"\t".join([str(KL[name][n][0]) for n in names])) for name in names])
         
     def showmatch(self,arglist):
@@ -527,6 +551,7 @@ e.g. eel_2003_8_27_15_48.gff"""
         Interface.resetMatrices(self)
         Interface.resetSequences(self)
 
+        
     def align(self, arglist):
         """Arguments: [filename[,num_of_align,[lambda[,xi[,mu[,nu,[,nuc_per_rotation]]]]]]]
 aligns the computed BS or optional the BS from a gff file
