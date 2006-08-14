@@ -22,6 +22,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.31  2006/04/05 08:30:07  kpalin
+# Regular expressions for sequence removal and commands for multiple alignment.
+#
 # Revision 1.30  2005/06/10 06:55:08  kpalin
 # TIming for matrix matching.
 #
@@ -223,12 +226,13 @@ class Interface:
         self.alignment=None
 
 
+        
     def showFileList(self,files):
         for fileName in files:
-            print fileName
+            self.show(fileName)
 
-    def show(self,text):
-        print text
+    def show(self,*text):
+        sys.stdout.writelines(" ".join(map(str,text+('\n',))))
             
     def head(self,sitesCount):
 
@@ -255,11 +259,11 @@ class Interface:
         for fileGlob in arglist:
             filenames=glob(fileGlob)
             if len(filenames)==0:
-                print "Can't find",fileGlob
+                self.show( "Can't find",fileGlob)
             for fileName in filenames:
-                print "Reading",fileName
+                self.show("Reading",fileName)
                 self.malignment.addGFFfile(fileName)
-        print "All %d files added. Doing the alignment"%(len(filenames)),filenames
+        self.show("All %d files added. Doing the alignment"%(len(filenames)),filenames)
         self.malignment.multiAlign()
 
 
@@ -302,16 +306,16 @@ If you use '.' as filename the local data are aligned."""
                                                      float(Lambda), float(xi),
                                                      float(mu), float(nu),float(nuc_per_rotation))
             if not self.alignment:
-                print "No multiple alignment for a reason or an other"
+                self.show("No multiple alignment for a reason or an other")
             else:
-                print "Done"
+                self.show("Done")
                 self.moreAlignments(int(num_of_align))
-                print len(self.alignment.bestAlignments)
+                self.show(str(len(self.alignment.bestAlignments)))
                 #for y in [(x.motif,x.score,zip(self.alignment.names,x.beginEnd,x.siteScore,x.siteSeqPos)) for x in self.alignment.bestAlignments[0]]:print y
                 #print Output.formatalignGFF(self.alignment)
-#                print "goodAlign=",map(str,self.alignment.nextBest())
+                #                print "goodAlign=",map(str,self.alignment.nextBest())
         except ValueError,e:
-            print "Error:",e
+            self.show("Error:",str(e))
             #print "Error: unallowed arguments passed to 'multipleAlign'"
 
         
@@ -332,8 +336,7 @@ If you use '.' as filename the local data are aligned."""
             #if not i or len(i)<2:continue
             if len([x for x in i.seqs if x in self.seq.getNames()])==len(i.seqs):
                 i.strAln(self.seq)
-            print str(i)
-            print "\n"
+            self.show(str(i))
 
 
     def saveMultiAlign(self,arglist):
@@ -348,7 +351,7 @@ If you use '.' as filename the local data are aligned."""
             minPairs=0
             
         if not hasattr(self,"malignment"):
-            print "No multiple alignment to save!"
+            self.show("No multiple alignment to save!")
             return
         m="w"
         for i in self.malignment:
@@ -373,13 +376,13 @@ If you use '.' as filename the local data are aligned."""
                 if self.matdict.has_key(f):
                     pass
                 else:
-                    print "adding %s, Info=%2.4g:"%(f,m.InfoContent)
+                    self.show("adding %s, Info=%2.4g:"%(f,m.InfoContent))
                     self.matlist.append(m)
                     self.matdict[f]=m
             except ValueError:
-                print "could not read",f
+                self.show("could not read",f)
             except IOError, (errno, strerror):
-                print "%s: %s" % (strerror, f)
+                self.show("%s: %s" % (strerror, f))
         # Make the matrix names nicer.
         cpreflen=len(os.path.commonprefix([os.path.dirname(x.fname) for x in self.matlist]))
         if cpreflen>0:
@@ -392,7 +395,7 @@ If you use '.' as filename the local data are aligned."""
     def printMatrices(self):
         "prints matrices to standard out"
         for i in range(len(self.matlist)):
-            print "Matrix No %d (info=%g) %s"%(i,self.matlist[i].InfoContent,self.matlist[i].name)
+            self.show("Matrix No %d (info=%g) %s"%(i,self.matlist[i].InfoContent,self.matlist[i].name))
             self.matlist[i].draw()
 
     def setPseudoCount(self,pseudoCnt):
@@ -408,7 +411,7 @@ If you use '.' as filename the local data are aligned."""
                 tot=reduce(lambda x,y:float(x)+float(y),arglist,0.0)*1.0
                 self.A,self.C,self.G,self.T=map(lambda x:float(x)/tot,arglist)
             except (ValueError,AssertionError):
-                print "Invalid parameters as background frequences.\nBackground distribution not set."
+                self.show("Invalid parameters as background frequences.\nBackground distribution not set.")
                 return
 
         Matrix.setBGfreq(self.A,self.C,self.G,self.T)
@@ -441,7 +444,7 @@ If you use '.' as filename the local data are aligned."""
                 bgStr="Order %d Markov"%(Matrix.Matrix.backGround.order)
             except AttributeError:
                 bgStr="(%0.2f,%0.2f,%0.2f,%0.2f)"%(self.matlist[i].freqA,self.matlist[i].freqC,self.matlist[i].freqG,self.matlist[i].freqT)
-            print "Matrix No %d %s bg=%s pCount=%g maxscore=%0.2f"%(i,self.matlist[i].name,bgStr,Matrix.Matrix.pseudoCount,self.matlist[i].maxscore)
+            self.show("Matrix No %d %s bg=%s pCount=%g maxscore=%0.2f"%(i,self.matlist[i].name,bgStr,Matrix.Matrix.pseudoCount,self.matlist[i].maxscore))
             self.matlist[i].drawWeights()
 
     def removeMatrix(self, index):
@@ -488,7 +491,7 @@ If you use '.' as filename the local data are aligned."""
         seqnumber=0
         for name in self.seq.getNames():
             seqnumber +=1
-            print "Matching Sequence.",seqnumber,"of",len(self.seq.getNames())
+            self.show("Matching Sequence.",seqnumber,"of",len(self.seq.getNames()))
             self.__comp[name]={}
             try:
                 startTime=time()
@@ -496,17 +499,17 @@ If you use '.' as filename the local data are aligned."""
                                                     bound,self.matlist,absCutoff)
                 endTime=time()
             except (OverflowError,ValueError): # Zero, Negative
-                print "Need positive threshold!"
+                self.show("Need positive threshold!")
                 return
 #                self.__comp[name][m]=m.getTFBSbyRatio(self.seq.sequence(name),
 #                                                      bound)
             try:
                 foundMatches=sum([len(x) for x in self.__comp[name].values()])
                 totalMatches+=foundMatches
-                print "Found %d matches in %s\n"%(foundMatches,timeFormat(endTime-startTime))
+                self.show("Found %d matches in %s\n"%(foundMatches,timeFormat(endTime-startTime)))
             except TypeError:
-                print "name=",name
-                print "self.__comp=",self.__comp
+                self.show("name=",name)
+                self.show("self.__comp=",self.__comp)
                 #self.__gff=Output.get(self.__comp).split('\n')
             if totalMatches>50000:
                 self.storeTmpGFF()
@@ -530,8 +533,8 @@ If you use '.' as filename the local data are aligned."""
                 except OSError:
                     pass
             atexit.register(condRemoveTmp,self.tempFileName)
-            print "Storing temporary file",self.tempFileName
-        print "Writing temporary file"
+            self.show("Storing temporary file",self.tempFileName)
+        self.show("Writing temporary file")
         outData=Output.get(self.__comp)
         if len(outData)>0:
             self.tempFile.write(outData)
@@ -551,7 +554,7 @@ If you use '.' as filename the local data are aligned."""
         # To view the gff file numbered in the same order, use:
         #grep  ENSG tmp.gff |sort --key=5n,5 --key=6n |nl -v0>tmp.sort.ensg.gff
         if hasattr(self,"tempFileName"):
-            print "Storing file in gziped format."
+            self.show("Storing file in gziped format.")
             if not filename[-2:]=="gz":
                 filename=filename+".gz"
             try:
@@ -559,7 +562,7 @@ If you use '.' as filename the local data are aligned."""
                 os.remove(self.tempFileName)
                 del(self.tempFileName)
             except IOError,e:
-                print e
+                self.show(e)
                 filename=self.tempFileName
             return filename
         else:
@@ -589,7 +592,7 @@ If you use '.' as filename the local data are aligned."""
         if not hasattr(self,"alignment"):
             return 
         if not self.alignment or not hasattr(self.alignment,"memSaveUsed"):
-            print self.alignment
+            self.show(self.alignment)
             return
         self.moreAlignments(count,self.alignment.nextBest)
         #print Output.formatalign(self.alignment,self.seq),
@@ -599,13 +602,13 @@ If you use '.' as filename the local data are aligned."""
         try:
             self.moreAlignments(count,self.alignment.suboptimal)
         except (NotImplementedError,AttributeError):
-            print "Fetching suboptimal alignments is not supported."
+            self.show("Fetching suboptimal alignments is not supported.")
         #print Output.formatalign(self.alignment,self.seq),
 
 
     def quit(self):
         "Exits the program"
-        print "Exiting the program"
+        self.show("Exiting the program")
         sys.exit()
 
 
@@ -618,7 +621,7 @@ If you use '.' as filename the local data are aligned."""
         """Fetch more alignments from previously run alignment matrix"""
         for i in range(num_of_align):
             if self.alignment.memSaveUsed==1 and self.alignment.askedResults<=len(self.alignment.bestAlignments):
-                print "Can't give more alignments. Don't remember those"
+                self.show("Can't give more alignments. Don't remember those")
                 break
             if not fetcherFun:
                 goodAlign=self.alignment.suboptimal()
@@ -667,24 +670,46 @@ If you use '.' as filename the local data are aligned."""
         if self.alignment:
             #Interface.showalignSTDO(self)
             assert self.alignment.x_name!=self.alignment.y_name
-            print "Used time %g sec."%(self.alignment.secs_to_align)
+            self.show("Used time %g sec."%(self.alignment.secs_to_align))
             return 1
         else:
             return None
+
+    def randomize_full(self,arglist):
+        """Arguments: none\nFully randomize the list of matched TFBS:es."""
+        if len(self.__comp)==0:
+            return
+
+        import random
+        # self.__comp = {'Sequence':{Matrix:{(position,strand,[ambig,allele,snpPos,scoreDif]):(Score,altScore)}}}
+
+        self.__rcomp={}
+        for sequence,matrixDict in self.__comp.items():
+            pos=[]
+            for matrix,hitDict in matrixDict.items():
+                
+                pos.extend([position for position,strand,SNPlist in hitDict.keys()])
+            random.shuffle(pos)
+            for matrix,hitDict in matrixDict.items():
+                randHitDict=dict([((pos.pop(),strand,SNPlist),score) for ((position,strand,SNPlist),score) in hitDict.items()])
+                matrixDict[matrix]=randHitDict
+        
+        self.show("Fully, Independently Randomized. Preserving positions.")
+
 
     def savealignGFF(self,filename=""):
         "Saves the results in GFF format"
         try:
             return Output.savealign(Output.formatalignGFF(self.alignment), filename)
         except AttributeError:
-            print "No alignment to save"
+            self.show("No alignment to save")
 
     def savealignAnchor(self,filename=""):
         "Saves the results in Anchor format"
         try:
             return Output.savealign(Output.formatalignCHAOS(self.alignment), filename)
         except AttributeError:
-            print "No alignment to save"
+            self.show("No alignment to save")
 
 
     def savealign(self, filename=''):
@@ -692,13 +717,13 @@ If you use '.' as filename the local data are aligned."""
         try:
             return Output.savealign(Output.formatalign(self.alignment,self.seq), filename)
         except AttributeError:
-            print "No alignment to save"
+            self.show("No alignment to save")
 
 
     def showalignSTDO(self):
         "Prints the alignment to standart out"
         if hasattr(self,"alignment"):
-            print Output.formatalign(self.alignment,self.seq),
+            self.show(Output.formatalign(self.alignment,self.seq))
 
     def about(self):
         "Information about the program"
