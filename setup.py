@@ -11,6 +11,9 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.23  2006/05/03 10:42:54  kpalin
+##   Merged. "Downgrade" version from 2.1 to 2.0pre2
+##
 ##   Revision 1.22  2006/05/03 10:12:57  kpalin
 ##   Fixed a nasty bug giving false results depending on order of input
 ##   sequences.
@@ -92,7 +95,7 @@ from distutils.core import setup, Extension
 alignCompileArgs = []
 
 #Save memory if the matrix would be larger than 512MB
-alignCompileArgs = ["-DSAVE_MEM","-DSAVE_MEM_LIMIT=536870912"]
+alignCompileArgs = ["-DSAVE_MEM","-DSAVE_MEM_LIMIT=536870912","-DOUTPUTFREQ=10000000]
 
 if 0:
     print "No alignment score decrease allowed"
