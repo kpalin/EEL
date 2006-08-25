@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.13  2006/05/12 06:51:05  kpalin
+ *Close to perfection.
+ *
  *Revision 1.12  2006/05/11 12:45:05  kpalin
  *Works. But leaks a bit of memory in matrixentry.
  *
@@ -120,6 +123,9 @@ class PointerVec: public BasicPointerVec {
   int limitBP;
   int dataPoint() const ;
 
+  // Distances from this to the limiter. Used as a cache.
+  vector<int> diff2limiter;
+
   // Highest point of the limited lookback.
   const class PointerVec *limiterPvec;
   //static const class PointerVec *limiterPvec;
@@ -134,7 +140,27 @@ class PointerVec: public BasicPointerVec {
   bool updateRestCoords();
   const int allHasFactor() const;
 
-  int getPrevMatrixCoord(motifCode const tfID,seqCode const dimension); 
+  void setPrevMatrixCoord(motifCode const tfID,seqCode const dimension); 
+
+
+  // Set the matrix index for sequence seq to value val
+  int matrixIndexSet(seqCode seq,int val) {
+    this->matrix_p[seq]=val;
+    if(val>=0 && this->limiterPvec && this->isOK()) {
+      this->diff2limiter[seq]=this->difference(*this->limiterPvec,seq);
+    }
+    return this->matrix_p[seq];
+  }
+
+  // Decrease matrix index for sequence seq by 1
+  int matrixIndexDec(seqCode seq) {
+    return this->matrixIndexSet(seq,this->matrix_p[seq]-1);
+  }
+  // Increase matrix index for sequence seq by 1
+  int matrixIndexInc(seqCode seq) {
+    return this->matrixIndexSet(seq,this->matrix_p[seq]+1);
+  }
+
 public:
   PointerVec() {ok=0; limiterPvec=NULL;limData=NULL; }
   //  PointerVec(const PointerVec &other);
@@ -159,8 +185,14 @@ public:
   bool checkAtBorder(seqCode i);
   bool checkWithinLimits() const ;
 
+  int difference2limiter(seqCode const i) {
+    // Return the distance FROM the end of this to the beginning of limiterPvec
+    assert(this->limiterPvec!=NULL);
+    assert(this->diff2limiter[i]==this->difference(*this->limiterPvec,i));
+    return this->diff2limiter[i];
+  }
 
-
+  // Return the distance FROM the end of this TO the beginning of other on sequence i when this is pointer to motifs of type thisTFid and other is pointer to motifs of type otherTFid
   int difference(PointerVec const &other,seqCode const i,motifCode const thisTFid, motifCode const otherTFid) const {
     assert(limData!=NULL);
     assert(thisTFid==this->getMotif());
@@ -171,10 +203,17 @@ public:
   } ;
 
 
-
+  // Return the distance FROM the end of this TO the beginning of other on sequence i when this is pointer to motifs of type thisTFid
   int difference(PointerVec const &other,seqCode const i,motifCode const thisTFid) const {
     assert(limData!=NULL);
     assert(thisTFid==this->getMotif());
+#ifndef NDEBUG
+    id_triple otherSite=other.getSite(i);
+    id_triple thisSite=this->getSite(i,thisTFid);
+
+    int ero=otherSite.pos;
+    ero-=thisSite.epos;
+#endif
     int otherRight=(int)(other.getSite(i).pos-this->getSite(i,thisTFid).epos);
     //int otherLeft=(int)(this->getSite(i).pos-other.getSite(i).epos);
     return otherRight-1; //max(otherRight,otherLeft);
