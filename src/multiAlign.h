@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.14  2006/08/25 12:18:31  kpalin
+ *Caching distances to the pointervec limiter.
+ *
  *Revision 1.13  2006/05/12 06:51:05  kpalin
  *Close to perfection.
  *
@@ -48,13 +51,13 @@
  *
  *
  */
-
+/*
 #ifndef NDEBUG
 #ifndef DEBUG_OUTPUT
 #define DEBUG_OUTPUT
 #endif
 #endif
-
+*/
 #include <algorithm>
 #include <functional>
 #include <math.h>
@@ -160,6 +163,11 @@ class PointerVec: public BasicPointerVec {
   int matrixIndexInc(seqCode seq) {
     return this->matrixIndexSet(seq,this->matrix_p[seq]+1);
   }
+  
+  // Update the internal motif code cache.
+  void resetMotifCode() {
+    this->curMotifCode=this->getMotifLaborous();
+  }
 
 public:
   PointerVec() {ok=0; limiterPvec=NULL;limData=NULL; }
@@ -185,7 +193,7 @@ public:
   bool checkAtBorder(seqCode i);
   bool checkWithinLimits() const ;
 
-  int difference2limiter(seqCode const i) {
+  int difference2limiter(seqCode const i) const {
     // Return the distance FROM the end of this to the beginning of limiterPvec
     assert(this->limiterPvec!=NULL);
     assert(this->diff2limiter[i]==this->difference(*this->limiterPvec,i));
@@ -205,18 +213,21 @@ public:
 
   // Return the distance FROM the end of this TO the beginning of other on sequence i when this is pointer to motifs of type thisTFid
   int difference(PointerVec const &other,seqCode const i,motifCode const thisTFid) const {
+#ifndef NDEBUG
     assert(limData!=NULL);
     assert(thisTFid==this->getMotif());
-#ifndef NDEBUG
+
     id_triple otherSite=other.getSite(i);
     id_triple thisSite=this->getSite(i,thisTFid);
 
     int ero=otherSite.pos;
     ero-=thisSite.epos;
-#endif
     int otherRight=(int)(other.getSite(i).pos-this->getSite(i,thisTFid).epos);
     //int otherLeft=(int)(this->getSite(i).pos-other.getSite(i).epos);
-    return otherRight-1; //max(otherRight,otherLeft);
+    //return otherRight-1; //max(otherRight,otherLeft);
+    assert((otherRight-1)==this->difference(other,i,thisTFid,other.getMotif()));
+#endif
+    return this->difference(other,i,thisTFid,other.getMotif());
   } ;
 
   // Return the distance FROM the end of this TO the beginning of other on sequence i
@@ -234,7 +245,16 @@ public:
   // Assist functions:
   store getValue()  const; // inline
 
-  motifCode const getMotif() const { return this->getMotifLaborous(); }
+  motifCode const getMotif() const { 
+#ifndef NDEBUG
+    const motifCode thisMotif=this->getMotifLaborous();
+    if(this->curMotifCode!=thisMotif) {
+      fprintf(stderr,"VÄÄRÄ MOTIFCODE!!\n");
+      //abort();
+    }
+#endif
+    return this->curMotifCode;
+  }
   motifCode const getMotifLaborous() const; // inline
 
   vector<id_triple>  getSites() const;
@@ -529,6 +549,7 @@ inline id_triple const &PointerVec::getSite(seqCode const i,motifCode const tfID
 inline PointerVec::PointerVec(const BasicPointerVec &p,class Matrix * mat,class Inputs  *inp):BasicPointerVec(p),limData(inp),myMat(mat)
 {
   this->m=mat->dims();
+  this->resetMotifCode();
 }
 
 

@@ -37,6 +37,9 @@
 /*
  *
  * $Log$
+ * Revision 1.26  2006/08/25 12:18:54  kpalin
+ * Caching distances to pointervec limiter.
+ *
  * Revision 1.25  2006/05/12 06:50:54  kpalin
  * Close to perfection.
  *
@@ -186,9 +189,7 @@ PointerVec::PointerVec(Matrix *mat,Inputs const *indata)
 
   this->matrix_p.resize(this->m,0);
 
-  // Not sure whether we'll need this.
-
-  //this->p.resize(this->m,0);
+  this->resetMotifCode();
   if(!this->allHasFactor()) {
     (*this)++;
   }
@@ -201,7 +202,8 @@ PointerVec::PointerVec(Matrix *mat,Inputs const *indata)
 }
 
 
-/* set matrix coordinate for site just before the limiter that was previously used with this pointing to motif of type tfID */
+/* set matrix coordinate for site just before the limiter 
+   that was previously used with this pointing to motif of type tfID */
 void PointerVec::setPrevMatrixCoord(motifCode const tfID,seqCode const i) {
   assert(this->limiterPvec);
   assert(tfID==this->getMotif());
@@ -217,18 +219,19 @@ void PointerVec::setPrevMatrixCoord(motifCode const tfID,seqCode const i) {
   }
   
 
-
+  motifCode limiterTF=this->limiterPvec->getMotif();
   while(this->matrix_p[i]<(this->myMat->countTFinSeq(i,tfID)) && 
-	this->difference(*this->limiterPvec,i,tfID)>=0) {
+	this->difference(*this->limiterPvec,i,tfID,limiterTF)>=0) {
     //this->matrixIndexInc(i);
     this->matrix_p[i]++;  // BE VERY VERY CAREFULL!!! 
     //this->matrix_p[i]++;
   }
-  this->matrixIndexSet(i,this->matrixIndex(i));  // BE VERY VERY CAREFULL!!! 
 
   if( this->matrix_p[i] > 0) {  
     this->matrixIndexDec(i);
     //this->matrix_p[i]--;
+  } else {
+    this->matrixIndexSet(i,this->matrixIndex(i));  // BE VERY VERY CAREFULL!!! 
   }
 
 
@@ -244,13 +247,13 @@ bool PointerVec::updateRestCoords()
      Return 0 if such site does not exist or it is further than limitBP. 
      Return 1 otherwise. */
   motifCode const tfid=this->getMotif();
-  motifCode const limiterTFid=this->limiterPvec->getMotif();
+  //motifCode const limiterTFid=this->limiterPvec->getMotif();
 
   
   for(uint i=1;i<this->m;i++) {
     this->setPrevMatrixCoord(tfid,i);
     //this->diff2limiter[i]=this->difference(*this->limiterPvec,i,tfid,limiterTFid);
-    if(this->diff2limiter[i]>=this->limitBP || this->diff2limiter[i]<0) {
+    if(this->difference2limiter(i)>=this->limitBP || this->difference2limiter(i)<0) {
 #ifdef DEBUG_OUTPUT
       printf("afterBreak %d\n",this->diff2limiter[i]);
 #endif
@@ -278,18 +281,23 @@ bool PointerVec::decFirst()
   cout<<"dF()"<<endl;
 #endif
 
-  
+
+  // BE VERY CAREFULL
   do {
-    this->matrixIndexDec(0);
-    //this->matrix_p[0]--;
+    //this->matrixIndexDec(0);
+    this->matrix_p[0]--;
+    this->resetMotifCode();
   } while(this->matrix_p[0]>=0 && !this->allHasFactor());
-  
+
+  this->matrixIndexSet(0,this->matrixIndex(0));
+  // CAN EASE UP NOW
+
   if(this->matrix_p[0]<0) {
     this->ok=0;
     return 0;
   }
 
-  this->curMotifCode=this->getMotifLaborous();
+  //this->curMotifCode=this->getMotifLaborous();
   // Here we dont need to know the new TF id because we only use dimension 0.
   
   //this->diff2limiter[0]=this->difference(*this->limiterPvec,0);
@@ -324,10 +332,11 @@ bool PointerVec::checkWithinLimits() const
   if(!this->limiterPvec) {
     ret=0;
   } else {
-    motifCode tfID=this->getMotif();
+    //motifCode tfID=this->getMotif();
 
     for(seqCode i=0;(unsigned int)i<(unsigned int)this->m;i++) {
-      int dist=this->difference(*this->limiterPvec,i,tfID);
+      //int dist=this->difference(*this->limiterPvec,i,tfID);
+      int dist=this->difference2limiter(i);
       ret&=(dist>=0);
       ret&=(dist<this->limitBP);
     }
@@ -424,7 +433,7 @@ void PointerVec::nextLookBack()
 
    if(seq==0) {
      while(!this->decFirst() && this->isOK())
-       assert(this->difference(*this->limiterPvec,seq)>=0);
+       assert(this->difference2limiter(seq)>=0);
    }
    
 
@@ -434,7 +443,7 @@ void PointerVec::nextLookBack()
      motifCode tfid=this->getMotif();
 
      assert(this->matrix_p[0]<this->myMat->dims(0));
-     printf("dist[0]= %d\n",this->difference(*this->limiterPvec,0));
+     printf("dist[0]= %d\n",this->difference2limiter(0));
      for(uint i=1;i<this->m;i++) {
        cout<<this->matrix_p[i]<<"<<"<<this->myMat->countTFinSeq(i,tfid)<<" "<<this->limData->factor(tfid)<<endl;
        assert(this->matrix_p[i]<this->myMat->countTFinSeq(i,tfid));
@@ -485,6 +494,7 @@ const PointerVec& PointerVec::operator++(int dummy)
     do {
       this->matrixIndexInc(0);
       //this->matrix_p[0]++;
+      this->resetMotifCode();
     } while(this->matrix_p[0]<this->myMat->dims(0) && !this->allHasFactor());
     
     if(this->matrix_p[0]>=this->myMat->dims(0)) {
@@ -658,7 +668,10 @@ BasicPointerVec Matrix::argMax()
 
   for(PointerVec p=this->getOrigin();p.isOK();p++) {
     assert( p.getSite(0).ID==p.getSite(1).ID );
-    assert( (!p.isOK()) || (this->getValue(p).getValue()>=0.0) );
+    /*assert( (!p.isOK()) 
+	    || (this->getValue(p).getValue()>=0.0)
+	    || ( (backer=this->getValue(p).getBacktraceP())==NULL) 
+	    || (this->getValue(*backer).getValue()<0.0) ); */ 
     if(this->getValue(p).getValue()>maxval) {
       for(backer=this->getValue(p).getBacktraceP();
 	  backer->isOK() && this->getValue(*backer).getValue()>=0.0;
@@ -991,10 +1004,10 @@ PointerVec PointerVec::getLimited(int limitbp) const
   
 
   for(seqCode i=1;(unsigned int)i<(unsigned int)this->m;i++) {
-    while(ret.isOK() && ret.difference(*ret.limiterPvec,i)<0) {
+    while(ret.isOK() && ret.difference2limiter(i)<0) {
       //ret.matrix_p[i]--;
       ret.matrixIndexDec(i);
-      if(ret.matrix_p[i]<0 || ret.difference(*ret.limiterPvec,i)>=ret.limitBP) {
+      if(ret.matrix_p[i]<0 || ret.difference2limiter(i)>=ret.limitBP) {
 	ret.ok=0;
 	goto finally;
       }
@@ -1448,8 +1461,9 @@ inline const double penalty(const malign_AlignmentObject* const dat,const posind
   return val;
 }
 
-
-inline const double multiPenalty(const malign_AlignmentObject* const self,const PointerVec &left,const PointerVec &right,const int n) 
+// Compute the sum of pairs penalty for adjacent columns 
+// left and rigtht with n rows (sequences)
+inline const double multiPenaltyLR(const malign_AlignmentObject* const self,const PointerVec &left,const PointerVec &right,const int n) 
 {
   double Score=0.0;
 
@@ -1464,6 +1478,21 @@ inline const double multiPenalty(const malign_AlignmentObject* const self,const 
   return Score;
 }
 
+// Compute the sum of pairs penalty for adjacent columns 
+// left and left->limiterPvec with n rows (sequences)
+inline const double multiPenalty(const malign_AlignmentObject* const self,const PointerVec &left,const PointerVec &right,const int n) 
+{
+  double Score=0.0;
+
+  for(seqCode i=0;i<n;i++) {
+    for(seqCode j=i+1;j<n;j++) {
+      Score+=penalty(self,
+		     left.difference2limiter(i),
+		     left.difference2limiter(j));
+    }
+  }
+  return Score;
+}
 
 
 void outputMemory(double bytes)
