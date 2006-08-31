@@ -22,6 +22,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.33  2006/08/31 10:08:36  kpalin
+# More Debug output and TF distance calculations.
+#
 # Revision 1.32  2006/08/14 09:57:30  kpalin
 # Added randomization function and cleaned diagnostic outputs.
 #
@@ -225,10 +228,14 @@ class Interface:
         self.outputted=0
         self.resetMatrices()
         self.resetSequences()
-        self.__comp={}
+        self.resetTFBS()
         self.alignment=None
 
 
+    def resetTFBS(self):
+        self.__comp_bound=-1.0
+        self.__comp_absCutoff=None
+        self.__comp={}
         
     def showFileList(self,files):
         for fileName in files:
@@ -370,10 +377,12 @@ If you use '.' as filename the local data are aligned."""
         "Arguments: none\nremoves all matrices"
         self.matlist=[]
         self.matdict={}
+        self.resetTFBS()
         collect()
 
     def addMatrix(self, filenames):
         "adds new matrices from given files"
+        self.resetTFBS()
         for f in filenames:
             try:
                 m=Matrix.Matrix(f)
@@ -437,6 +446,7 @@ If you use '.' as filename the local data are aligned."""
 
 
     def _initMatrixWeights(self):
+        self.resetTFBS()
         map(Matrix.Matrix.initWeights,self.matlist)
             
 
@@ -455,12 +465,14 @@ If you use '.' as filename the local data are aligned."""
         "removes matrix given by index"
         try:
             self.matlist.pop(index)
+            self.resetTFBS()
         except IndexError:
             pass
 
     def resetSequences(self, arglist=None):
         "Arguments: none\nremoves all sequences"
         self.seq=Sequences()
+        self.resetTFBS()
         collect()
 
     def addSequence(self, filenames):
@@ -471,6 +483,10 @@ If you use '.' as filename the local data are aligned."""
     def removeSequence(self, name):
         "removes sequences given by name"
         self.seq.removeSequence(name)
+        try:
+            del(self.__comp[name])
+        except KeyError:
+            pass
         collect()
     
     def getSeqNames(self):
@@ -488,14 +504,18 @@ If you use '.' as filename the local data are aligned."""
             os.remove(self.tempFileName)
             del(self.tempFileName)
 
-        self.__comp={}
-        duration = len(self.matlist) * len(self.seq.getNames())
+        #self.__comp={}
+        if self.__comp_bound!=bound or self.__comp_absCutoff!=absCutoff:
+            self.resetTFBS()
+        self.__comp_bound=bound
+        self.__comp_absCutoff=absCutoff
         progress= 0.0
         totalMatches=0
         seqnumber=0
-        for name in self.seq.getNames():
+        matchSeqs=[name for name in self.seq.getNames() if not self.__comp.has_key(name)]
+        for name in matchSeqs:
             seqnumber +=1
-            self.show("Matching Sequence.",seqnumber,"of",len(self.seq.getNames()))
+            self.show("Matching Sequence %s. %d of %d"%(name,seqnumber,len(matchSeqs)))
             self.__comp[name]={}
             try:
                 startTime=time()

@@ -16,6 +16,9 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.22  2006/08/14 09:48:06  kpalin
+# Added a new __randomize_full command.
+#
 # Revision 1.21  2006/04/05 08:30:07  kpalin
 # Regular expressions for sequence removal and commands for multiple alignment.
 #
@@ -553,7 +556,7 @@ e.g. eel_2003_8_27_15_48.gff"""
 
         
     def align(self, arglist):
-        """Arguments: [filename[,num_of_align,[lambda[,xi[,mu[,nu,[,nuc_per_rotation]]]]]]]
+        """Arguments: [filename[,num_of_align,[lambda[,xi[,mu[,nu,[,nuc_per_rotation, [Seq1, Seq2]]]]]]]]
 aligns the computed BS or optional the BS from a gff file
 filename specifies a file in gff format is you want to be aligned
 num_of_align        specifies how many alignments you want. (Default 3)
@@ -562,12 +565,13 @@ xi       Penalty factor for rotation (Default 1.0)
 mu       Penalty factor for average distance between sites (Default 0.5)
 nu       Penalty factor for distance difference between sites (Default 1.0)
 nuc_per_rotation    specifies how many nucletides there are per rotation. (Default 10.4)
+Seq1,Seq2 Sequences to be aligned.
 If you want to skip a argument just  write '.' for it.
 If you use '.' as filename the local data are aligned."""
         try:
             [filename, num_of_align, Lambda, xi,
-             mu, nu, nuc_per_rotation]=arglist + ['.']*(7-len(arglist))
-            
+             mu, nu, nuc_per_rotation,Seq1,Seq2]=(arglist + ['.']*(9-len(arglist)))[:9]
+
             if num_of_align=='.':
                 num_of_align=3
             if Lambda=='.':
@@ -580,11 +584,16 @@ If you use '.' as filename the local data are aligned."""
                 nu=1.0
             if nuc_per_rotation=='.':
                 nuc_per_rotation=10.4
-
+            if Seq1=='.':
+                Seq1=None
+            if Seq2=='.':
+                Seq2=None
+                
             try:
                 if not Interface.align(self, filename, int(num_of_align),
                                        float(Lambda), float(xi),
-                                       float(mu), float(nu),float(nuc_per_rotation)):
+                                       float(mu), float(nu),
+                                       float(nuc_per_rotation),Seq1,Seq2):
                     print "No alignment for a reason or an other"
             except AttributeError,val:
                 if len(val.args)==1 or (len(val.args)>1 and len(val.args[1])<2):
