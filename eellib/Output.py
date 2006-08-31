@@ -13,6 +13,9 @@ from eellib import alignedCols
 
 #
 # $Log$
+# Revision 1.25  2006/08/14 09:46:06  kpalin
+# Added more comments.
+#
 # Revision 1.24  2006/02/08 07:44:46  kpalin
 # Fixed faulty asserts.
 #
@@ -298,10 +301,10 @@ def formatMultiAlignGFF(alignment):
                                           i,siteScore,colCode,annot.strip()))
                 try:
                     assert(DEBUGprevpos.get(seq,(0,0))[1]<begin)
-                    assert(0<=begin-DEBUGprevpos.get(seq,(0,begin-1))[1]<1000)
+                    assert(1<=begin-DEBUGprevpos.get(seq,(0,begin-1))[1]<=1000)
                 except AssertionError:
                     print DEBUGprevpos.get(seq,(0,0))[1],"<",begin
-                    print "0<=",begin,"-",DEBUGprevpos.get(seq,(0,begin-1))[1],"<",1000
+                    print "0<=",begin,"-",DEBUGprevpos.get(seq,(0,begin-1))[1],"<=",1000
                     print alignment.names[seq],"COL %d"%(colCode),DEBUGprevpos.get(seq,(0,0))[1],"<",end
                     print outStrIO.getvalue()
                     raise

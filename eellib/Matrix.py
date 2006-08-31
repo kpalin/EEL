@@ -8,6 +8,10 @@ from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.14  2005/05/19 07:49:35  kpalin
+# Merged Waterman-Eggert style suboptimal alignments and
+# SNP matching.
+#
 # Revision 1.13.2.1  2005/05/09 07:15:09  kpalin
 # Matrix distances.
 #
@@ -296,22 +300,77 @@ class Matrix:
 
         return (minKLdist,minKLshift)
 
+    def maximumExpectedScore(self,other):
+        "Compute the maximum expected score of self given other"
+
+        self.computeFreqMatrix()
+        other.computeFreqMatrix()
+
+
+        maxEscore=-1e99
+        for shift in range(len(other)):#range(1-len(self),len(other)):
+            Es=self.maxExpectedScore(other,shift)
+            #print shift,kld
+            if Es>maxEscore:
+                maxEscore=Es
+                maxEshift=shift
+
+        return (maxEscore,maxEshift)
+
+
+    def __giveReverseComplementFreqs(self):
+        "Return self.freq for reverse complement site"
+        rc=[]
+        for flist in self.freq:
+            flist=flist[:]
+            flist.reverse()
+            rc.append(flist)
+        rc.reverse()
+        return rc
+
     def KLdistance(self,other,shift=0):
-        "Computes the Kullback-Leibler distance D(self||other) between two matrices. Actually on on the overlapping region"
+        "Computes the Kullback-Leibler distance min D(self||other) D(other||self) between two matrices."
 
-        KLdist=0.0
-        for (pList,qList,bgFreq) in zip(self.freq,other.freq,[self.freqA,self.freqC,self.freqG,self.freqT]):
-            if shift<0:
-                pList=[bgFreq]*(-shift)+pList
-            else:
-                lenDelta=len(self)-len(other)
-                pList=pList[shift:]+[bgFreq]*(shift-lenDelta+1)
-            qList=qList[:len(other)]
-            pList=pList[:len(other)]
-            #print "len",len(qList),len(pList)
-            KLdist+=reduce(operator.add,[ p*log2(p/q) for (p,q) in zip(pList,qList) ])
+        minKLdist=1e999
+        for selfFreq in [self.freq,self.__giveReverseComplementFreqs()]:
+            KLdistp=0.0
+            KLdistq=0.0
+            for (pList,qList,bgFreq) in zip(selfFreq,other.freq,[self.freqA,self.freqC,self.freqG,self.freqT]):
+                if shift<0:
+                    pList=[bgFreq]*(-shift)+pList
+                else:
+                    lenDelta=len(self)-len(other)
+                    pList=pList[shift:]+[bgFreq]*(shift-lenDelta+1)
+                qList=qList[:len(other)]
+                pList=pList[:len(other)]
+                #print "len",len(qList),len(pList)
+                KLdistp+=reduce(operator.add,[ p*log2(p/q) for (p,q) in zip(pList,qList) ])
+                KLdistq+=reduce(operator.add,[ q*log2(q/p) for (p,q) in zip(pList,qList) ])
+            minKLdist=min(KLdistp,KLdistq,minKLdist)
+            
+        return minKLdist
 
-        return KLdist
+    def maxExpectedScore(self,other,shift=0):
+        "Computes maximum  (over other sites strand) expected score of self, given other."
+
+        maxEscore=-1e999
+        for otherFreq in [other.freq,other.__giveReverseComplementFreqs()]:
+            Escore=0.0
+            for (pList,scoreList,bgFreq) in zip(otherFreq,self.M_weight,[self.freqA,self.freqC,self.freqG,self.freqT]):
+                if shift<0:
+                    pList=[bgFreq]*(-shift)+pList
+                else:
+                    lenDelta=len(self)-len(other)
+                    pList=pList[shift:]+[bgFreq]*(shift-lenDelta+1)
+                scoreList=scoreList[:len(self)]
+                pList=pList[:len(self)]
+                #print "len",len(scoreList),len(pList)
+                Escore+=reduce(operator.add,[ p*S for (p,S) in zip(pList,scoreList) ])
+
+            maxEscore=max(Escore,maxEscore)
+
+        #print self.name,other.name,maxEscore,shift
+        return maxEscore
 
 
         

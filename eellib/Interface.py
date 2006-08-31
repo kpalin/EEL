@@ -22,6 +22,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.32  2006/08/14 09:57:30  kpalin
+# Added randomization function and cleaned diagnostic outputs.
+#
 # Revision 1.31  2006/04/05 08:30:07  kpalin
 # Regular expressions for sequence removal and commands for multiple alignment.
 #
@@ -311,6 +314,7 @@ If you use '.' as filename the local data are aligned."""
                 self.show("Done")
                 self.moreAlignments(int(num_of_align))
                 self.show(str(len(self.alignment.bestAlignments)))
+                self.show("Used time %g sec."%(self.alignment.secs_to_align))
                 #for y in [(x.motif,x.score,zip(self.alignment.names,x.beginEnd,x.siteScore,x.siteSeqPos)) for x in self.alignment.bestAlignments[0]]:print y
                 #print Output.formatalignGFF(self.alignment)
                 #                print "goodAlign=",map(str,self.alignment.nextBest())
