@@ -11,6 +11,10 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.25  2006/08/14 09:47:34  kpalin
+##   Added a quotation mark that was missed during the last checkin. Of
+##   course.
+##
 ##   Revision 1.24  2006/08/14 09:45:41  kpalin
 ##   Lowered output frequency for the alignment.
 ##
@@ -76,7 +80,7 @@ print sys.argv
 common_compile_args=["-Wall"]
 if len(sys.argv)>1:
     if sys.argv[1]=='debug':
-        common_compile_args=["-O0","-fno-inline","-Wall","-g","-UNDEBUG","-DEXTRADEBUG","-DDEBUG_OUTPUT","-DSUBOPTDEBUG"]
+        common_compile_args=["-O0","-fno-inline","-Wall","-g","-UNDEBUG","-DEXTRADEBUG"]#,"-DDEBUG_OUTPUT","-DSUBOPTDEBUG"]
         print "Using debug settings"
         del sys.argv[1]
     elif sys.argv[1]=='profile':
