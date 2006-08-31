@@ -37,6 +37,9 @@
 /*
  *
  * $Log$
+ * Revision 1.27  2006/08/29 06:08:40  kpalin
+ * Speed improvements.
+ *
  * Revision 1.26  2006/08/25 12:18:54  kpalin
  * Caching distances to pointervec limiter.
  *
@@ -218,7 +221,6 @@ void PointerVec::setPrevMatrixCoord(motifCode const tfID,seqCode const i) {
     //this->matrix_p[i]=newCoord;
   }
   
-
   motifCode limiterTF=this->limiterPvec->getMotif();
   while(this->matrix_p[i]<(this->myMat->countTFinSeq(i,tfID)) && 
 	this->difference(*this->limiterPvec,i,tfID,limiterTF)>=0) {
@@ -611,15 +613,17 @@ Matrix::Matrix(Inputs *indata)
     // Allocate the helpers for the sparse matrix
 
     // TODO: Get rid of TFs that do not occur in some of the sequences.
-    this->tfIndex.resize(indata->sequences());
-    for(seqCode seq=0;seq<indata->sequences();seq++) {
-      this->tfIndex[seq].resize(indata->factors());
-
-      for(posCode pos=0;pos<this->dimLen[seq];pos++) {
-	this->tfIndex[seq][indata->getSite(pos,seq).ID].push_back(pos);
-      }
-
+    this->tfIndex.resize(indata->factors());
+    for(motifCode tf=0;tf<indata->factors();tf++) {
+      this->tfIndex[tf].resize(indata->sequences());
     }
+    for(seqCode seq=0;seq<indata->sequences();seq++) {
+      for(posCode pos=0;pos<this->dimLen[seq];pos++) {
+	this->tfIndex[indata->getSite(pos,seq).ID][seq].push_back(pos);
+      }
+    }
+
+    
 #ifdef DEBUG_OUTPUT
     for(int i=0;i<indata->factors();i++) {
       int motifCount=countTFinSeq(0,i);

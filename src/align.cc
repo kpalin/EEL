@@ -37,6 +37,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.26  2005/10/03 10:18:41  kpalin
+ *  Presumably working multiple alignment version. Not yet usable though.
+ *
  *  Revision 1.25  2005/09/20 07:27:50  kpalin
  *  Added a compile time switch to force monotonous alignment score.
  *
@@ -1178,6 +1181,7 @@ alignMemorySaveObject(align_AlignmentObject *self)
 
 
   self->memSaveUsed=1;
+  self->askedresults=max(self->askedresults,50);
 
 
   for(vector<vector<int> >::iterator iter=self->CP->index.begin();

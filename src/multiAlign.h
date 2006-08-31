@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.15  2006/08/29 06:08:28  kpalin
+ *Speed improvements.
+ *
  *Revision 1.14  2006/08/25 12:18:31  kpalin
  *Caching distances to the pointervec limiter.
  *
@@ -359,7 +362,7 @@ class Matrix {
 
   vector<bool> allHaveFactor;
 
-  // p=tfIndex[seqID][tfID][posCode] <=>  indata->seq[seqID][p] is the posCode:th 
+  // p=tfIndex[tfID][seqID][posCode] <=>  indata->seq[seqID][p] is the posCode:th 
   //                                      occurrence of motif tfID in sequence seqID
   vector< vector< vector<int> > > tfIndex;
 
@@ -411,17 +414,17 @@ public:
   int dims() const {return dim; }
   int dims(int i) const { return dimLen[i]; }
   const int countTFinSeq(seqCode const seq,motifCode const tfID) const { 
-    return this->tfIndex[seq][tfID].size(); }
+    return this->tfIndex[tfID][seq].size(); }
 
 
   const int by_seq_tf_pos(int const seqID, motifCode const tfID,posCode const pos) const { 
 #ifndef NDEBUG
-    vector< vector<int> > seqTF=this->tfIndex.at(seqID);
-    vector<int>  TFid=seqTF.at(tfID);
+    vector< vector<int> > seqTF=this->tfIndex.at(tfID);
+    vector<int>  TFid=seqTF.at(seqID);
     int tfCode = TFid.at(pos);
     return tfCode;
 #else
-    return this->tfIndex[seqID][tfID][pos]; 
+    return this->tfIndex[tfID][seqID][pos]; 
 #endif
   }
 
