@@ -1,0 +1,4874 @@
+{
+   supp0
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyString_InternInPlace
+   fun:PyString_InternFromString
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp1
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyString_InternInPlace
+   fun:PyString_InternFromString
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp2
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp3
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp4
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp5
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp6
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItemString
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp7
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:_PyExc_Init
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp8
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyString_InternInPlace
+   fun:PyDict_SetItemString
+   fun:Py_InitModule4
+   fun:initsignal
+   fun:PyOS_InitInterrupts
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp9
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyMarshal_ReadLastObjectFromFile
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_CallFunction
+   fun:PyImport_Import
+   fun:PyImport_ImportModule
+   obj:/usr/bin/python2.4
+}
+{
+   supp10
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyMarshal_ReadLastObjectFromFile
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp11
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyMarshal_ReadLastObjectFromFile
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp12
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyMarshal_ReadLastObjectFromFile
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp13
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+}
+{
+   supp14
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+}
+{
+   supp15
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp16
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp17
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp18
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp19
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp20
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp21
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp22
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp23
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp24
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp25
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp26
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp27
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+}
+{
+   supp28
+   Memcheck:Cond
+   fun:PyObject_Realloc
+   fun:_PyObject_GC_Resize
+   fun:PyFrame_New
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+}
+{
+   supp29
+   Memcheck:Value8
+   fun:PyObject_Realloc
+   fun:_PyObject_GC_Resize
+   fun:PyFrame_New
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+}
+{
+   supp30
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+}
+{
+   supp31
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+}
+{
+   supp32
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+}
+{
+   supp33
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyObject_GC_Resize
+   fun:PyFrame_New
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+}
+{
+   supp34
+   Memcheck:Cond
+   fun:PyObject_Free
+   fun:PyGrammar_AddAccelerators
+   fun:PyParser_New
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+}
+{
+   supp35
+   Memcheck:Value8
+   fun:PyObject_Free
+   fun:PyGrammar_AddAccelerators
+   fun:PyParser_New
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+}
+{
+   supp36
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyGrammar_AddAccelerators
+   fun:PyParser_New
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+}
+{
+   supp37
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyString_Resize
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp38
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyString_Resize
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp39
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp40
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp41
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp42
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp43
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+}
+{
+   supp44
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp45
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp46
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp47
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp48
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_DelItem
+   fun:PyDict_DelItemString
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+}
+{
+   supp49
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp50
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_StringFlags
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp51
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp52
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp53
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyObject_GC_Resize
+   fun:PyFrame_New
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+}
+{
+   supp54
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyObject_GenericGetAttr
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp55
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyArg_ParseTuple
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp56
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp57
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp58
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp59
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyArg_ParseTupleAndKeywords
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+}
+{
+   supp60
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp61
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItemString
+   fun:PyType_Ready
+   fun:PyObject_GenericGetAttr
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+}
+{
+   supp62
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItemString
+   fun:PyType_Ready
+   fun:PyObject_GenericGetAttr
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+}
+{
+   supp63
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+}
+{
+   supp64
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp65
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp66
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp67
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp68
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItemString
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+}
+{
+   supp69
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+}
+{
+   supp70
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyTokenizer_Get
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp71
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyTokenizer_Get
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp72
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp73
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp74
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp75
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp76
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyString_Resize
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp77
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyString_Resize
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp78
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp79
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp80
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp81
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp82
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp83
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp84
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp85
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp86
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyNode_Free
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp87
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyNode_Free
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp88
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyNode_Free
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp89
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+}
+{
+   supp90
+   Memcheck:Addr8
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+}
+{
+   supp91
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp92
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   supp93
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItemString
+   fun:PyType_Ready
+   fun:PyStructSequence_InitType
+   fun:inittime
+   fun:_PyImport_LoadDynamicModule
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+}
+{
+   supp94
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp95
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp96
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp97
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyImport_ExecCodeModuleEx
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+}
+{
+   supp98
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+}
+{
+   supp99
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+}
+{
+   supp100
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp101
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp102
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   supp103
+   Memcheck:Addr8
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+}
+{
+   supp104
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:initcStringIO
+   fun:_PyImport_LoadDynamicModule
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+}
+{
+   supp105
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:initcStringIO
+   fun:_PyImport_LoadDynamicModule
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+}
+{
+   supp106
+   Memcheck:Addr8
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+}
+{
+   supp107
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp108
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp109
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp110
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp111
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp112
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp113
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+}
+{
+   supp114
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+}
+{
+   supp115
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp116
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp117
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp118
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp119
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp120
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+   fun:_PyImport_LoadDynamicModule
+}
+{
+   supp121
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+}
+{
+   supp122
+   Memcheck:Cond
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libc-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.5.so
+   obj:/lib/ld-2.3.5.so
+   obj:/lib/libdl-2.3.5.so
+   fun:dlopen
+   fun:_PyImport_GetDynLoadFunc
+}
+{
+   supp123
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+}
+{
+   supp124
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+}
+{
+   supp125
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+}
+{
+   supp126
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:Py_Finalize
+}
+{
+   supp127
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp128
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp129
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp130
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp131
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp132
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp133
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp134
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp135
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp136
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp137
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp138
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp139
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyDict_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp140
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp141
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyFrame_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp142
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyInt_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp143
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyGrammar_RemoveAccelerators
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp145
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyString_InternInPlace
+   fun:PyString_InternFromString
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp146
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyString_InternInPlace
+   fun:PyString_InternFromString
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp147
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp148
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp149
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp150
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp151
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItemString
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp152
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:_PyExc_Init
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp153
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyString_InternInPlace
+   fun:PyDict_SetItemString
+   fun:Py_InitModule4
+   fun:initsignal
+   fun:PyOS_InitInterrupts
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp154
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyTokenizer_Get
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp155
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyTokenizer_Get
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp156
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp157
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp158
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp159
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyString_Resize
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp160
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyString_Resize
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp161
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp162
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp163
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp164
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp165
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp166
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp167
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp168
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp169
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyNode_Free
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp170
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyNode_Free
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp171
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyNode_Free
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp172
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+}
+{
+   supp173
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+}
+{
+   supp174
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:initcStringIO
+   fun:_PyImport_LoadDynamicModule
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+}
+{
+   supp175
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:initcStringIO
+   fun:_PyImport_LoadDynamicModule
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+}
+{
+   supp176
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:initcStringIO
+   fun:_PyImport_LoadDynamicModule
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+}
+{
+   supp177
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:initcStringIO
+   fun:_PyImport_LoadDynamicModule
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+}
+{
+   supp178
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItemString
+   fun:Py_InitModule4
+   fun:initmath
+   fun:_PyImport_LoadDynamicModule
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyImport_ImportModuleEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+}
+{
+   supp179
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp180
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp181
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp182
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp183
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp184
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp185
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp186
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyString_Resize
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+}
+{
+   supp187
+   Memcheck:Cond
+   fun:PyObject_Realloc
+   fun:_PyObject_GC_Resize
+   fun:PyFrame_New
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+}
+{
+   supp188
+   Memcheck:Value8
+   fun:PyObject_Realloc
+   fun:_PyObject_GC_Resize
+   fun:PyFrame_New
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+}
+{
+   supp189
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp190
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyDict_SetItemString
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp191
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyDict_SetItemString
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp192
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp193
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp194
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp195
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp196
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp197
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp198
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp199
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp200
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp201
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp202
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp203
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp204
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp205
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp206
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp207
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp208
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp209
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp210
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp211
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp212
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp213
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp214
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp215
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp216
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp217
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp218
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp219
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp220
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp221
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp222
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp223
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp224
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp225
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp226
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp227
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp228
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp229
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp230
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp231
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp232
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp233
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp234
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp235
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp236
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyDict_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp237
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp238
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp239
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp240
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp241
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp242
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp243
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp244
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyInterpreterState_Clear
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp245
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyFrame_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp246
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyInt_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   supp247
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyGrammar_RemoveAccelerators
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyString_InternInPlace
+   fun:PyString_InternFromString
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyString_InternInPlace
+   fun:PyString_InternFromString
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyType_Ready
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItemString
+   fun:PyType_Ready
+   fun:_Py_ReadyTypes
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:_PyExc_Init
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyString_InternInPlace
+   fun:PyDict_SetItemString
+   fun:Py_InitModule4
+   fun:initsignal
+   fun:PyOS_InitInterrupts
+   fun:Py_InitializeEx
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyTokenizer_Get
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyTokenizer_Get
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyString_Resize
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Realloc
+   fun:_PyString_Resize
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyNode_Free
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyNode_Free
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyNode_Free
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:_ZNK10PointerVec10differenceERKS_ii
+   fun:_ZNK10PointerVec10differenceERKS_i
+   fun:_ZN10PointerVec14matrixIndexSetEii
+   fun:_ZN10PointerVec14matrixIndexIncEi
+   fun:_ZN10PointerVec18setPrevMatrixCoordEii
+   fun:_ZN10PointerVec16updateRestCoordsEv
+   fun:_ZN10PointerVec8decFirstEv
+   fun:_ZN10PointerVec12nextLookBackEv
+   fun:_Z12malignObjectP22malign_AlignmentObject
+   fun:_Z18malign_alignCommonP22malign_AlignmentObjectP7_objectiddddd
+   fun:malignment_init
+   obj:/usr/bin/python2.4
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:_ZNK10PointerVec10differenceERKS_ii
+   fun:_ZN10PointerVec18setPrevMatrixCoordEii
+   fun:_ZN10PointerVec16updateRestCoordsEv
+   fun:_ZN10PointerVec8decFirstEv
+   fun:_ZN10PointerVec12nextLookBackEv
+   fun:_Z12malignObjectP22malign_AlignmentObject
+   fun:_Z18malign_alignCommonP22malign_AlignmentObjectP7_objectiddddd
+   fun:malignment_init
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalCode
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyRun_FileExFlags
+   fun:PyRun_SimpleFileExFlags
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_EvalFrame
+   fun:PyEval_EvalCodeEx
+   obj:/usr/bin/python2.4
+   fun:PyObject_Call
+   fun:PyEval_CallObjectWithKeywords
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyDict_SetItemString
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyDict_SetItemString
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Value8
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:PyDict_SetItem
+   fun:_PyModule_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyDict_Clear
+   fun:PyImport_Cleanup
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   obj:/usr/bin/python2.4
+   obj:/usr/bin/python2.4
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:_PyImport_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyFrame_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyInt_Fini
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Addr4
+   fun:PyObject_Free
+   fun:PyGrammar_RemoveAccelerators
+   fun:Py_Finalize
+   fun:Py_Main
+   fun:__libc_start_main
+}
