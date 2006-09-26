@@ -8,6 +8,9 @@ from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.15  2006/08/31 10:08:36  kpalin
+# More Debug output and TF distance calculations.
+#
 # Revision 1.14  2005/05/19 07:49:35  kpalin
 # Merged Waterman-Eggert style suboptimal alignments and
 # SNP matching.
@@ -101,6 +104,14 @@ class Matrix:
 
         return s
         
+    def toCisevolver(self,s=None):
+        "Return the matrix as file like object formatted for cisevolver"
+        if not s:
+            s=StringIO()
+
+        s.write("\n".join(["%f %f %f %f"%(x[0],x[1],x[2],x[3]) for x in zip(*self.freq)]))
+        return s
+    
     def toAhab(self,s=None):
         "Return the matrix as file like object formatted for ahab"
         if not s:
