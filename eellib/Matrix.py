@@ -1,13 +1,16 @@
 # -*- coding: UTF-8 -*-
 """Python interface and logic to TFBS matrix matching"""
 import operator
-import string
 import math
 
 from eellib import _c_matrix
 
 #
 # $Log$
+# Revision 1.16  2006/09/26 13:10:45  kpalin
+# Added untested and hidden feature to export PFM as frequency matrix
+# for cisevolver tool.
+#
 # Revision 1.15  2006/08/31 10:08:36  kpalin
 # More Debug output and TF distance calculations.
 #
@@ -73,10 +76,17 @@ class Matrix:
         File=open(filename,'r')
         self.fname=filename
         self.name=filename
-        self.LLMatrix=filter(lambda x:len(x),[[string.atoi(entry)
+        self.LLMatrix=filter(lambda x:len(x),[[float(entry)
                         for entry in line.split()]
                        for line in File.read().split('\n')])
         File.close()
+
+        r=reduce(lambda x,y:x+y,self.LLMatrix,[])
+        r=len([x for x in r if 1.0>x>0.0 or 1.0>x-math.floor(x)>0.0 ])
+        if r>0:
+            self.outFormat="%f"
+        else:
+            self.outFormat="%3.0f"
         self.initWeights()
         #self.draw()
 
@@ -97,10 +107,10 @@ class Matrix:
         "Return a file like object having the transposed matrix"
         if not s:
             s=StringIO()
-        
-        for i in range(len(self)):
-            A,C,G,T=self.LLMatrix[0][i],self.LLMatrix[1][i],self.LLMatrix[2][i],self.LLMatrix[3][i]
-            s.write("%d\t%d\t%d\t%d\n"%(A,C,G,T))
+
+        format="\t".join([self.outFormat]*4)+"\n"
+        s.write("\n".join([format%(A,C,G,T) for (A,C,G,T) in zip(*self.LLMatrix)] ))
+        s.write("\n")
 
         return s
         
@@ -110,6 +120,7 @@ class Matrix:
             s=StringIO()
 
         s.write("\n".join(["%f %f %f %f"%(x[0],x[1],x[2],x[3]) for x in zip(*self.freq)]))
+        s.write("\n")
         return s
     
     def toAhab(self,s=None):
@@ -176,7 +187,7 @@ class Matrix:
         "draws the matrix"
         for line in self.LLMatrix:
             for entry in line:
-                print '%3.0f' % entry,
+                print self.outFormat % entry,
             print
 
     def drawWeights(self):
@@ -216,7 +227,7 @@ class Matrix:
         Update weights only for positive probability.
         Background is taken care elsewhere"""
 
-        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[Matrix.pseudoCount]*len(self.LLMatrix[0]))
+        sum=reduce(lambda s,row:map(operator.add,s,row),self.LLMatrix,[Matrix.pseudoCount]*len(self))
 
 
         self.M_weight.append(map(lambda x,tot: log2((x+(self.freqA*Matrix.pseudoCount))/tot),
