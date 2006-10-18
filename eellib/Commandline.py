@@ -8,6 +8,7 @@ This module takes care of the commandline history and parsing.
 from time import localtime
 from glob import glob
 from Interface import Interface
+from Interface import CommandError
 from popen2 import popen3
 import re
 import string
@@ -16,6 +17,9 @@ import _c_matrix
 
 
 # $Log$
+# Revision 1.23  2006/08/31 11:19:22  kpalin
+# Align pre-given sequences and get TFBS only if needed.
+#
 # Revision 1.22  2006/08/14 09:48:06  kpalin
 # Added a new __randomize_full command.
 #
@@ -103,6 +107,8 @@ import _c_matrix
 # Ilmeisesti jotain uutta. En tiedä mitä.
 #
 
+    
+
 
 try:
     # Use historyfile
@@ -121,9 +127,14 @@ except ImportError:
 except Exception:
     pass
 
+runOnTTY=1
 try:
     import os
-except ImportError:
+    import sys
+    runOnTTY=os.isatty(sys.stdin.fileno())
+    if not runOnTTY:
+        print "Not running on tty device"
+except (ImportError,AttributeError):
     pass
 
 
@@ -184,6 +195,7 @@ class Commandline(Interface):
                          'saveMarkovBackground':  (self.saveMarkovBackground,1),
                          'more':               (self.moreAlignment,0),
                          'suboptimals':               (self.suboptimalAlignment,0),
+                         'suboptimalsDownTo':               (self.suboptimalAlignmentsDownTo,1),
                          '__multipleAlignGreedy':      (self.multiAlignGreedy,1),
                          'multipleAlign':      (self.multiAlign,0),
                          '__showMultiAlign':     (self.showMultiAlign,0),
@@ -213,9 +225,16 @@ class Commandline(Interface):
                 except KeyboardInterrupt:
                     print
 
+            if not runOnTTY:
+                self.show(token)
+            try:
+                self.execute(token)
+            except CommandError,e:
+                self.show(str(e))
+                if not runOnTTY:
+                    break
 
-            self.execute(token)
-
+                
     def execute(self, command):
         "executes the given command (like 'run' does)"
         try:
@@ -410,7 +429,7 @@ class Commandline(Interface):
             if filenames:
                 Interface.addSequence(self, filenames)
             else:
-                print "file not found:", filestring
+                raise CommandError("file not found:"+filestring)
 
     def printSeqNames(self, arglist):
         "Arguments: none\nprints the names of the sequences"
@@ -671,6 +690,14 @@ If you use '.' as filename the local data are aligned."""
         else:
             count=1
         self.suboptimalAlignments(count)
+
+        
+    def suboptimalAlignmentsDownTo(self,arglist):
+        """Arguments: Lower bound on the module score
+        Fetch suboptimal alignments down to given bound (and one below the bound)"""
+        
+        self.suboptimalsDownTo(float(arglist[0]))
+
 
 
     def getBaseSaveName(self):
