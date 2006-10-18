@@ -4,6 +4,7 @@
 from Sequence import Sequences
 
 from eellib import Matrix
+
 import Output
 import os,shutil
 from tempfile import mktemp
@@ -11,6 +12,18 @@ import atexit
 from glob import glob
 from time import time
 
+class CommandError(Exception):
+    "Error that occured during processing of a command"
+    def __init__(self,message,parent=None):
+        """Initialize the error.
+
+        message is the message output after raising the error.
+        parent is the original exception that resulted in the error."""
+        self.message=message
+        self.parent=parent
+
+    def __str__(self):
+        return self.message
 
 import sys
 if sys.platform!='win32':
@@ -22,6 +35,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.34  2006/08/31 11:19:22  kpalin
+# Align pre-given sequences and get TFBS only if needed.
+#
 # Revision 1.33  2006/08/31 10:08:36  kpalin
 # More Debug output and TF distance calculations.
 #
@@ -164,6 +180,7 @@ def timeFormat(value):
     
 
 def statReport():
+    "Return some status information about the program."
     status={}
     try:
         statParts=open("/proc/self/stat").read().split()
@@ -195,6 +212,7 @@ def statReport():
         pass
 
 def memReport():
+    "Report memory consumption"
     try:
         import re
         statStr=open("/proc/self/status").read()
@@ -205,6 +223,7 @@ def memReport():
             print "Couldn't figure out status:\n",statStr
     except Exception:
         pass
+
 def __sRep():
     print statReport()
 
@@ -238,13 +257,16 @@ class Interface:
         self.__comp={}
         
     def showFileList(self,files):
+        "Display the list of files on display device"
         for fileName in files:
             self.show(fileName)
 
     def show(self,*text):
+        "Display the parameters on display device (stdout)"
         sys.stdout.writelines(" ".join(map(str,text+('\n',))))
             
     def head(self,sitesCount):
+        "Keep only the first sitesCount binding sites for each sequence."
 
         allSites={}
         allLimits={}
@@ -326,7 +348,7 @@ If you use '.' as filename the local data are aligned."""
                 #print Output.formatalignGFF(self.alignment)
                 #                print "goodAlign=",map(str,self.alignment.nextBest())
         except ValueError,e:
-            self.show("Error:",str(e))
+            raise CommandError("Error:",e)
             #print "Error: unallowed arguments passed to 'multipleAlign'"
 
         
@@ -386,16 +408,17 @@ If you use '.' as filename the local data are aligned."""
         for f in filenames:
             try:
                 m=Matrix.Matrix(f)
-                if self.matdict.has_key(f):
-                    pass
-                else:
-                    self.show("adding %s, Info=%2.4g:"%(f,m.InfoContent))
-                    self.matlist.append(m)
-                    self.matdict[f]=m
             except ValueError:
-                self.show("could not read",f)
+                raise CommandError("could not read "+f)
             except IOError, (errno, strerror):
-                self.show("%s: %s" % (strerror, f))
+                raise CommandError("%s: %s" % (strerror, f))
+
+            if self.matdict.has_key(f):
+                pass
+            else:
+                self.show("adding %s, Info=%2.4g:"%(f,m.InfoContent))
+                self.matlist.append(m)
+                self.matdict[f]=m
         # Make the matrix names nicer.
         cpreflen=len(os.path.commonprefix([os.path.dirname(x.fname) for x in self.matlist]))
         if cpreflen>0:
@@ -423,8 +446,8 @@ If you use '.' as filename the local data are aligned."""
                 assert(len(arglist)==4)
                 tot=reduce(lambda x,y:float(x)+float(y),arglist,0.0)*1.0
                 self.A,self.C,self.G,self.T=map(lambda x:float(x)/tot,arglist)
-            except (ValueError,AssertionError):
-                self.show("Invalid parameters as background frequences.\nBackground distribution not set.")
+            except (ValueError,AssertionError),e:
+                raise CommandError("Invalid parameters as background frequences.\nBackground distribution not set.",e)
                 return
 
         Matrix.setBGfreq(self.A,self.C,self.G,self.T)
@@ -478,15 +501,19 @@ If you use '.' as filename the local data are aligned."""
     def addSequence(self, filenames):
         "adds sequences from files in FASTA format"
         for f in filenames:
-            self.seq.addSequence(f)
+            try:
+                self.seq.addSequence(f)
+            except Exception,e:
+                raise CommandError("Can not read file %s"%(f),e)
             
     def removeSequence(self, name):
         "removes sequences given by name"
-        self.seq.removeSequence(name)
-        try:
-            del(self.__comp[name])
-        except KeyError:
-            pass
+        removedSequences=self.seq.removeSequence(name)
+        for n in removedSequences:
+            try:
+                del(self.__comp[n])
+            except KeyError:
+                pass
         collect()
     
     def getSeqNames(self):
@@ -522,8 +549,8 @@ If you use '.' as filename the local data are aligned."""
                 self.__comp[name]=Matrix.getAllTFBS(self.seq.sequence(name),
                                                     bound,self.matlist,absCutoff)
                 endTime=time()
-            except (OverflowError,ValueError): # Zero, Negative
-                self.show("Need positive threshold!")
+            except (OverflowError,ValueError),e: # Zero, Negative
+                raise CommandError("Need positive threshold!",e)
                 return
 #                self.__comp[name][m]=m.getTFBSbyRatio(self.seq.sequence(name),
 #                                                      bound)
@@ -593,6 +620,7 @@ If you use '.' as filename the local data are aligned."""
             return Output.savematch(self.__comp, filename)
 
     def getmatchStr(self):
+        "Get the list of matched TFBS:es as a string in GFF fromat"
         outStr=""
 
         if hasattr(self,"tempFileName"):
@@ -626,9 +654,16 @@ If you use '.' as filename the local data are aligned."""
         try:
             self.moreAlignments(count,self.alignment.suboptimal)
         except (NotImplementedError,AttributeError):
-            self.show("Fetching suboptimal alignments is not supported.")
+            raise CommandError("Fetching suboptimal alignments is not supported.")
         #print Output.formatalign(self.alignment,self.seq),
 
+    def suboptimalsDownTo(self,lowScore):
+        """Gets alignments down to lowScore"""
+        try:
+            while len(self.alignment.bestAlignments)<1 or self.alignment.bestAlignments[-1][-1].score>lowScore:
+                self.moreAlignments(1,self.alignment.suboptimal)
+        except (NotImplementedError,AttributeError):
+            self.show("Fetching suboptimal alignments is not supported.")
 
     def quit(self):
         "Exits the program"
@@ -726,14 +761,14 @@ If you use '.' as filename the local data are aligned."""
         try:
             return Output.savealign(Output.formatalignGFF(self.alignment), filename)
         except AttributeError:
-            self.show("No alignment to save")
+            raise CommandError("No alignment to save")
 
     def savealignAnchor(self,filename=""):
         "Saves the results in Anchor format"
         try:
             return Output.savealign(Output.formatalignCHAOS(self.alignment), filename)
         except AttributeError:
-            self.show("No alignment to save")
+            raise CommandError("No alignment to save")
 
 
     def savealign(self, filename=''):
@@ -741,7 +776,7 @@ If you use '.' as filename the local data are aligned."""
         try:
             return Output.savealign(Output.formatalign(self.alignment,self.seq), filename)
         except AttributeError:
-            self.show("No alignment to save")
+            raise CommandError("No alignment to save")
 
 
     def showalignSTDO(self):
