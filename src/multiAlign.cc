@@ -37,6 +37,9 @@
 /*
  *
  * $Log$
+ * Revision 1.28  2006/08/31 10:09:34  kpalin
+ * Minimum remembered pairwise alignments and speed improvements for multi align.
+ *
  * Revision 1.27  2006/08/29 06:08:40  kpalin
  * Speed improvements.
  *
@@ -288,8 +291,11 @@ bool PointerVec::decFirst()
   do {
     //this->matrixIndexDec(0);
     this->matrix_p[0]--;
+    if(this->matrix_p[0]<0) {
+      break;
+    }
     this->resetMotifCode();
-  } while(this->matrix_p[0]>=0 && !this->allHasFactor());
+  } while(!this->allHasFactor());
 
   this->matrixIndexSet(0,this->matrixIndex(0));
   // CAN EASE UP NOW
