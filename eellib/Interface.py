@@ -35,6 +35,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.35  2006/10/18 07:23:44  kpalin
+# Added suboptimalsDownTO
+#
 # Revision 1.34  2006/08/31 11:19:22  kpalin
 # Align pre-given sequences and get TFBS only if needed.
 #
@@ -134,6 +137,12 @@ if sys.platform!='win32':
 #
 #
 
+
+try: #Workaround for python 2.2
+    sum([1,2])
+except NameError:
+    import operator
+    sum=lambda x:reduce(operator.add,x)
 
 if 0:
     print "NOW IMPORTING ALIGN module"
