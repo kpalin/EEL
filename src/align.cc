@@ -37,6 +37,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.27  2006/08/31 10:09:34  kpalin
+ *  Minimum remembered pairwise alignments and speed improvements for multi align.
+ *
  *  Revision 1.26  2005/10/03 10:18:41  kpalin
  *  Presumably working multiple alignment version. Not yet usable though.
  *
@@ -572,6 +575,12 @@ typedef struct {
   double fill_factor;
   int memSaveUsed;
 
+  // Expected value model
+  // ln(Evalue)=alpha+beta*score
+  double alpha;
+  double beta;
+  double Rsquared;
+
   struct __CPSTUF *CP;
 
 } align_AlignmentObject;
@@ -641,6 +650,9 @@ alignment_init(align_AlignmentObject *self, PyObject *args, PyObject *kwds)
     self->lambda=0.5;
     self->xi=1.0;
     self->expectedMemUsage=0;
+    self->alpha=0;
+    self->beta=0;
+    self->Rsquared=0.0;
     return 0;
 }
 
@@ -780,6 +792,12 @@ static PyMemberDef alignment_members[] = {
      "Number of filled cells."},
     {"askedResults",T_INT, offsetof(align_AlignmentObject,askedresults), 0,
      "Number of filled cells."},
+    {"alpha",T_DOUBLE, offsetof(align_AlignmentObject,alpha), 0,
+     "Intercept of the expectation model."},
+    {"beta",T_DOUBLE, offsetof(align_AlignmentObject,beta), 0,
+     "Slope of the expectation model."},
+    {"Rsquared",T_DOUBLE, offsetof(align_AlignmentObject,Rsquared), 0,
+     "Coefficient of determination of the expectation model"},
     {NULL}  /* Sentinel */
 };
 
