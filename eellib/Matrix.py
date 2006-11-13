@@ -5,8 +5,15 @@ import math
 
 from eellib import _c_matrix
 
+CUTOFF_RELATIVE=0
+CUTOFF_ABSOLUTE=1
+CUTOFF_PVALUE=2
+
 #
 # $Log$
+# Revision 1.17  2006/09/27 07:34:55  kpalin
+# Read frequency matrices.
+#
 # Revision 1.16  2006/09/26 13:10:45  kpalin
 # Added untested and hidden feature to export PFM as frequency matrix
 # for cisevolver tool.
@@ -84,12 +91,26 @@ class Matrix:
         r=reduce(lambda x,y:x+y,self.LLMatrix,[])
         r=len([x for x in r if 1.0>x>0.0 or 1.0>x-math.floor(x)>0.0 ])
         if r>0:
-            self.outFormat="%f"
+            self.outFormat="%g"
         else:
             self.outFormat="%3.0f"
         self.initWeights()
         #self.draw()
+        self.pvalueThresholds={}
 
+
+    def thresholdForPvalue(self,pvalue):
+        "Compute the threshold for given p-value. Depends on 0th order background distribution"
+        bgDist=(self.freqA,self.freqC,self.freqG,self.freqT)
+        try:
+            threshold=self.pvalueThresholds[(pvalue,bgDist)]
+        except KeyError:
+            threshold=_c_matrix.thresholdFromP(self.M_weight,pvalue,bgDist)
+            self.pvalueThresholds[(pvalue,bgDist)]=threshold
+            print "%s:%g"%(self.name,threshold)
+
+
+        return threshold
 
     def toMatCompare(self,s=None):
         "Return the matrix as file like object suitable for MatCompare input"
@@ -470,10 +491,11 @@ def setMarkovBackground(bg):
     print "Setting %dth order Markov background"%(bg.order)
     Matrix.backGround=bg
 
-def getAllTFBS(sequence,cutoff,matlist,absoluteCutoff=None):
+def getAllTFBS(sequence,cutoff,matlist,cutoffType):
     "Get all TFBSs from one sequence."
-    
-    if not absoluteCutoff:
+    if cutoffType==CUTOFF_PVALUE:
+        cutoff=[m.thresholdForPvalue(cutoff) for m in matlist]
+    elif cutoffType==CUTOFF_RELATIVE:
         cutoff=[log2(cutoff)+m.maxscore for m in matlist]
 
     if len(matlist)==0:
