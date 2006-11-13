@@ -13,6 +13,12 @@ import math
 
 #
 # $Log$
+# Revision 1.27  2006/11/13 12:33:41  kpalin
+# Added 50mer tags to the GFF output giving the location of the
+# module. The tags start from the beginning and the end of the module.
+#
+# Added Escore reporting.
+#
 # Revision 1.26  2006/08/31 10:08:36  kpalin
 # More Debug output and TF distance calculations.
 #
@@ -277,7 +283,7 @@ def formatMultiAlignGFF(alignment,seqData=None,tagLength=50):
     NamesAndLengths=""
     #NamesAndLengths=["%s=%d"%(x,y) for (x,y) in zip(alignment.names,alignment.lengths) ]
     outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f time=%g %s\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation,alignment.secs_to_align,NamesAndLengths))
-    outStrIO.write("### Escore=exp(%g%+g*S) Rsquared=%g\n"%(alignment.alpha,alignment.beta,alignment.Rsquared))
+    outStrIO.write("### Escore=exp(%g%+g*S) Rsquared=%g RMSE=%g\n"%(alignment.alpha,alignment.beta,alignment.Rsquared,alignment.RMSE))
 
     # For each module
     for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
@@ -496,7 +502,7 @@ def formatalign(alignment,seq=None):
         outStrIO.write("\n".join(["Sequence %s:\n%s\n"%(xseq,seq.describe(xseq)) for xseq in alignment.names])+"\n\n")
         
     if alignment.Rsquared>0.1:
-        outStrIO.write("\nEscore=exp(%g%+g*S))  with Rsqared=%g\n"%(alignment.alpha,alignment.beta,alignment.Rsquared))
+        outStrIO.write("\nEscore=exp(%g%+g*S)  with Rsqared=%g and RMSE=%g\n"%(alignment.alpha,alignment.beta,alignment.Rsquared,alignment.RMSE))
 
     # goodAlign= [ (x,y,Score,Motif,(startX,endX),(startY,endY),Strand) ]
     for alnNo,goodAlign in enumerate(alignment.bestAlignments):
@@ -515,7 +521,9 @@ def formatalign(alignment,seq=None):
         outStrIO.write("\n### Alignment No %d ###\n"%(alnNo+1,))
 
         if alignment.Rsquared>0.1:
-            outStrIO.write("E-value=%g\n"%(math.exp(alignment.alpha+alignment.beta*goodAlign[-1].score)))
+            Evalue=math.exp(alignment.alpha+alignment.beta*goodAlign[-1].score)
+            #outStrIO.write("E-value=%g  [%g,%g]\n"%(Evalue,Evalue-alignment.RMSE*1.96,Evalue+alignment.RMSE*1.96))
+            outStrIO.write("E-value=%g\n\n"%(Evalue))
         
         #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
         for as in goodAlign:
