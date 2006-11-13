@@ -37,6 +37,10 @@
 /*
  *
  *  $Log$
+ *  Revision 1.28  2006/11/13 12:40:58  kpalin
+ *  Added the parameters of the expectation model to the
+ *  align_AlignmentObject
+ *
  *  Revision 1.27  2006/08/31 10:09:34  kpalin
  *  Minimum remembered pairwise alignments and speed improvements for multi align.
  *
@@ -580,6 +584,7 @@ typedef struct {
   double alpha;
   double beta;
   double Rsquared;
+  double RMSE;
 
   struct __CPSTUF *CP;
 
@@ -652,7 +657,8 @@ alignment_init(align_AlignmentObject *self, PyObject *args, PyObject *kwds)
     self->expectedMemUsage=0;
     self->alpha=0;
     self->beta=0;
-    self->Rsquared=0.0;
+    self->Rsquared=-1.0;
+    self->RMSE=0.0;
     return 0;
 }
 
@@ -798,6 +804,8 @@ static PyMemberDef alignment_members[] = {
      "Slope of the expectation model."},
     {"Rsquared",T_DOUBLE, offsetof(align_AlignmentObject,Rsquared), 0,
      "Coefficient of determination of the expectation model"},
+    {"RMSE",T_DOUBLE, offsetof(align_AlignmentObject,RMSE), 0,
+     "Root mean squared error of the expectation model."},
     {NULL}  /* Sentinel */
 };
 
