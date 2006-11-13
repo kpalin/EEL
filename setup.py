@@ -11,6 +11,9 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.26  2006/08/31 10:07:02  kpalin
+##   Random things
+##
 ##   Revision 1.25  2006/08/14 09:47:34  kpalin
 ##   Added a quotation mark that was missed during the last checkin. Of
 ##   course.
@@ -203,9 +206,9 @@ ext_modList= [modMatrix,modAlignedCols,modAlign,modDist]
 ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
 
 setup (name = 'EEL',
-       version = '2.0pre2',
+       version = '2.0pre4',
        url = "http://www.cs.helsinki.fi/u/kpalin/",
-       author = "Kimmo Palin, Matthias Berg",
+       author = "Kimmo Palin, Matthias Berg, Pasi Rastas",
        author_email = "kimmo.palin@helsinki.fi",
        maintainer = "Kimmo Palin",
        maintainer_email = "kimmo.palin@helsinki.fi",
