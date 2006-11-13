@@ -15,6 +15,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.11  2006/04/05 08:30:07  kpalin
+# Regular expressions for sequence removal and commands for multiple alignment.
+#
 # Revision 1.10  2005/07/08 07:56:43  kpalin
 # Fixed a problem with seek() and multiple open()s in addSequence().
 # Now it should work better with pipes.
@@ -89,7 +92,8 @@ class SingleSequence:
 
 
 class UnsupportedTypeException(Exception):
-    pass
+    def __init__(self,v="Unsupported sequence format"):
+        Exception.__init__(self,v)
 
 class Sequences:
     "represents DNA-Sequences"
@@ -211,14 +215,9 @@ class Sequences:
 
 
             print filename, "added" 
-        except IOError, e:
-            if type(e)==type((1,2)):
-                (errno, strerror)=e
-                print "I/O error(%s): %s" % (errno, strerror)
-            else:
-                print e
-        except UnsupportedTypeException:
-            print filename,"in not in supported format!"
+        except UnsupportedTypeException,e:
+            e.args=(filename+"in not in supported format!",)
+            raise e
 
     def __str__(self):
         """returns the names of the sequences"""
@@ -239,9 +238,11 @@ class Sequences:
         "Remove sequence by name"
         import re
         pat=re.compile(namePat)
-        for name in [x for x in  self.__Seq.keys() if pat.match(x)]:
+        seqToRemove=[x for x in  self.__Seq.keys() if pat.match(x)]
+        for name in seqToRemove:
             del self.__Seq[name]
-        
+        return seqToRemove
+    
     def getNames(self):
         "Return a list of sequence names"
         return self.__Seq.keys()
