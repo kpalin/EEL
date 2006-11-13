@@ -36,6 +36,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.37  2006/11/13 12:34:48  kpalin
+# Added TFBS search p-value cutoff and Escore computation.
+#
 # Revision 1.36  2006/10/26 08:52:37  kpalin
 # Workaround for old python v2.2
 #
@@ -737,7 +740,7 @@ If you use '.' as filename the local data are aligned."""
         meanlr=Sy/n
         SSEnull=sum([(lr-meanlr)**2 for (lr,S) in Data])
         SSEmodel=sum([(lr-(self.alignment.alpha+self.alignment.beta*S))**2 for (lr,S) in Data])
-
+        self.alignment.RMSE=math.sqrt(SSEmodel/n)
         self.alignment.Rsquared=1.0-SSEmodel/SSEnull
             
         
