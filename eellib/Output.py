@@ -8,11 +8,14 @@ from time import localtime
 from cStringIO import StringIO
 
 from eellib import alignedCols
-
+import math
 
 
 #
 # $Log$
+# Revision 1.26  2006/08/31 10:08:36  kpalin
+# More Debug output and TF distance calculations.
+#
 # Revision 1.25  2006/08/14 09:46:06  kpalin
 # Added more comments.
 #
@@ -111,6 +114,11 @@ from eellib import alignedCols
 #
 
 
+
+try: # Workaround for python 2.2
+    enumerate([2,3,4])
+except NameError:
+    enumerate=lambda x:zip(range(len(x)),x)
 
 
 try:
@@ -252,7 +260,7 @@ def formatalignCHAOS(alignment):
     return outStrIO.getvalue()
 
 
-def formatMultiAlignGFF(alignment):
+def formatMultiAlignGFF(alignment,seqData=None,tagLength=50):
     "Formats the multiple alignemnt for GFF file"
     if not alignment:
         return "No alignment\n"
@@ -266,7 +274,10 @@ def formatMultiAlignGFF(alignment):
 
 
     # Header
-    outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f time=%g\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation,alignment.secs_to_align))
+    NamesAndLengths=""
+    #NamesAndLengths=["%s=%d"%(x,y) for (x,y) in zip(alignment.names,alignment.lengths) ]
+    outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f time=%g %s\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation,alignment.secs_to_align,NamesAndLengths))
+    outStrIO.write("### Escore=exp(%g%+g*S) Rsquared=%g\n"%(alignment.alpha,alignment.beta,alignment.Rsquared))
 
     # For each module
     for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
@@ -276,12 +287,23 @@ def formatMultiAlignGFF(alignment):
 
         # For each sequence participating in the module
         modData=moduleData(goodAlign)
+
         for j in range(len(modData)):
             seq,begin,end,score=modData[j]
+            InsertInfo=""
             if len(modData)==2:
                 targetID=1-abs(j)
-                InsertInfo='\tTarget "%s";\tStart %d;\tEnd %d;\tStrand .;\tFrame .;\t'%(alignment.names[modData[targetID][0]],\
-                                                                                        modData[targetID][1],modData[targetID][2])
+                InsertInfo='\tTarget "%s";\tStart %d;\tEnd %d;\tStrand .;\tFrame .;\t%s'%(alignment.names[modData[targetID][0]],\
+                                                                                          modData[targetID][1],modData[targetID][2],InsertInfo)
+
+
+            if alignment.Rsquared>0.1:
+                InsertInfo="%sEscore %g\t"%(InsertInfo,math.exp(alignment.alpha+alignment.beta*score))
+
+            if seqData:
+                moduleSeq=seqData[alignment.names[seq]][begin:end]
+                InsertInfo="%sTag5 %s\tTag3 %s\t"%(InsertInfo,moduleSeq[:tagLength],moduleSeq[-tagLength:])
+                
             else:
                 InsertInfo=""
             outStrIO.write(GFFalignFormat%(alignment.names[seq], \
@@ -473,6 +495,9 @@ def formatalign(alignment,seq=None):
     if seq:
         outStrIO.write("\n".join(["Sequence %s:\n%s\n"%(xseq,seq.describe(xseq)) for xseq in alignment.names])+"\n\n")
         
+    if alignment.Rsquared>0.1:
+        outStrIO.write("\nEscore=exp(%g%+g*S))  with Rsqared=%g\n"%(alignment.alpha,alignment.beta,alignment.Rsquared))
+
     # goodAlign= [ (x,y,Score,Motif,(startX,endX),(startY,endY),Strand) ]
     for alnNo,goodAlign in enumerate(alignment.bestAlignments):
         if len(goodAlign)==0:
@@ -487,8 +512,11 @@ def formatalign(alignment,seq=None):
             maln=""
             addeds=starts[:]
 
-
         outStrIO.write("\n### Alignment No %d ###\n"%(alnNo+1,))
+
+        if alignment.Rsquared>0.1:
+            outStrIO.write("E-value=%g\n"%(math.exp(alignment.alpha+alignment.beta*goodAlign[-1].score)))
+        
         #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
         for as in goodAlign:
             coordStr="".join(["[%d]"%(x) for x in as.siteSeqPos])
