@@ -26,6 +26,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.16  2006/08/10 11:39:16  kpalin
+ * Port to 64bit. Changed custom bit32 type to uint32_t.
+ *
  * Revision 1.15  2005/11/25 12:13:49  kpalin
  * Removed direct stdout output from C.
  *
@@ -1178,6 +1181,14 @@ TFBSscan::TFBSscan(PyObject *mat,double cutoff)
   this->py_matrix=mat;
   this->bound=cutoff;
 
+
+#ifndef NDEBUG
+  PyObject *name=PyObject_GetAttrString(this->py_matrix,"name");
+  cerr <<PyString_AsString(name)<<" bound:"<<cutoff<<endl;
+  Py_DECREF(name);
+#endif
+
+
   PyObject *matListList=PyObject_GetAttrString(this->py_matrix,"M_weight");
   if(!matListList) {
     PyErr_SetString(PyExc_ValueError,"Malformed matrix");
@@ -1406,7 +1417,7 @@ void TFBShit::addHit(double Score,vector<class SNPdat> &genotype)
 
 #ifndef NDEBUG
   if(this->sigGenotype.size()>0) {
-    int kokoe=this->sigGenotype.size();
+    //int kokoe=this->sigGenotype.size();
     for(unsigned int i=0;i<this->sigGenotype.size();i++) {
       SNPdat apu=this->sigGenotype[i];
       if(!(this->sigGenotype[i].allele=='A' ||
@@ -1891,6 +1902,280 @@ vector<TFBSscan*> parseMatricies(int *count,PyObject *mats,PyObject *cutoffs,dou
   return ret;
 }
 
+// c++ p-value code generously donated by Pasi Rastas under GPL
+
+#include <iostream>
+#include <ext/hash_map>
+#include <vector>
+
+using __gnu_cxx::hash_map;
+
+typedef vector< int > intArray;
+typedef vector< double > doubleArray;
+typedef hash_map< int, double > myHashMap;
+typedef vector< intArray > intMatrix;
+typedef vector< unsigned char > charArray;
+
+//this one uses table
+int tresholdFromP(const intMatrix &mat, const double &p,const doubleArray bgDist)
+{
+    int numA = mat.size();
+    int n = mat[0].size();
+
+    int maxT = 0;
+    int minV = INT_MAX;
+
+    for (int i = 0; i < n; ++i) {
+	int max = mat[0][i];
+	int min = max;
+	for (int j = 1; j < numA; ++j) {
+	    int v = mat[j][i];
+	    if (max < v)
+		max = v;
+	    else if (min > v)
+		min = v;
+	}
+	maxT += max;
+	if (minV > min)
+	    minV = min;
+    }
+    int R = maxT - n * minV;
+
+    //cout << "Size " << R << "\n" ;
+
+    // use indexes, map, own implementation...
+    doubleArray table0(R+1, 0.0);
+    doubleArray table1(R+1, 0.0);
+
+    for (int j = 0; j < numA; ++j)
+	table0[mat[j][0] - minV] += bgDist[j]; // change this to use own background model
+
+    for (int i = 1; i < n; ++i) {
+	for (int j = 0; j < numA; ++j) {
+	    int s = mat[j][i] - minV;
+	    for (int r = s; r <= R; ++r)
+		table1[r] += bgDist[j] * table0[r - s]; // change this to use own background model
+	}
+	for (int r = 0; r <= R; ++r) {
+	    table0[r] = table1[r];
+	    table1[r] = 0.0;
+	}
+    }
+
+    double sum = 0.0;
+
+    for (int r = R; r >= 0; --r) {
+	sum += table0[r];
+	//cout << "sum = " << sum << "\n" ;
+	if (sum > p) {
+	    //cout << "tol = " << r << "\n" ;
+	    return (r + n * minV + 1);
+	}
+    }
+#ifdef DEBUG_OUTPUT
+    cerr << "Error: No treshold found!";
+#endif
+    return INT_MAX;
+    //cout << "sum = " << sum << "\n";
+}
+
+// same as above, uses hashmap instead of arrays...
+// somewhat slower...
+int tresholdFromP2(const intMatrix &mat, const double &p, const doubleArray bgDist)
+{
+    int numA = mat.size();
+    int n = mat[0].size();
+
+    int maxT = 0;
+    int minV = INT_MAX;
+
+    for (int i = 0; i < n; ++i) {
+	int max = mat[0][i];
+	int min = max;
+	for (int j = 1; j < numA; ++j) {
+	    int v = mat[j][i];
+	    if (max < v)
+		max = v;
+	    else if (min > v)
+		min = v;
+	}
+	maxT += max;
+	if (minV > min)
+	    minV = min;
+    }
+
+    myHashMap table0;
+    myHashMap table1;
+
+    for (int j = 0; j < numA; ++j)
+	table0[ mat[j][0] ] += bgDist[j]; // change this to use own background model
+
+    for (int i = 1; i < n; ++i) {
+	//cout << "Size = " << table0.size() << "\n";
+	for (int j = 0; j < numA; ++j) {
+	    int s = mat[j][i];
+	    for (myHashMap::iterator it = table0.begin(); 
+		 it != table0.end(); ++it) {
+		table1[ it->first + s ] += bgDist[j] * (it->second); // change this to use own background model
+	    }
+	}
+	table0 = table1;
+	table1.clear();
+    }
+
+    //cout << "maxT = " << maxT << " minV = " << minV << "\n";
+    double sum = 0.0;
+    for (int r = maxT; r >= n * minV; --r) {
+	sum += table0[r];
+	//cout << "sum = " << sum << "\n" ;
+	if (sum > p) {
+	    //cout << "tol = " << r << "\n" ;
+	    return (r + 1);
+	}
+    }
+#ifdef DEBUG_OUTPUT
+    cerr << "Error: No treshold found!";
+#endif
+    return INT_MAX;
+}
+
+
+// Wrappers from Kimmo Palin
+intMatrix *pyMatrix2IntMatrix(const PyObject  *py_matrix,double *multiplier)
+{ // Parse the python array of arrays to type of vector of vectors that is good for Pasis code.
+  //Also round the floating point values to integers in range ROUNDING_RANGE
+  intMatrix *mat=new intMatrix();
+
+  const int matLen=PySequence_Fast_GET_SIZE(PySequence_Fast_GET_ITEM(py_matrix,0));
+  double minV=DBL_MAX,maxV=-DBL_MAX;
+
+
+  for(int i=0;
+      i<PySequence_Fast_GET_SIZE(py_matrix);i++) {
+    PyObject *pyNuc=PySequence_Fast_GET_ITEM(py_matrix,i);
+    for(int j=0;
+	j<PySequence_Fast_GET_SIZE(pyNuc);j++) {
+      double thisVal=PyFloat_AsDouble(PySequence_Fast_GET_ITEM(pyNuc,j));
+      minV=min(minV,thisVal);
+      maxV=max(maxV,thisVal);
+    }
+  }
+
+  (*multiplier)=ROUNDING_RANGE/(maxV-minV);
+
+#ifndef NDEBUG
+  double err,SSE=0.0,SAE=0.0,maxAbsErr=0.0;
+#endif
+  for(int i=0;
+      i<PySequence_Fast_GET_SIZE(py_matrix);i++) {
+    intArray nucl;
+    PyObject *pyNuc=PySequence_Fast_GET_ITEM(py_matrix,i);
+    for(int j=0;
+	j<PySequence_Fast_GET_SIZE(pyNuc);j++) {
+      double val=PyFloat_AsDouble(PySequence_Fast_GET_ITEM(pyNuc,j));
+      int intVal=(int)round(val*(*multiplier));
+      nucl.push_back(intVal);
+      //cerr<<val<<"~"<<val*(*multiplier)<<"~"<<(int)round(PyFloat_AsDouble(PySequence_Fast_GET_ITEM(pyNuc,j))*(*multiplier))<<'\t';
+      //nucl.push_back((int)round(PyFloat_AsDouble(PySequence_Fast_GET_ITEM(pyNuc,j))*(*multiplier)));
+#ifndef NDEBUG
+      err=((float)intVal)/(*multiplier)-val;
+      SSE+=err*err;
+      SAE+=(err>0?err:-err);
+      maxAbsErr=max(maxAbsErr,(err>0?err:-err));
+#endif      
+    }
+    //cerr<<endl;
+    mat->push_back(nucl);
+  }
+
+#ifndef NDEBUG
+  int nm=PySequence_Fast_GET_SIZE(py_matrix)*PySequence_Fast_GET_SIZE(PySequence_Fast_GET_ITEM(py_matrix,0));
+  cerr<<"Multiplier:"<<*multiplier<<" SSE:"<<SSE<<" SAE:"<<SAE<<" RMSE:"<<sqrt(SSE/nm)<<" MAE:"<<SAE/nm<<" MaxAbsErr:"<<maxAbsErr<<endl;
+#endif
+  return mat;
+}
+
+// Compute the score threshold for given matrix, p-value and 0th order background
+static PyObject *
+matrix_thresholdFromP(PyObject *self, PyObject *args)
+{
+  PyObject *bgdist,*py_matrix;
+  double pval,multiplier;
+  int cutoff;
+  double cutoffScore;
+  doubleArray bgdistA;
+
+#ifdef TIME_TFBS
+  clock_t before,after;
+
+  // Start timing
+  before=clock();
+#endif
+
+
+  if (!PyArg_ParseTuple(args, "OdO" ,&py_matrix,&pval,&bgdist)) {
+    return NULL;
+  }
+
+  if(!PySequence_Check(py_matrix)) {
+    PyErr_SetString(PyExc_ValueError,"No matrix list given.");
+    return 0;
+  }
+  if(!PySequence_Check(bgdist)) {
+    PyErr_SetString(PyExc_ValueError,"No background distribution given.");
+    return 0;
+  }
+  if(PySequence_Length(bgdist)!=4) {
+    PyErr_SetString(PyExc_ValueError,"Wrong size of background distribution.");
+    return 0;
+  }
+
+
+  // Cast background distribution fit for Pasis code
+  double bgSum=0.0;
+  for(int i=0;i<PySequence_Length(bgdist);i++) {
+    PyObject *myFloat=PySequence_Fast_GET_ITEM(bgdist,i);
+
+    myFloat=PyNumber_Float(myFloat);
+    if(!myFloat) {
+      PyErr_SetString(PyExc_ValueError,"Invalid background distribution value.");
+      return 0;
+    }
+
+    double myDouble=PyFloat_AsDouble(myFloat);
+    Py_DECREF(myFloat);
+
+    bgdistA.push_back(myDouble);
+    bgSum+=myDouble;
+  }
+  // Normalize to distribution
+  for(int i=0;i<PySequence_Length(bgdist);i++) {
+      
+    bgdistA[i]/=bgSum;
+  }
+
+  intMatrix *myIntMat=pyMatrix2IntMatrix(py_matrix,&multiplier);
+
+  cutoff=tresholdFromP2(*myIntMat,pval,bgdistA);
+  delete myIntMat;
+  cutoffScore=cutoff/multiplier;
+  
+#ifdef TIME_TFBS
+  // End timing
+  after=clock();
+  cout<<"CPU secs: "<<((after-before)*1.0/CLOCKS_PER_SEC)<<endl;
+		       
+#endif
+	 
+  return PyFloat_FromDouble(cutoffScore);
+
+}
+
+
+
+
+
+
 
 //Returns a map from matrix to index to score of possible TFBS.
 //The arguments are matrix, sequence and bound.
@@ -2107,6 +2392,8 @@ static PyMethodDef matrixMethods[] = {
    "Kind of computes higher order Background: (seq,order)"},
   {"getAllTFBSwithBg", matrix_getAllTFBSwithBG, METH_VARARGS,
    "Returns a map from matrix to index to score of possible TFBS.\nThe arguments are a list of matricies, the sequence, list/float of cutoffs and a background object."},
+  {"thresholdFromP", matrix_thresholdFromP, METH_VARARGS,
+   "Returns a score threshold for given matrix corresponding to a p-value\nArguments: a [[matrix]], p-value, [background distribution]."},
   {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
