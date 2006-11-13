@@ -11,6 +11,7 @@ from tempfile import mktemp
 import atexit
 from glob import glob
 from time import time
+import operator
 
 class CommandError(Exception):
     "Error that occured during processing of a command"
@@ -35,6 +36,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.36  2006/10/26 08:52:37  kpalin
+# Workaround for old python v2.2
+#
 # Revision 1.35  2006/10/18 07:23:44  kpalin
 # Added suboptimalsDownTO
 #
@@ -417,8 +421,8 @@ If you use '.' as filename the local data are aligned."""
         for f in filenames:
             try:
                 m=Matrix.Matrix(f)
-            except ValueError:
-                raise CommandError("could not read "+f)
+            except ValueError,e:
+                raise CommandError("could not read matrix "+f)
             except IOError, (errno, strerror):
                 raise CommandError("%s: %s" % (strerror, f))
 
@@ -532,19 +536,23 @@ If you use '.' as filename the local data are aligned."""
 
     def getTFBSAbsolute(self,cutoff=9.0):
         "computes the possible TFBS"
-        Interface.getTFBS(self,cutoff,1)
+        Interface.getTFBS(self,cutoff,Matrix.CUTOFF_ABSOLUTE)
+
+    def getTFBSpvalue(self,cutoff):
+        "computes the possible TFBS"
+        Interface.getTFBS(self,cutoff,Matrix.CUTOFF_PVALUE)
  
-    def getTFBS(self, bound=0.1 , absCutoff=None):
+    def getTFBS(self, bound=0.1 , cutoffType=Matrix.CUTOFF_RELATIVE):
         "computes the possible TFBS"
         if hasattr(self,"tempFileName"):
             os.remove(self.tempFileName)
             del(self.tempFileName)
 
         #self.__comp={}
-        if self.__comp_bound!=bound or self.__comp_absCutoff!=absCutoff:
+        if self.__comp_bound!=bound or self.__comp_cutoffType!=Matrix.CUTOFF_ABSOLUTE:
             self.resetTFBS()
         self.__comp_bound=bound
-        self.__comp_absCutoff=absCutoff
+        self.__comp_cutoffType=cutoffType
         progress= 0.0
         totalMatches=0
         seqnumber=0
@@ -556,7 +564,7 @@ If you use '.' as filename the local data are aligned."""
             try:
                 startTime=time()
                 self.__comp[name]=Matrix.getAllTFBS(self.seq.sequence(name),
-                                                    bound,self.matlist,absCutoff)
+                                                    bound,self.matlist,cutoffType)
                 endTime=time()
             except (OverflowError,ValueError),e: # Zero, Negative
                 raise CommandError("Need positive threshold!",e)
@@ -669,7 +677,9 @@ If you use '.' as filename the local data are aligned."""
     def suboptimalsDownTo(self,lowScore):
         """Gets alignments down to lowScore"""
         try:
-            while len(self.alignment.bestAlignments)<1 or self.alignment.bestAlignments[-1][-1].score>lowScore:
+            prevNumOfAlignments=-1
+            while (len(self.alignment.bestAlignments)<1 or self.alignment.bestAlignments[-1][-1].score>lowScore) and len(self.alignment.bestAlignments)>prevNumOfAlignments:
+                prevNumOfAlignments=len(self.alignment.bestAlignments)
                 self.moreAlignments(1,self.alignment.suboptimal)
         except (NotImplementedError,AttributeError):
             self.show("Fetching suboptimal alignments is not supported.")
@@ -685,8 +695,56 @@ If you use '.' as filename the local data are aligned."""
         return  len(self.__comp)>0 or hasattr(self,"tempFileName")
             
 
+    def computeExpectationModel(self):
+        """Compute the a and b for the E-value estimate E=exp(-(a+b*S))
+
+        This is done by fitting a simple linear model
+        log(r)=a+b*S+e
+        where r is the rank of module, S is the score and e is an error
+        term with expected value 0.
+
+        Ten highest ranking modules are omited to account for 'real' signal"""
+
+        #print "Called expectation model"
+        if not (self.alignment and len(self.alignment.bestAlignments)>30):
+            # Do nothing if there is no alignment data
+            #print "Nothing to do",repr(self.alignment)
+            #if self.alignment:
+            #    print len(self.alignment.bestAlignments)
+            return 
+        Data=[(math.log(r+1),aS[-1].score) for r,aS in enumerate(self.alignment.bestAlignments)]
+
+        # Do the regression on modules ranking 10-50
+        Data=Data[10:50]
+
+        n=1.0*len(Data)
+
+        # Do the regression
+
+        Sxy=sum([S*lr for (lr,S) in Data])
+        Sx=sum([S for (lr,S) in Data])
+        Sy=sum([lr for (lr,S) in Data])
+        Sxx=sum([S**2 for (lr,S) in Data])
+        self.alignment.beta=(n*Sxy-Sx*Sy)/(n*Sxx-Sx**2)
+        self.alignment.alpha=(Sy-self.alignment.beta*Sx)/n
+
+
+        #self.beta=(n*sum([S*lr for (lr,S) in Data])-sum([S for (lr,S) in Data])*sum([lr for (lr,S) in Data]))/(n*sum([S**2 for (lr,S) in Data])-sum([S for (lr,S) in Data])**2)
+
+        #self.alpha=(sum([lr for (lr,S) in Data])-self.alignment_A*sum([S for (lr,S) in Data]))/n
+
+        # Do some diagnostics (R-squared i.e. the coefficient of determination)
+        meanlr=Sy/n
+        SSEnull=sum([(lr-meanlr)**2 for (lr,S) in Data])
+        SSEmodel=sum([(lr-(self.alignment.alpha+self.alignment.beta*S))**2 for (lr,S) in Data])
+
+        self.alignment.Rsquared=1.0-SSEmodel/SSEnull
+            
+        
+
     def moreAlignments(self,num_of_align=1,fetcherFun=None):
         """Fetch more alignments from previously run alignment matrix"""
+
         for i in range(num_of_align):
             if self.alignment.memSaveUsed==1 and self.alignment.askedResults<=len(self.alignment.bestAlignments):
                 self.show("Can't give more alignments. Don't remember those")
@@ -701,8 +759,8 @@ If you use '.' as filename the local data are aligned."""
             #               0 1 2     3      4[0]   4[1]   5[0]   5[1]  6
             # goodAlign= [ (x,y,Score,Motif,(startX,endX),(startY,endY),Strand) ]
             self.alignment.bestAlignments.append(goodAlign)
-            
-        
+        self.computeExpectationModel()
+
     def align(self, filename='.', num_of_align=3,
               Lambda=1.0, xi=1.0, mu=0.5,nu=1.0, nuc_per_rotation=10.4,
               firstSeq=None,secondSeq=None):
@@ -768,7 +826,7 @@ If you use '.' as filename the local data are aligned."""
     def savealignGFF(self,filename=""):
         "Saves the results in GFF format"
         try:
-            return Output.savealign(Output.formatalignGFF(self.alignment), filename)
+            return Output.savealign(Output.formatMultiAlignGFF(self.alignment,self.seq), filename)
         except AttributeError:
             raise CommandError("No alignment to save")
 
