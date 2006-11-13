@@ -13,10 +13,12 @@ from popen2 import popen3
 import re
 import string
 
-import _c_matrix
 
 
 # $Log$
+# Revision 1.24  2006/10/18 07:23:59  kpalin
+# Added suboptimalsDownTo
+#
 # Revision 1.23  2006/08/31 11:19:22  kpalin
 # Align pre-given sequences and get TFBS only if needed.
 #
@@ -179,6 +181,7 @@ class Commandline(Interface):
                          'ps':                 (self.printSeqNames,0),
                          'getTFBS':            (self.getTFBS,0),
                          'getTFBSabsolute':    (self.getTFBSabsolute,0),
+                         'getTFBSpvalue':    (self.getTFBSpvalue,0),
                          'showmatch':          (self.showmatch,0),
                          'sm':                 (self.showmatch,0),
                          'q':                  (self.quit,0),
@@ -472,7 +475,21 @@ The default value for cutoff is 9.0"""
             Interface.getTFBSAbsolute(self, cutoff)
         except ValueError:
             print "getTFBSabsolute requires an numeric argument!"
-            
+
+
+    def getTFBSpvalue(self, arglist):
+        """Arguments: [pvalue]
+computes the scores of all matrices and all sequences. Report scores
+better than given p-value.
+The default value for pvalue is 1e-6"""
+        cutoff=1e-6
+        try:
+            if(len(arglist)>0):
+                cutoff= string.atof(arglist[0])
+            Interface.getTFBSpvalue(self, cutoff)
+        except ValueError:
+            print "getTFBSpvalue requires an numeric argument!"
+
 
 
     def showKLdist(self,arglist):
