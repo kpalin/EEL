@@ -1,5 +1,8 @@
 //
 // $Log$
+// Revision 1.6  2006/08/10 11:36:10  kpalin
+// Another try on 64bit port.
+//
 // Revision 1.5  2006/08/10 11:38:44  kpalin
 // Port to 64bit. Changed custom bit32 type to uint32_t.
 //
@@ -33,6 +36,11 @@
 #endif
 
 #include<stdint.h>
+
+// Range for rounding the matrix values for p-value thresholing
+// Increasing this gives more accurate results slowly.
+#define ROUNDING_RANGE 1000.0
+
 
 struct __BGdataCPP {
   vector<unsigned long int> counts;
