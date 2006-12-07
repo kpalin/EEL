@@ -37,6 +37,9 @@
 /*
  *
  * $Log$
+ * Revision 1.29  2006/10/19 07:57:30  kpalin
+ * Fixed a seqfault.
+ *
  * Revision 1.28  2006/08/31 10:09:34  kpalin
  * Minimum remembered pairwise alignments and speed improvements for multi align.
  *
@@ -502,8 +505,12 @@ const PointerVec& PointerVec::operator++(int dummy)
     do {
       this->matrixIndexInc(0);
       //this->matrix_p[0]++;
-      this->resetMotifCode();
-    } while(this->matrix_p[0]<this->myMat->dims(0) && !this->allHasFactor());
+      if(this->matrix_p[0]<this->myMat->dims(0)) {
+	this->resetMotifCode();
+      } else {
+	break;
+      } 
+    } while(!this->allHasFactor());
     
     if(this->matrix_p[0]>=this->myMat->dims(0)) {
       this->matrixIndexSet(0,-1);
@@ -624,8 +631,17 @@ Matrix::Matrix(Inputs *indata)
       this->tfIndex[tf].resize(indata->sequences());
     }
     for(seqCode seq=0;seq<indata->sequences();seq++) {
+#ifndef NDEBUG
+      cerr<<seq<<":"<<this->dimLen[seq]<<endl;
+#endif
       for(posCode pos=0;pos<this->dimLen[seq];pos++) {
+#ifndef NDEBUG
+	id_triple const &debugSite=indata->getSite(pos,seq);
+	motifCode debugTF=debugSite.ID;
+	this->tfIndex[debugTF][seq].push_back(pos);
+#else
 	this->tfIndex[indata->getSite(pos,seq).ID][seq].push_back(pos);
+#endif
       }
     }
 
@@ -1178,6 +1194,10 @@ malignment_init(malign_AlignmentObject *self, PyObject *args, PyObject *kwds)
       //CHECKING_DECREF(self);
       return -1;
     }
+  self->alpha=0;
+  self->beta=0;
+  self->Rsquared=-1.0;
+  self->RMSE=0.0;
 
   malign_alignCommon(self,data,result_ask,lambda,xi,mu,nu,nuc_per_rotation);
 
@@ -1269,6 +1289,14 @@ static PyMemberDef malignment_members[] = {
      "Number of filled cells."},
     {"memSaveUsed",T_INT, offsetof(malign_AlignmentObject,memSaveUsed), 0,
      "Placeholder for compatibility with 2d alignment."},
+    {"alpha",T_DOUBLE, offsetof(malign_AlignmentObject,alpha), 0,
+     "Intercept of the expectation model."},
+    {"beta",T_DOUBLE, offsetof(malign_AlignmentObject,beta), 0,
+     "Slope of the expectation model."},
+    {"Rsquared",T_DOUBLE, offsetof(malign_AlignmentObject,Rsquared), 0,
+     "Coefficient of determination of the expectation model"},
+    {"RMSE",T_DOUBLE, offsetof(malign_AlignmentObject,RMSE), 0,
+     "Root mean squared error of the expectation model."},
     {NULL}  /* Sentinel */
 };
 
