@@ -36,6 +36,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.38  2006/11/13 13:03:22  kpalin
+# Added E-model RMSE
+#
 # Revision 1.37  2006/11/13 12:34:48  kpalin
 # Added TFBS search p-value cutoff and Escore computation.
 #
@@ -728,7 +731,10 @@ If you use '.' as filename the local data are aligned."""
         Sx=sum([S for (lr,S) in Data])
         Sy=sum([lr for (lr,S) in Data])
         Sxx=sum([S**2 for (lr,S) in Data])
-        self.alignment.beta=(n*Sxy-Sx*Sy)/(n*Sxx-Sx**2)
+        try:
+            self.alignment.beta=(n*Sxy-Sx*Sy)/(n*Sxx-Sx**2)
+        except ZeroDivisionError:
+            self.alignment.beta=1e99
         self.alignment.alpha=(Sy-self.alignment.beta*Sx)/n
 
 
@@ -741,7 +747,10 @@ If you use '.' as filename the local data are aligned."""
         SSEnull=sum([(lr-meanlr)**2 for (lr,S) in Data])
         SSEmodel=sum([(lr-(self.alignment.alpha+self.alignment.beta*S))**2 for (lr,S) in Data])
         self.alignment.RMSE=math.sqrt(SSEmodel/n)
-        self.alignment.Rsquared=1.0-SSEmodel/SSEnull
+        try:
+            self.alignment.Rsquared=1.0-SSEmodel/SSEnull
+        except ZeroDivisionError:
+            self.alignment.Rsquared=0.0
             
         
 

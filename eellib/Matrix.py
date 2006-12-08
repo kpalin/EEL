@@ -11,6 +11,9 @@ CUTOFF_PVALUE=2
 
 #
 # $Log$
+# Revision 1.18  2006/11/13 12:35:22  kpalin
+# Added p-value threshold computation.
+#
 # Revision 1.17  2006/09/27 07:34:55  kpalin
 # Read frequency matrices.
 #
@@ -107,7 +110,7 @@ class Matrix:
         except KeyError:
             threshold=_c_matrix.thresholdFromP(self.M_weight,pvalue,bgDist)
             self.pvalueThresholds[(pvalue,bgDist)]=threshold
-            print "%s:%g"%(self.name,threshold)
+            #print "%s:%g"%(self.name,threshold)
 
 
         return threshold
