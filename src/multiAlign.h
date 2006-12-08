@@ -5,6 +5,9 @@
 /*
  *
  *$Log$
+ *Revision 1.16  2006/08/31 10:09:34  kpalin
+ *Minimum remembered pairwise alignments and speed improvements for multi align.
+ *
  *Revision 1.15  2006/08/29 06:08:28  kpalin
  *Speed improvements.
  *
@@ -54,6 +57,7 @@
  *
  *
  */
+
 /*
 #ifndef NDEBUG
 #ifndef DEBUG_OUTPUT
@@ -209,7 +213,7 @@ public:
     assert(thisTFid==this->getMotif());
     int otherRight=(int)(other.getSite(i,otherTFid).pos-this->getSite(i,thisTFid).epos);
 
-    assert((otherRight-1)==this->difference(other,i,thisTFid));
+    //assert((otherRight-1)==this->difference(other,i,thisTFid));
     return otherRight-1; //max(otherRight,otherLeft);
   } ;
 
@@ -228,7 +232,7 @@ public:
     int otherRight=(int)(other.getSite(i).pos-this->getSite(i,thisTFid).epos);
     //int otherLeft=(int)(this->getSite(i).pos-other.getSite(i).epos);
     //return otherRight-1; //max(otherRight,otherLeft);
-    assert((otherRight-1)==this->difference(other,i,thisTFid,other.getMotif()));
+    //assert((otherRight-1)==this->difference(other,i,thisTFid,other.getMotif()));
 #endif
     return this->difference(other,i,thisTFid,other.getMotif());
   } ;
@@ -293,9 +297,23 @@ public:
 
   vector<id_triple>  getSites(PointerVec const &here) const;
 
-  id_triple const &getSite(PointerVec const &p,seqCode i) const { return seq[i][p[i]]; }
-  id_triple const &getSite(posCode const pos,seqCode const i) const { return seq[i][pos]; 
-    // return seq.at(i).at(pos);
+  id_triple const &getSite(PointerVec const &p,seqCode i) const { 
+#if 1
+    posCode my_p=p[i];
+    vector<id_triple> my_seq=seq.at(i);
+    return my_seq.at(my_p); 
+#else
+    return seq[i][p[i]];
+#endif
+  }
+
+  id_triple const &getSite(posCode const pos,seqCode const i) const { 
+#if 1
+    vector<id_triple> const &my_seq=seq.at(i);
+    return my_seq.at(pos);
+#else
+    return seq[i][pos]; 
+#endif
   }
 };
 
@@ -474,6 +492,12 @@ typedef struct {
   double nuc_per_rotation;
   int askedresults;
   int memSaveUsed;
+  // Expected value model
+  // ln(Evalue)=alpha+beta*score
+  double alpha;
+  double beta;
+  double Rsquared;
+  double RMSE;
 
   int item_count;
 
@@ -495,7 +519,18 @@ inline BasicPointerVec::BasicPointerVec(class PointerVec &p):matrix_p(p.matrix_p
 }
 
 inline store PointerVec::getValue()  const { return this->myMat->getValueP(*this)->getValue(); } ;
-inline motifCode const PointerVec::getMotifLaborous() const {  return this->limData->getSite(this->matrix_p[0],0).ID; };
+inline motifCode const PointerVec::getMotifLaborous() const {  
+#if 1
+  posCode p=this->matrix_p.at(0);
+  id_triple const &trip= this->limData->getSite(p,0);
+    
+  return trip.ID; 
+
+#else
+  return this->limData->getSite(this->matrix_p[0],0).ID; 
+#endif
+};
+
 
 inline matrixentry *Matrix::getValueP(BasicPointerVec const &p) const
 {

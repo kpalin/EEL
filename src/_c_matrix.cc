@@ -26,6 +26,10 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.17  2006/11/13 12:38:02  kpalin
+ * Added code for p-value threshold computation. The threshold
+ * computation part is from Pasi Rastas.
+ *
  * Revision 1.16  2006/08/10 11:39:16  kpalin
  * Port to 64bit. Changed custom bit32 type to uint32_t.
  *
@@ -1906,6 +1910,7 @@ vector<TFBSscan*> parseMatricies(int *count,PyObject *mats,PyObject *cutoffs,dou
 
 #include <iostream>
 #include <ext/hash_map>
+#include <map>
 #include <vector>
 
 using __gnu_cxx::hash_map;
@@ -1914,6 +1919,7 @@ typedef vector< int > intArray;
 typedef vector< double > doubleArray;
 typedef hash_map< int, double > myHashMap;
 typedef vector< intArray > intMatrix;
+typedef vector< doubleArray > doubleMatrix;
 typedef vector< unsigned char > charArray;
 
 //this one uses table
@@ -1963,14 +1969,19 @@ int tresholdFromP(const intMatrix &mat, const double &p,const doubleArray bgDist
     }
 
     double sum = 0.0;
+    int prevNonZero=R;
 
     for (int r = R; r >= 0; --r) {
-	sum += table0[r];
-	//cout << "sum = " << sum << "\n" ;
-	if (sum > p) {
-	    //cout << "tol = " << r << "\n" ;
-	    return (r + n * minV + 1);
-	}
+      sum += table0[r];
+      //cout << "sum = " << sum << "\n" ;
+      if (sum > p) {
+	//cout << "tol = " << r << "\n" ;
+	return max(r+1,prevNonZero-1) + n * minV;
+      }
+      if(table0[r]>0.0) {
+	prevNonZero=r;
+      }
+
     }
 #ifdef DEBUG_OUTPUT
     cerr << "Error: No treshold found!";
@@ -1983,8 +1994,8 @@ int tresholdFromP(const intMatrix &mat, const double &p,const doubleArray bgDist
 // somewhat slower...
 int tresholdFromP2(const intMatrix &mat, const double &p, const doubleArray bgDist)
 {
-    int numA = mat.size();
-    int n = mat[0].size();
+  int numA = mat.size();  // Size of the alphabet
+  int n = mat[0].size();  // Length of the matrix
 
     int maxT = 0;
     int minV = INT_MAX;
@@ -2025,13 +2036,21 @@ int tresholdFromP2(const intMatrix &mat, const double &p, const doubleArray bgDi
 
     //cout << "maxT = " << maxT << " minV = " << minV << "\n";
     double sum = 0.0;
+    int prevNonZero=maxT;
+
     for (int r = maxT; r >= n * minV; --r) {
-	sum += table0[r];
-	//cout << "sum = " << sum << "\n" ;
-	if (sum > p) {
-	    //cout << "tol = " << r << "\n" ;
-	    return (r + 1);
-	}
+      sum += table0[r];
+
+      //cout << "sum = " << sum << "\n" ;
+      if (sum > p) {
+	//cout << "tol = " << r << "\n" ;
+	return ((r + 1)+prevNonZero)/2;
+      }
+
+      if(table0[r]>0.0) {
+	prevNonZero=r;
+      }
+
     }
 #ifdef DEBUG_OUTPUT
     cerr << "Error: No treshold found!";
@@ -2039,6 +2058,75 @@ int tresholdFromP2(const intMatrix &mat, const double &p, const doubleArray bgDi
     return INT_MAX;
 }
 
+// same as above, uses hashmaps with customisations
+// somewhat slower...
+int tresholdFromP3(const intMatrix &mat, const double &p, const doubleArray bgDist)
+{
+  int numA = mat.size();  // Size of the alphabet
+  int n = mat[0].size();  // Length of the matrix
+
+    int maxT = 0;
+    int minV = INT_MAX;
+
+    for (int i = 0; i < n; ++i) {
+	int max = mat[0][i];
+	int min = max;
+	for (int j = 1; j < numA; ++j) {
+	    int v = mat[j][i];
+	    if (max < v)
+		max = v;
+	    else if (min > v)
+		min = v;
+	}
+	maxT += max;
+	if (minV > min)
+	    minV = min;
+    }
+
+    myHashMap table0;
+    myHashMap table1;
+
+    for (int j = 0; j < numA; ++j)
+	table0[ mat[j][0] ] += bgDist[j]; // change this to use own background model
+
+    for (int i = 1; i < n; ++i) {
+	//cout << "Size = " << table0.size() << "\n";
+	for (int j = 0; j < numA; ++j) {
+	    int s = mat[j][i];
+	    for (myHashMap::iterator it = table0.begin(); 
+		 it != table0.end(); ++it) {
+		table1[ it->first + s ] += bgDist[j] * (it->second); // change this to use own background model
+	    }
+	}
+	table0 = table1;
+	table1.clear();
+    }
+
+    //cout << "maxT = " << maxT << " minV = " << minV << "\n";
+    double sum = 0.0;
+    map<int,double> sortedTable(table0.begin(),table0.end());
+    int prevNonZero=maxT;
+
+    for (map<int,double>::const_reverse_iterator r=sortedTable.rbegin(); r->first >= n * minV; ++r) {
+      sum += r->second;
+
+      //cout << "sum = " << sum << " r = "<<r->first<<","<<r->second<<"\n" ;
+      if (sum > p) {
+	//cout << "tol = " << r << "\n" ;
+	//--r;
+	//cout<<" r = "<<r->first<<","<<r->second<<" ehkä = "<<(r->first+1)<<"\n";
+	return (r->first+1+prevNonZero)/2;
+      }
+      if(r->second>0.0) {
+	prevNonZero=r->first;
+      }
+
+    }
+#ifdef DEBUG_OUTPUT
+    cerr << "Error: No treshold found!";
+#endif
+    return INT_MAX;
+}
 
 // Wrappers from Kimmo Palin
 intMatrix *pyMatrix2IntMatrix(const PyObject  *py_matrix,double *multiplier)
@@ -2046,7 +2134,7 @@ intMatrix *pyMatrix2IntMatrix(const PyObject  *py_matrix,double *multiplier)
   //Also round the floating point values to integers in range ROUNDING_RANGE
   intMatrix *mat=new intMatrix();
 
-  const int matLen=PySequence_Fast_GET_SIZE(PySequence_Fast_GET_ITEM(py_matrix,0));
+  //const int matLen=PySequence_Fast_GET_SIZE(PySequence_Fast_GET_ITEM(py_matrix,0));
   double minV=DBL_MAX,maxV=-DBL_MAX;
 
 
@@ -2060,7 +2148,6 @@ intMatrix *pyMatrix2IntMatrix(const PyObject  *py_matrix,double *multiplier)
       maxV=max(maxV,thisVal);
     }
   }
-
   (*multiplier)=ROUNDING_RANGE/(maxV-minV);
 
 #ifndef NDEBUG
@@ -2084,7 +2171,9 @@ intMatrix *pyMatrix2IntMatrix(const PyObject  *py_matrix,double *multiplier)
       maxAbsErr=max(maxAbsErr,(err>0?err:-err));
 #endif      
     }
-    //cerr<<endl;
+#ifndef NDEBUG
+    cerr<<endl;
+#endif
     mat->push_back(nucl);
   }
 
@@ -2093,6 +2182,7 @@ intMatrix *pyMatrix2IntMatrix(const PyObject  *py_matrix,double *multiplier)
   cerr<<"Multiplier:"<<*multiplier<<" SSE:"<<SSE<<" SAE:"<<SAE<<" RMSE:"<<sqrt(SSE/nm)<<" MAE:"<<SAE/nm<<" MaxAbsErr:"<<maxAbsErr<<endl;
 #endif
   return mat;
+
 }
 
 // Compute the score threshold for given matrix, p-value and 0th order background
