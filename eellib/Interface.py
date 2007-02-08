@@ -36,6 +36,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.39  2006/12/08 09:51:34  kpalin
+# Added E-values and TFBS p-values
+#
 # Revision 1.38  2006/11/13 13:03:22  kpalin
 # Added E-model RMSE
 #
@@ -459,15 +462,21 @@ If you use '.' as filename the local data are aligned."""
         self._initMatrixWeights()
 
     def setBGFreq(self,arglist=None):
-        "Arguments: A C G T\nBackground nucleotide frequencies. Removes markov background."
+        "Arguments: A C G T|bgSampleSequence\nBackground nucleotide frequencies. Removes markov background."
         if (not arglist==None):
             try:
-                assert(len(arglist)==4)
-                tot=reduce(lambda x,y:float(x)+float(y),arglist,0.0)*1.0
-                self.A,self.C,self.G,self.T=map(lambda x:float(x)/tot,arglist)
+                if len(arglist)==4:
+                    tot=reduce(lambda x,y:float(x)+float(y),arglist,0.0)*1.0
+                    self.A,self.C,self.G,self.T=map(lambda x:float(x)/tot,arglist)
+                elif len(arglist)==1:
+                    seq=self.seq.sequence(arglist[1])
+                    self.A,self.C,self.G,self.T=[seq.count(x) for x in "ACGT"]
+                    tot=float(self.A+self.C+self.G+self.T)
+                    self.A,self.C,self.G,self.T=self.A/tot,self.C/tot,self.G/tot,self.T/tot
+                else:
+                    assert(1==0)
             except (ValueError,AssertionError),e:
                 raise CommandError("Invalid parameters as background frequences.\nBackground distribution not set.",e)
-                return
 
         Matrix.setBGfreq(self.A,self.C,self.G,self.T)
         self._initMatrixWeights()
