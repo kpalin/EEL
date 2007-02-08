@@ -26,6 +26,10 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.18  2006/12/08 09:49:56  kpalin
+ * Fixed a seqfault and added a source file from Pasi rastas which got
+ * included in _c_matrix.cc
+ *
  * Revision 1.17  2006/11/13 12:38:02  kpalin
  * Added code for p-value threshold computation. The threshold
  * computation part is from Pasi Rastas.
@@ -1909,12 +1913,17 @@ vector<TFBSscan*> parseMatricies(int *count,PyObject *mats,PyObject *cutoffs,dou
 // c++ p-value code generously donated by Pasi Rastas under GPL
 
 #include <iostream>
-#include <ext/hash_map>
 #include <map>
 #include <vector>
 
+#ifdef  _GLIBCXX_DEBUG
+#include <ext/hash_map>
+// #include <debug/hash_map>
+using __gnu_debug::hash_map;
+#else
+#include <ext/hash_map>
 using __gnu_cxx::hash_map;
-
+#endif
 typedef vector< int > intArray;
 typedef vector< double > doubleArray;
 typedef hash_map< int, double > myHashMap;
@@ -2036,7 +2045,7 @@ int tresholdFromP2(const intMatrix &mat, const double &p, const doubleArray bgDi
 
     //cout << "maxT = " << maxT << " minV = " << minV << "\n";
     double sum = 0.0;
-    int prevNonZero=maxT;
+    int prevNonZero=2*(maxT+1);  // Basically infinite
 
     for (int r = maxT; r >= n * minV; --r) {
       sum += table0[r];
