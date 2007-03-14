@@ -11,6 +11,9 @@ CUTOFF_PVALUE=2
 
 #
 # $Log$
+# Revision 1.19  2006/12/08 09:51:34  kpalin
+# Added E-values and TFBS p-values
+#
 # Revision 1.18  2006/11/13 12:35:22  kpalin
 # Added p-value threshold computation.
 #
@@ -66,6 +69,8 @@ CUTOFF_PVALUE=2
 #
 #
 
+import re
+
 from cStringIO import StringIO
 
 def log2(x):
@@ -83,12 +88,17 @@ class Matrix:
     def __init__(self,filename):
         "reads matrix from file"
 
-        File=open(filename,'r')
+        File=open(filename,'rU')
         self.fname=filename
         self.name=filename
+
+        splitter=re.compile(r"\s+")
         self.LLMatrix=filter(lambda x:len(x),[[float(entry)
                         for entry in line.split()]
-                       for line in File.read().split('\n')])
+                       for line in File.readlines()])
+        #print self.fname
+        assert(len(self.LLMatrix)==4)
+
         File.close()
 
         r=reduce(lambda x,y:x+y,self.LLMatrix,[])
