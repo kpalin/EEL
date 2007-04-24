@@ -37,6 +37,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.29  2006/11/13 13:03:39  kpalin
+ *  Added RMSE
+ *
  *  Revision 1.28  2006/11/13 12:40:58  kpalin
  *  Added the parameters of the expectation model to the
  *  align_AlignmentObject
@@ -144,6 +147,13 @@
  *
  */
 
+/* Debug output macros */
+#ifndef NDEBUG
+#define dprintf(...) fprintf(stderr,"%s:%u: ",__FILE__,__LINE__);\
+  fprintf(stderr,__VA_ARGS__);
+#else
+#define dprintf(...) 
+#endif
 
 #define CHECKING_DECREF(X) if((PyObject*)(X)==Py_None) printf("none decref line %d",__LINE__); Py_DECREF(X);
 
@@ -712,7 +722,7 @@ alignment_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     return (PyObject *)self;
 }
 
-
+ 
 
 double findMax(int &pos_x,int &pos_y,align_AlignmentObject *self)
 {
@@ -720,10 +730,13 @@ double findMax(int &pos_x,int &pos_y,align_AlignmentObject *self)
   store max=-1.0;
   pos_x=-1;
   pos_y=-1;
- 
-  for (uint x=0; x< self->CP->matrix.size(); x++) {
-    for(uint y=0; y<self->CP->matrix[x].size(); y++) {
+  dprintf("x_name=%s y_name=%s\n",PyString_AsString((PyObject*)self->x_name),PyString_AsString((PyObject*)self->y_name));
 
+  dprintf("matrix size %d\n",self->CP->matrix.size());
+  for (uint x=0; x< self->CP->matrix.size(); x++) {
+    dprintf("matrix[%d] size %d\n",x,self->CP->matrix[x].size());
+    for(uint y=0; y<self->CP->matrix[x].size(); y++) {
+      dprintf("(%d,%d) -> [%d,%d] %g\n",x,y,self->CP->matrix[x][y].x,self->CP->matrix[x][y].y,self->CP->matrix[x][y].value );
       if(self->CP->matrix[x][y].value>0) {
 	int tmp_x=self->CP->matrix[x][y].x;
 	int tmp_y=self->CP->matrix[x][y].y;
@@ -737,6 +750,10 @@ double findMax(int &pos_x,int &pos_y,align_AlignmentObject *self)
       }
     }
   }
+#ifndef NDEBUG
+  printf("Found max %g\n",max);
+#endif
+  
 
   return max;
 }
@@ -1018,9 +1035,11 @@ void outputMemory(double bytes)
 
 void memReport(align_AlignmentObject *self)
 {
+
   self->fill_factor=(self->item_count*1.0/(self->CP->seq_x.size() *1.0* self->CP->seq_y.size()));
 
 
+#ifndef SILENTPROGRESS
   double normSize=((self->CP->seq_x.size() * 1.0)*self->CP->seq_y.size() * sizeof(matrixentry));
 		   
   cout <<"Sequence length: x: "<<self->CP->seq_x.size()<<", y: "<<self->CP->seq_y.size()<<endl
@@ -1036,7 +1055,7 @@ void memReport(align_AlignmentObject *self)
   cout<<endl<<"So using only "<<(100.0*(self->mem_usage/normSize))<<" percent of the matrix"<<endl
       <<"Filling only "<<(self->fill_factor*100.0) <<" percent of the cells"<<endl;
   
-      
+#endif      
 }
 
 int indexYafterOrAtRealY(int sx, int x,struct __CPSTUF *CP,int real_y)
@@ -1084,7 +1103,7 @@ alignObject(align_AlignmentObject *self,unsigned long int const sx, unsigned lon
   /* Not really: compute the matrix in slice from sx to ex (the whole
      length of y) */
 
-
+  dprintf("sx:%lu sy:%lu  ex:%lu ey:%lu\n",sx,sy,ex,ey);
   assert(sx<ex);
   assert(ex<=self->CP->seq_x.size());
   assert(sy<ey);
@@ -1093,7 +1112,7 @@ alignObject(align_AlignmentObject *self,unsigned long int const sx, unsigned lon
   // allocating the matrix
   // Allocate full rows between sx and ex. 
   for (uint i=sx; i<ex; i++){
-    //cout<<"row:"<<i<<" len:"<<self->CP->index[self->CP->seq_x[i].ID].size()<<endl;
+    dprintf("row: %d len: %d\n",i,self->CP->index[self->CP->seq_x[i].ID].size())
     self->CP->matrix.push_back(vector<matrixentry> (self->CP->index[self->CP->seq_x[i].ID].size()));
     self->item_count+=self->CP->index[self->CP->seq_x[i].ID].size();
     self->mem_usage += self->CP->index[self->CP->seq_x[i].ID].size()*sizeof(matrixentry);	
@@ -1113,6 +1132,7 @@ alignObject(align_AlignmentObject *self,unsigned long int const sx, unsigned lon
   for (x=0; x<(int)(ex-sx); x++) {
 
     cells_filled+=1+self->CP->matrix[x].size();
+#ifndef SILENTPROGRESS
     if(cells_filled>OUTPUTFREQ) {
       cout<< "filling line "<<x+1<<" of "<<(ex-sx) << " of length "<<self->CP->matrix[x].size()
 #ifndef NDEBUG
@@ -1121,6 +1141,7 @@ alignObject(align_AlignmentObject *self,unsigned long int const sx, unsigned lon
 	  <<endl;
       cells_filled-=OUTPUTFREQ;
     }
+#endif
 
     for(y=indexYafterOrAtRealY(sx,x,self->CP,sy); y<(int)self->CP->matrix[x].size(); y++){
       assert(y>=0 && y<self->CP->index[self->CP->seq_x[sx+x].ID].size());
@@ -1244,12 +1265,13 @@ alignMemorySaveObject(align_AlignmentObject *self)
 
   for (x=0; x<(int)self->CP->seq_x.size(); x++) {
 
+#ifndef SILENTPROGRESS
     cells_filled+=1+self->CP->matrix[x%slizeWidth].size();
     if(cells_filled>OUTPUTFREQ) {
       cout<< "filling line "<<x+1<<" of "<<self->CP->seq_x.size() << " of length "<<self->CP->index[self->CP->seq_x[x].ID].size()<<endl;
       cells_filled-=OUTPUTFREQ;
     }
-
+#endif
 
     for(y=0; y<(int)self->CP->index[self->CP->seq_x[x].ID].size(); y++){
       int const real_y= self->CP->index[self->CP->seq_x[x].ID][y];
@@ -1472,7 +1494,6 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
   vector<triple> seq_x,seq_y,tmp_seq;
   seq_x=(*matchlist)[firstSeqName];
   seq_y=(*matchlist)[secondSeqName];
-  
 
   // Check that we get short rows.
   string tmp_str;
@@ -1497,6 +1518,9 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
     seq_x=tmp_seq;
 #endif
   }      
+
+  dprintf("x_name=%s y_name=%s\n",firstSeqName.c_str(),secondSeqName.c_str());
+  dprintf("seq_x.size=%d seq_y.size=%d\n",seq_x.size(),seq_y.size());
 
   //vector<id_triple> id_seq_x, id_seq_y;
   map<string, uint> TF_to_ID;
@@ -1526,6 +1550,8 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
 
 
   ret_self->CP->ID_to_TF.resize(TF_to_ID.size());
+  dprintf("TF_to_ID.size = %d\n",TF_to_ID.size());
+
   //  vector<string> ID_to_TF(TF_to_ID.size());
   for(map<string, uint>::iterator i=TF_to_ID.begin();i!= TF_to_ID.end(); i++){
     ret_self->CP->ID_to_TF[i->second]=i->first;
@@ -1573,7 +1599,7 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
     ret_self->CP->seq_y.push_back(idtr);
   }
 
-
+  dprintf("CP->seq_x.size=%d CP->seq_y.size=%d\n",ret_self->CP->seq_x.size(),ret_self->CP->seq_y.size());
   delete matchlist;
 
 
@@ -1595,6 +1621,8 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
 
   // building the index map
   ret_self->CP->index.resize(ret_self->CP->ID_to_TF.size()*2);
+  dprintf("ID_to_TF.size() = %d\n",ret_self->CP->ID_to_TF.size());
+  dprintf("index.size() = %d\n",ret_self->CP->index.size());
 
   for(uint id=0; id<ret_self->CP->index.size(); id++){
     for(uint y=0; y<ret_self->CP->seq_y.size(); y++) {
@@ -1603,7 +1631,9 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
 	ret_self->mem_usage += sizeof(int);
       }
     }
+    dprintf("index[id=%d].size() = %d\n",id,ret_self->CP->index[id].size());
   }
+  dprintf("index.size() = %d\n",ret_self->CP->index.size());
 
   estimateMemoryConsumption(ret_self);
 
@@ -1855,9 +1885,11 @@ alignment_nextBest(align_AlignmentObject *self)
   }
 
     
-
+#ifndef NDEBUG
+  printf("Going to trace alignment from (%d,%d)\n",pos_x,pos_y);
+#endif
   
-  
+ 
   // Format the output.
   //string ret;
   
@@ -1973,7 +2005,7 @@ alignment_suboptimal(align_AlignmentObject *self)
 #ifndef NDEBUG
   static int kierros=0;
   kierros++;
-  printf("suboptimal: %d\n",kierros);
+  dprintf("suboptimal: %d\n",kierros);
 
 #endif
   
@@ -1989,6 +2021,10 @@ alignment_suboptimal(align_AlignmentObject *self)
     Py_INCREF(Py_None);
     return Py_None;
   }
+#ifndef NDEBUG
+  printf("Going to trace alignment from (%d,%d)\n",pos_x,pos_y);
+#endif
+  
 
   // Format the output.
   PyObject *ret=traceAlignment(self,sx,sy,pos_x,pos_y);
