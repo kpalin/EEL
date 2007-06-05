@@ -11,6 +11,9 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.27  2006/11/13 13:04:05  kpalin
+##   New minor release to Jussi with major improvements.
+##
 ##   Revision 1.26  2006/08/31 10:07:02  kpalin
 ##   Random things
 ##
@@ -91,7 +94,7 @@ if len(sys.argv)>1:
         print "Using profiling settings"
         del sys.argv[1]
     elif sys.argv[1]=='lite_debug':
-        common_compile_args=["-g","-Wall","-O0"]
+        common_compile_args=["-g","-Wall","-O0","-D_GLIBCXX_DEBUG"]
         print "Using light debug settings"
         del sys.argv[1]
 
@@ -105,7 +108,7 @@ from distutils.core import setup, Extension
 alignCompileArgs = []
 
 #Save memory if the matrix would be larger than 512MB
-alignCompileArgs = ["-DSAVE_MEM","-DSAVE_MEM_LIMIT=536870912","-DOUTPUTFREQ=10000000"]
+alignCompileArgs = ["-DSAVE_MEM","-DSAVE_MEM_LIMIT=536870912","-DOUTPUTFREQ=10000000","-DSILENTPROGRESS"]
 
 if 0:
     print "No alignment score decrease allowed"
