@@ -36,6 +36,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.40  2007/02/08 09:21:34  kpalin
+# Added possibility of setting simple background from example.
+#
 # Revision 1.39  2006/12/08 09:51:34  kpalin
 # Added E-values and TFBS p-values
 #
@@ -443,7 +446,7 @@ If you use '.' as filename the local data are aligned."""
                 self.matdict[f]=m
         # Make the matrix names nicer.
         cpreflen=len(os.path.commonprefix([os.path.dirname(x.fname) for x in self.matlist]))
-        if cpreflen>0:
+        if cpreflen==0:
             cpreflen+=1  # Take away also the dir separator if any.
         for m in self.matlist:
             m.name=m.fname[cpreflen:]
