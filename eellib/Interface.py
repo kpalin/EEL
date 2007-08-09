@@ -36,6 +36,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.42  2007/08/09 05:58:02  kpalin
+# Fixed setBGFreq to use sample sequence
+#
 # Revision 1.41  2007/06/05 12:40:00  kpalin
 # Dont' remember
 #
@@ -481,7 +484,7 @@ If you use '.' as filename the local data are aligned."""
                     self.A,self.C,self.G,self.T=self.A/tot,self.C/tot,self.G/tot,self.T/tot
                 else:
                     assert(1==0)
-            except (ValueError,AssertionError),e:
+            except (ValueError,AssertionError,KeyError),e:
                 raise CommandError("Invalid parameters as background frequencies.\nBackground distribution not set.",e)
 
         Matrix.setBGfreq(self.A,self.C,self.G,self.T)
