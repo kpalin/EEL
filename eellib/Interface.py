@@ -36,6 +36,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.41  2007/06/05 12:40:00  kpalin
+# Dont' remember
+#
 # Revision 1.40  2007/02/08 09:21:34  kpalin
 # Added possibility of setting simple background from example.
 #
@@ -472,14 +475,14 @@ If you use '.' as filename the local data are aligned."""
                     tot=reduce(lambda x,y:float(x)+float(y),arglist,0.0)*1.0
                     self.A,self.C,self.G,self.T=map(lambda x:float(x)/tot,arglist)
                 elif len(arglist)==1:
-                    seq=self.seq.sequence(arglist[1])
+                    seq=self.seq.sequence(arglist[0]).getvalue()
                     self.A,self.C,self.G,self.T=[seq.count(x) for x in "ACGT"]
                     tot=float(self.A+self.C+self.G+self.T)
                     self.A,self.C,self.G,self.T=self.A/tot,self.C/tot,self.G/tot,self.T/tot
                 else:
                     assert(1==0)
             except (ValueError,AssertionError),e:
-                raise CommandError("Invalid parameters as background frequences.\nBackground distribution not set.",e)
+                raise CommandError("Invalid parameters as background frequencies.\nBackground distribution not set.",e)
 
         Matrix.setBGfreq(self.A,self.C,self.G,self.T)
         self._initMatrixWeights()
