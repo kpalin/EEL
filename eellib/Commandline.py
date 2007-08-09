@@ -16,6 +16,9 @@ import string
 
 
 # $Log$
+# Revision 1.25  2006/11/13 12:34:15  kpalin
+# Added command to search the binding sites with p-value cutoff.
+#
 # Revision 1.24  2006/10/18 07:23:59  kpalin
 # Added suboptimalsDownTo
 #
@@ -175,7 +178,7 @@ class Commandline(Interface):
                          'resetSequences':     (self.resetSequences,0),
                          'ress':               (self.resetSequences,0),
                          'reset':              (self.reset,0),
-                         "setBGfreq":          (self.setBGFreq,4),
+                         "setBGfreq":          (self.setBGFreq,1),
                          "setMarkovBG":        (self._setMarkovBG,1),
                          'printSeqNames':      (self.printSeqNames,0),
                          'ps':                 (self.printSeqNames,0),
