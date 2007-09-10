@@ -11,6 +11,9 @@ CUTOFF_PVALUE=2
 
 #
 # $Log$
+# Revision 1.20  2007/03/14 08:35:58  kpalin
+# Added universal newline support for reading PFM:s
+#
 # Revision 1.19  2006/12/08 09:51:34  kpalin
 # Added E-values and TFBS p-values
 #
@@ -95,7 +98,7 @@ class Matrix:
         splitter=re.compile(r"\s+")
         self.LLMatrix=filter(lambda x:len(x),[[float(entry)
                         for entry in line.split()]
-                       for line in File.readlines()])
+                       for line in File.readlines() if len(line)>2])
         #print self.fname
         assert(len(self.LLMatrix)==4)
 
@@ -336,18 +339,25 @@ class Matrix:
 
 
 
-    def minimumKLdistance(self,other):
+    def minimumKLdistance(self,other,force=False):
         "Compute the minimum Kullback-Leibler distance between self and other"
+        #print self.name,other.name,force
         if len(self)<len(other):
             return other.minimumKLdistance(self)
-
-        minKLdist=1e50
+        elif self==other:
+            return (0.0,0)
+        elif len(self)==len(other) and not force:
+            minKLdist,minKLshift=other.minimumKLdistance(self,True)
+            minKLshift=-minKLshift
+        else:
+            minKLdist=1e50
+            
         self.computeFreqMatrix()
         other.computeFreqMatrix()
 
         assert(len(self)>=len(other))
 
-        for shift in range(1-len(other),len(self)):
+        for shift in range(1-len(other),len(self)):            
             kld=self.KLdistance(other,shift)
             #print shift,kld
             if kld<minKLdist:
@@ -386,19 +396,23 @@ class Matrix:
 
     def KLdistance(self,other,shift=0):
         "Computes the Kullback-Leibler distance min D(self||other) D(other||self) between two matrices."
-
+        assert(len(other)<=len(self))
+        #pdb.set_trace()
         minKLdist=1e999
-        for selfFreq in [self.freq,self.__giveReverseComplementFreqs()]:
+        for otherFreq in [other.freq,other.__giveReverseComplementFreqs()]:
             KLdistp=0.0
             KLdistq=0.0
-            for (pList,qList,bgFreq) in zip(selfFreq,other.freq,[self.freqA,self.freqC,self.freqG,self.freqT]):
+            for (pList,qList,bgFreq) in zip(otherFreq,self.freq,[self.freqA,self.freqC,self.freqG,self.freqT]):
                 if shift<0:
-                    pList=[bgFreq]*(-shift)+pList
+                    qList=[bgFreq]*(-shift)+qList
                 else:
                     lenDelta=len(self)-len(other)
-                    pList=pList[shift:]+[bgFreq]*(shift-lenDelta+1)
+                    assert(lenDelta>=0)
+                    qList=qList[shift:]+[bgFreq]*(shift+lenDelta+1)
+                #print pList,qList
                 qList=qList[:len(other)]
                 pList=pList[:len(other)]
+                #print self.name,other.name,shift,zip(qList,pList)
                 #print "len",len(qList),len(pList)
                 KLdistp+=reduce(operator.add,[ p*log2(p/q) for (p,q) in zip(pList,qList) ])
                 KLdistq+=reduce(operator.add,[ q*log2(q/p) for (p,q) in zip(pList,qList) ])
