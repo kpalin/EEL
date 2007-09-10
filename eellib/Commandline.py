@@ -16,6 +16,9 @@ import string
 
 
 # $Log$
+# Revision 1.26  2007/08/09 05:57:36  kpalin
+# Fixed setBGfreq to accept only 1 parameter
+#
 # Revision 1.25  2006/11/13 12:34:15  kpalin
 # Added command to search the binding sites with p-value cutoff.
 #
@@ -504,14 +507,18 @@ The default value for pvalue is 1e-6"""
             print "Could not save %s:"%(arglist[0]),e
             return
 
-        for m in self.matlist:
-            for n in self.matlist:
-                KL[m.name][n.name]=m.minimumKLdistance(n)
+        names=[m.name for m in self.matlist]
 
-        names=KL.keys()
-        names.sort()
+        for mi in range(len(self.matlist)):
+            for ni in range(len(self.matlist)):
+                m,n=self.matlist[mi],self.matlist[ni]
+                KL[m.name][n.name]=m.minimumKLdistance(n)
+                #print "KL[",m.name,"][",n.name,"]=",KL[m.name][n.name]
+                if KL[n.name].has_key(m.name):
+                    assert(KL[m.name][n.name][0]==KL[n.name][m.name][0])
+
         fout.write("\t".join(["names"]+names)+"\n")
-        fout.writelines(["%s\t%s\n"%(name,"\t".join([str(KL[name][n][0]) for n in names])) for name in names])
+        fout.writelines(["%s\t%s\n"%(name,"\t".join([str(KL[min(name,n)][max(name,n)][0]) for n in names])) for name in names])
 
 
     def showExpectedScores(self,arglist):
