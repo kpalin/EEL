@@ -37,6 +37,9 @@
 /*
  *
  *  $Log$
+ *  Revision 1.30  2007/04/24 11:01:06  kpalin
+ *  Bug hunting without bugs. Added debug printf macro dprintf()
+ *
  *  Revision 1.29  2006/11/13 13:03:39  kpalin
  *  Added RMSE
  *
@@ -1470,7 +1473,7 @@ int getSequences(matchlisttype *matchlist, string &firstSeqName,string &secondSe
 static PyObject *
 align_alignCommon(PyObject *self, PyObject *args,istream *data)
 {
-  PyObject *ret_obj;
+  PyObject *ret_obj=NULL;
   char* stub;
   double lambda, xi, mu, nuc_per_rotation,nu;
   int result_ask;
@@ -1636,18 +1639,20 @@ align_alignCommon(PyObject *self, PyObject *args,istream *data)
   dprintf("index.size() = %d\n",ret_self->CP->index.size());
 
   estimateMemoryConsumption(ret_self);
+  try {
 
 #ifdef SAVE_MEM
-  if(ret_self->expectedMemUsage>SAVE_MEM_LIMIT) {
-    cout<<"Saving memory!"<<endl;
-    ret_obj=(PyObject*)alignMemorySaveObject(ret_self);
-  } else {
-    ret_obj=(PyObject*)alignObject(ret_self,0,0,ret_self->CP->seq_x.size(),ret_self->CP->seq_y.size());
-  }
+    if(ret_self->expectedMemUsage>SAVE_MEM_LIMIT) {
+      ret_obj=(PyObject*)alignMemorySaveObject(ret_self);
+    } else {
+      ret_obj=(PyObject*)alignObject(ret_self,0,0,ret_self->CP->seq_x.size(),ret_self->CP->seq_y.size());
+    }
 #else
-  ret_obj=(PyObject*)alignObject(ret_self,0,0,ret_self->CP->seq_x.size(),ret_self->CP->seq_y.size());
+    ret_obj=(PyObject*)alignObject(ret_self,0,0,ret_self->CP->seq_x.size(),ret_self->CP->seq_y.size());
 #endif
-
+  } catch (std::bad_alloc const&) {
+    PyErr_SetString(PyExc_MemoryError,"Out of memory!");
+  } 
   // End timing
   after=clock();
 
@@ -1696,7 +1701,14 @@ align_alignfile(PyObject *self, PyObject *args)
   clearData.open(file);
   inData=&clearData;
 #endif
-  ret=align_alignCommon(self,args,inData);
+  ret=NULL;
+  try {
+    ret=align_alignCommon(self,args,inData);
+  } catch (std::bad_alloc const&) {
+    PyErr_SetString(PyExc_MemoryError,"Out of memory!");
+  }
+
+
 
 
 #ifdef HAVE_GZSTREAM
@@ -1714,6 +1726,7 @@ static PyObject *
 align_aligndata(PyObject *self, PyObject *args)
 {
   char* data;
+  PyObject *ret=NULL;
 
   if (!(data=PyString_AsString(PySequence_GetItem(args, 0)))){
     PyErr_SetString(PyExc_AttributeError,"Invalid data argument!");
@@ -1722,7 +1735,12 @@ align_aligndata(PyObject *self, PyObject *args)
   
   istringstream inData(data);
 
-  return align_alignCommon(self,args,&inData);
+  try {
+    ret=align_alignCommon(self,args,&inData);
+  } catch (std::bad_alloc const&) {
+    PyErr_SetString(PyExc_MemoryError,"Out of memory!");
+  }
+  return ret;
 }
 
 
