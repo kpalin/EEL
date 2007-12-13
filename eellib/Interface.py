@@ -36,6 +36,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.43  2007/08/09 05:59:59  kpalin
+# Fixed setBGFreq to handle missing sample sequence request gracefully.
+#
 # Revision 1.42  2007/08/09 05:58:02  kpalin
 # Fixed setBGFreq to use sample sequence
 #
@@ -452,8 +455,13 @@ If you use '.' as filename the local data are aligned."""
                 self.matdict[f]=m
         # Make the matrix names nicer.
         cpreflen=len(os.path.commonprefix([os.path.dirname(x.fname) for x in self.matlist]))
-        if cpreflen==0:
-            cpreflen+=1  # Take away also the dir separator if any.
+        try:
+            cpreflen=len(os.path.dirname(self.matlist[0].fname[:cpreflen+1]))
+            if cpreflen>0:
+                cpreflen+=1
+        except KeyError:
+            pass
+
         for m in self.matlist:
             m.name=m.fname[cpreflen:]
         
@@ -603,7 +611,7 @@ If you use '.' as filename the local data are aligned."""
                 self.show("name=",name)
                 self.show("self.__comp=",self.__comp)
                 #self.__gff=Output.get(self.__comp).split('\n')
-            if totalMatches>50000:
+            if totalMatches>100000:
                 self.storeTmpGFF()
                 self.__comp[name]={}
                 totalMatches=0
