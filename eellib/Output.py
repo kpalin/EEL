@@ -13,6 +13,9 @@ import math
 
 #
 # $Log$
+# Revision 1.28  2006/11/13 13:03:01  kpalin
+# Added module E-score RMSE
+#
 # Revision 1.27  2006/11/13 12:33:41  kpalin
 # Added 50mer tags to the GFF output giving the location of the
 # module. The tags start from the beginning and the end of the module.
@@ -283,7 +286,14 @@ def formatMultiAlignGFF(alignment,seqData=None,tagLength=50):
     NamesAndLengths=""
     #NamesAndLengths=["%s=%d"%(x,y) for (x,y) in zip(alignment.names,alignment.lengths) ]
     outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f time=%g %s\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation,alignment.secs_to_align,NamesAndLengths))
-    outStrIO.write("### Escore=exp(%g%+g*S) Rsquared=%g RMSE=%g\n"%(alignment.alpha,alignment.beta,alignment.Rsquared,alignment.RMSE))
+
+    for sName in alignment.names:
+        try:
+            sDesc=seqData.describe(sName).split("\n")
+            sDesc="\n#".join(sDesc)
+        except (KeyError,AttributeError):
+            sDesc=""
+        outStrIO.write("#%s\t%s\n"%(sName,sDesc))
 
     # For each module
     for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
