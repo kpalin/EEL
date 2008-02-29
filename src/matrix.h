@@ -1,5 +1,13 @@
 //
 // $Log$
+// Revision 1.7.2.1  2008/01/21 12:51:02  kpalin
+// Now report all, even weak, SNPs hitting binding sites.
+//
+// Revision 1.7  2006/11/13 12:37:09  kpalin
+// Added a constant for rounding range. Linear dependency on the speed of
+// the p-value threshold computation. Unknown, probably mostly positive,
+// dependency on the accuracy of the thresholding.
+//
 // Revision 1.6  2006/08/10 11:36:10  kpalin
 // Another try on 64bit port.
 //
@@ -32,7 +40,7 @@
 
 
 #ifndef LARGE_AFFY_DELTA
-#define LARGE_AFFY_DELTA 1.0
+#define LARGE_AFFY_DELTA 0.0
 #endif
 
 #include<stdint.h>

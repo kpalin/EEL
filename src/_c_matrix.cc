@@ -26,6 +26,13 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.19.2.1  2008/01/21 12:51:02  kpalin
+ * Now report all, even weak, SNPs hitting binding sites.
+ *
+ * Revision 1.19  2007/02/08 09:22:54  kpalin
+ * p-value thresholding now giving impossibly high threshold for motifs
+ * with too likely highest scoring match.
+ *
  * Revision 1.18  2006/12/08 09:49:56  kpalin
  * Fixed a seqfault and added a source file from Pasi rastas which got
  * included in _c_matrix.cc
@@ -94,7 +101,7 @@ PyObject *TFBShit::buildPySNPs()
   assert(PyTuple_Size(ret)==0 || getRefCount(ret)==1);
 
   for(unsigned int i=0;i<this->sigGenotype.size();i++) {
-    if(this->sigGenotype[i].allele!='N' || this->sigGenotype[i].scoreDif>LARGE_AFFY_DELTA) {
+    if(this->sigGenotype[i].allele!='N' || fabs(this->sigGenotype[i].scoreDif)>LARGE_AFFY_DELTA) {
       PyObject *obj=this->sigGenotype[i].buildPySNP(this->mat->length());
       assert(getRefCount(obj)==1);
 #ifndef NDEBUG

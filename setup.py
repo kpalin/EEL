@@ -11,6 +11,12 @@ import sys
 
 ##
 ##   $Log$
+##   Revision 1.28.2.1  2008/01/21 12:50:56  kpalin
+##   Now report all, even weak, SNPs hitting binding sites.
+##
+##   Revision 1.28  2007/06/05 12:39:43  kpalin
+##   Just random changes for testing
+##
 ##   Revision 1.27  2006/11/13 13:04:05  kpalin
 ##   New minor release to Jussi with major improvements.
 ##
@@ -170,7 +176,7 @@ else:
 modMatrix = Extension('eellib._c_matrix',
                     libraries = commonLibs,
                     sources = ['src/_c_matrix.cc'],
-                    extra_compile_args = common_compile_args+["-DSEQ_BUFFER_SIZE=5000000","-DLARGE_AFFY_DELTA=1.0","-DMAX_SNP_COUNT=7"],
+                    extra_compile_args = common_compile_args+["-DSEQ_BUFFER_SIZE=5000000","-DLARGE_AFFY_DELTA=0.0","-DMAX_SNP_COUNT=7"],
                     extra_link_args = [])
 
 
