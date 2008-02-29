@@ -36,6 +36,10 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.44  2007/12/13 09:33:31  kpalin
+# Fixed PFM file name pretty printing and increased temporary GFF file
+# creation limit.
+#
 # Revision 1.43  2007/08/09 05:59:59  kpalin
 # Fixed setBGFreq to handle missing sample sequence request gracefully.
 #
@@ -783,7 +787,11 @@ If you use '.' as filename the local data are aligned."""
     def moreAlignments(self,num_of_align=1,fetcherFun=None):
         """Fetch more alignments from previously run alignment matrix"""
 
-        for i in range(num_of_align):
+        if self.alignment.memSaveUsed==1:
+            # Only nextBest fetcher is possible if memSave was used.
+            fetcherFun=self.alignment.nextBest
+            
+         for i in range(num_of_align):
             if self.alignment.memSaveUsed==1 and self.alignment.askedResults<=len(self.alignment.bestAlignments):
                 self.show("Can't give more alignments. Don't remember those")
                 break
