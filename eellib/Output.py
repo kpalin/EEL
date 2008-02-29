@@ -13,6 +13,9 @@ import math
 
 #
 # $Log$
+# Revision 1.29  2008/01/02 08:27:14  kpalin
+# Added sequence names and descriptions to GFF output file.
+#
 # Revision 1.28  2006/11/13 13:03:01  kpalin
 # Added module E-score RMSE
 #
@@ -443,7 +446,7 @@ def formatalign2D(alignment,seq=None):
                 yaln=alnFmt%(yaln,y2add,yseq[as.beginY-1-ystart:as.endY-ystart].upper())
                 xaln=alnFmt%(xaln,x2add,xseq[as.beginX-1-xstart:as.endX-xstart].upper())
 
-                maln=alnFmt%(maln," "*len(y2add),as.motif[:siteLen])
+                maln=alnFmt%(maln," "*len(y2add),as.motif[-siteLen:])
                 xadded,yadded=as.endX,as.endY
 
         if seq:
@@ -511,9 +514,6 @@ def formatalign(alignment,seq=None):
     if seq:
         outStrIO.write("\n".join(["Sequence %s:\n%s\n"%(xseq,seq.describe(xseq)) for xseq in alignment.names])+"\n\n")
         
-    if alignment.Rsquared>0.1:
-        outStrIO.write("\nEscore=exp(%g%+g*S)  with Rsqared=%g and RMSE=%g\n"%(alignment.alpha,alignment.beta,alignment.Rsquared,alignment.RMSE))
-
     # goodAlign= [ (x,y,Score,Motif,(startX,endX),(startY,endY),Strand) ]
     for alnNo,goodAlign in enumerate(alignment.bestAlignments):
         if len(goodAlign)==0:
@@ -530,11 +530,6 @@ def formatalign(alignment,seq=None):
 
         outStrIO.write("\n### Alignment No %d ###\n"%(alnNo+1,))
 
-        if alignment.Rsquared>0.1:
-            Evalue=math.exp(alignment.alpha+alignment.beta*goodAlign[-1].score)
-            #outStrIO.write("E-value=%g  [%g,%g]\n"%(Evalue,Evalue-alignment.RMSE*1.96,Evalue+alignment.RMSE*1.96))
-            outStrIO.write("E-value=%g\n\n"%(Evalue))
-        
         #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
         for as in goodAlign:
             coordStr="".join(["[%d]"%(x) for x in as.siteSeqPos])
