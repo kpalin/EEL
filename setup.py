@@ -3,87 +3,8 @@
 You can get debug build with command:
 python2.2 setup.py debug build
 """
-import sys
+import sys,time
 
-
-
-
-
-##
-##   $Log$
-##   Revision 1.28.2.1  2008/01/21 12:50:56  kpalin
-##   Now report all, even weak, SNPs hitting binding sites.
-##
-##   Revision 1.28  2007/06/05 12:39:43  kpalin
-##   Just random changes for testing
-##
-##   Revision 1.27  2006/11/13 13:04:05  kpalin
-##   New minor release to Jussi with major improvements.
-##
-##   Revision 1.26  2006/08/31 10:07:02  kpalin
-##   Random things
-##
-##   Revision 1.25  2006/08/14 09:47:34  kpalin
-##   Added a quotation mark that was missed during the last checkin. Of
-##   course.
-##
-##   Revision 1.24  2006/08/14 09:45:41  kpalin
-##   Lowered output frequency for the alignment.
-##
-##   Revision 1.23  2006/05/03 10:42:54  kpalin
-##   Merged. "Downgrade" version from 2.1 to 2.0pre2
-##
-##   Revision 1.22  2006/05/03 10:12:57  kpalin
-##   Fixed a nasty bug giving false results depending on order of input
-##   sequences.
-##
-##   Revision 1.21  2005/07/07 09:23:34  kpalin
-##   Improved Windows compilation, especially py2exe
-##
-##   Revision 1.20  2005/07/05 11:22:32  kpalin
-##   Cap on SNPs in _c_matrix extension.
-##
-##   Revision 1.19  2005/05/19 07:49:25  kpalin
-##   Merged Waterman-Eggert style suboptimal alignments and
-##   SNP matching.
-##
-##   Revision 1.18.2.1  2005/05/09 07:12:52  kpalin
-##   Under development.
-##
-##   Revision 1.18  2005/03/02 13:31:43  kpalin
-##   One more working version.
-##
-##   Revision 1.17  2005/01/14 13:45:21  kpalin
-##   Better installation and added msvcp71.dll and msvcr71.dll for windows
-##   installation.
-##
-##   Revision 1.16  2005/01/14 12:51:48  kpalin
-##   Fixes for TCL/TIX gui in windows
-##
-##   Revision 1.15  2005/01/07 13:41:25  kpalin
-##   Works with py2exe. (windows executables)
-##
-##   Revision 1.14  2005/01/05 09:05:08  kpalin
-##   Fixed a one line description to satisfy bdist_rpm
-##
-##   Revision 1.13  2004/12/22 11:14:16  kpalin
-##   Some fixes for better distributability
-##
-##   Revision 1.12  2004/12/14 13:07:52  kpalin
-##
-##   Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun
-##   "My hovercraft is full of EELs" )
-##
-##   Revision 1.11  2004/07/30 12:22:10  kpalin
-##   Exact multiple alignment and alignedCols.alnColumn
-##
-##   Revision 1.10  2004/07/14 12:04:46  kpalin
-##   New version for genome wide alignments.
-##
-##   Revision 1.9  2004/04/14 07:54:10  kpalin
-##   Checking in new version code for distribution.
-##
-##
 
 
 
@@ -215,7 +136,7 @@ ext_modList= [modMatrix,modAlignedCols,modAlign,modDist]
 ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
 
 setup (name = 'EEL',
-       version = '2.0pre4',
+       version = time.strftime("%y%m%d"),#'2.0pre4',
        url = "http://www.cs.helsinki.fi/u/kpalin/",
        author = "Kimmo Palin, Matthias Berg, Pasi Rastas",
        author_email = "kimmo.palin@helsinki.fi",
