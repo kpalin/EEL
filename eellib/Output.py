@@ -13,6 +13,9 @@ import math
 
 #
 # $Log$
+# Revision 1.30  2008/02/29 10:08:23  kpalin
+# Cut motif name from the end.
+#
 # Revision 1.29  2008/01/02 08:27:14  kpalin
 # Added sequence names and descriptions to GFF output file.
 #
@@ -188,9 +191,9 @@ def get(data):
     """Returns the data as a string formated as GFF.
 
     data must have the following format:
-    dictionary from Sequence to Matrix to (position,strand,[ambig,allele,snpPos,scoreDif]) to (Score,altScore)"""
+    dictionary from Sequence to Matrix to (position,strand,((ambig,allele,snpPos,scoreDif))) to (Score,altScore)"""
     #output=''
-    # data = {'Sequence':{Matrix:{(position,strand,[ambig,allele,snpPos,scoreDif]):(Score,altScore)}}}
+    # data = {'Sequence':{Matrix:{(position,strand,((ambig,allele,snpPos,scoreDif))):(Score,altScore)}}}
 
     def flatten(mlist):
         olist=[]
