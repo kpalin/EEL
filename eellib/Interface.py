@@ -36,6 +36,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.45  2008/02/29 08:53:32  kpalin
+# Should provide output even when the memory save was used
+#
 # Revision 1.44  2007/12/13 09:33:31  kpalin
 # Fixed PFM file name pretty printing and increased temporary GFF file
 # creation limit.
@@ -791,7 +794,7 @@ If you use '.' as filename the local data are aligned."""
             # Only nextBest fetcher is possible if memSave was used.
             fetcherFun=self.alignment.nextBest
             
-         for i in range(num_of_align):
+        for i in range(num_of_align):
             if self.alignment.memSaveUsed==1 and self.alignment.askedResults<=len(self.alignment.bestAlignments):
                 self.show("Can't give more alignments. Don't remember those")
                 break
