@@ -11,6 +11,9 @@ CUTOFF_PVALUE=2
 
 #
 # $Log$
+# Revision 1.21  2007/09/10 14:19:39  kpalin
+# Korjattiin KL etäisyyksien laskentaa
+#
 # Revision 1.20  2007/03/14 08:35:58  kpalin
 # Added universal newline support for reading PFM:s
 #
@@ -271,7 +274,7 @@ class Matrix:
                             self.LLMatrix[0],sum))
         self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*Matrix.pseudoCount))/tot),
                             self.LLMatrix[1],sum))
-        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqC*Matrix.pseudoCount))/tot),
+        self.M_weight.append(map(lambda x,tot: log2((x+(self.freqG*Matrix.pseudoCount))/tot),
                             self.LLMatrix[2],sum))
         self.M_weight.append(map(lambda x,tot: log2((x+(self.freqT*Matrix.pseudoCount))/tot),
                             self.LLMatrix[3],sum))
@@ -529,7 +532,8 @@ def getAllTFBS(sequence,cutoff,matlist,cutoffType):
         ret={}
     else:
         Mat=matlist[:]
-        ret=_c_matrix.getAllTFBSwithBg(Mat,sequence,cutoff,Matrix.backGround)
-
-
+        if Matrix.backGround == None:
+            ret=_c_matrix.getAllTFBSzeroOrderBG(Mat,sequence,cutoff,Matrix.freqA,Matrix.freqC,Matrix.freqG,Matrix.freqT)
+        else:
+            ret=_c_matrix.getAllTFBSMarkovBG(Mat,sequence,cutoff,Matrix.backGround)
     return ret
