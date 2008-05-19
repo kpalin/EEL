@@ -3,16 +3,16 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <map>
 #include <string>
 #include <sstream>
 #include <list>
-#include <deque>
+#include <queue>
 #include <time.h>
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
 #include <algorithm>
-
 
 using namespace std;
 
@@ -20,12 +20,11 @@ using namespace std;
 #include "debugTools.h"
 
 
-#ifndef SEQ_BUFFER_SIZE
-#define SEQ_BUFFER_SIZE 15000000
-#endif
-
 /*
  * $Log$
+ * Revision 1.20  2008/02/29 09:10:09  kpalin
+ * Report all snps
+ *
  * Revision 1.19.2.1  2008/01/21 12:51:02  kpalin
  * Now report all, even weak, SNPs hitting binding sites.
  *
@@ -84,65 +83,8 @@ unsigned long py_fileLikeTell(PyObject *py_file);
 int py_fileLikeSeek(PyObject *py_file, unsigned long pos);
 
 
-
-PyObject *SNPdat::buildPySNP(int refPos)
-{
-  return Py_BuildValue("(ccid)",this->ambig,this->allele,refPos-this->pos,this->scoreDif);
-}
-
-PyObject *TFBShit::buildPySNPs()
-{
-  int size=this->sigGenotype.size();
-  int realSize=0;
-  PyObject *ret=PyTuple_New(size);
-  assert(ret);
-  assert(PyTuple_Check(ret));
-  printDebug("refcount(new snp tuple of size %d)=%d",size,getRefCount(ret));
-  assert(PyTuple_Size(ret)==0 || getRefCount(ret)==1);
-
-  for(unsigned int i=0;i<this->sigGenotype.size();i++) {
-    if(this->sigGenotype[i].allele!='N' || fabs(this->sigGenotype[i].scoreDif)>LARGE_AFFY_DELTA) {
-      PyObject *obj=this->sigGenotype[i].buildPySNP(this->mat->length());
-      assert(getRefCount(obj)==1);
-#ifndef NDEBUG
-      assert(PyTuple_Check(obj));
-      char *al=PyString_AsString(PyTuple_GetItem(obj,1));
-      assert(*al=='A'||*al=='C'||*al=='G'||*al=='T'||*al=='N');
-#endif
-      PyTuple_SetItem(ret,realSize++,obj);
-      printDebug("refcount(ret)=%d (after SetItem)",getRefCount(ret));
-      assert(getRefCount(obj)==1);
-
-    }
-  }
-  if(size!=realSize) {
-    int rval=_PyTuple_Resize(&ret,realSize);
-    assert(rval==0);
-    rval=0;
-  }
-  printDebug("refcount(ret tuple of size %d)=%d",PyTuple_Size(ret),getRefCount(ret));
-  assert(PyTuple_Size(ret)==0 || getRefCount(ret)==1);
-
-  return ret;
-}
-
-int SNPdat::diffAllele(SNPdat &other)
-{
-  return this->pos==other.pos && this->ambig==other.ambig && this->allele!=other.allele;
-}
-int SNPdat::operator==(SNPdat &other)
-{
-  return this->pos==other.pos && this->allele==other.allele && this->ambig==other.ambig;
-}
-
-bool operator<(const class TFBSscan &t1, const class TFBSscan &t2){
-  return t1.length()<t2.length() || (t1.length()==t2.length() && t1.py_matrix<t2.py_matrix);
-}
-
-bool lessThan(TFBSscan* t1,TFBSscan* t2){
-  return *t1<*t2;
-}
-
+//################################################################################
+// Misc. helper methods 
 
 //gets a Python list of lists (Matrix)
 vector<vector<double> > parse(PyObject* listoflists)
@@ -191,10 +133,6 @@ void drawvector(vector<vector<double> > ret)
       cout<<endl;
     }
 }  
-
-
-
-
 
 
 char *getAllels(char IUPAC)
@@ -303,6 +241,8 @@ void addMatchWithKey(PyObject *dict,PyObject *key,int const pos,char const stran
 }
 
 
+//################################################################################
+// BG object definitions and methods 
 
 uint32_t const nucl_A=0,nucl_C=1,nucl_G=2,nucl_T=3;
 
@@ -1122,821 +1062,16 @@ int py_fileLikeSeek(PyObject *py_file, unsigned long pos)
 
 
 //################################################################################
-
-//################################################################################
-//################################################################################
-
-
-void TFBSscan::halfHistories()
-{
-  // Remove the SNPs that we have past and left behind
-
-//   cout<<"halving"<<endl;
-#ifndef NDEBUG
-  int before=this->history.size();
-#endif
-
-  deque<deque<double> >::iterator Iter=this->history.begin();
-  deque<deque<double> >::iterator compl_Iter=this->compl_history.begin();
-  // Remove every second value
-  for(int i=0;i<this->history.size();i++) {
-    this->compl_history.erase(this->compl_history.begin()+i);
-    this->history.erase(this->history.begin()+i);
-  }
-  assert((before>>1)==this->history.size());
-  assert(this->history.size()>0);
-  assert(this->compl_history.size()>0);
-}
-
-void printIntBits(int val)
-{
-   char str[33];
-   uint32_ttoStr(str,(uint32_t)val);
-   printf("%s %d\n",str,val);
-}
-
-vector<int> snpIndexFromCode(int snpCode,int snpCount)
-{
-  vector<int> ret;
-  int  ind;
-
-
-  for(int i=0;i<snpCount  ;i+=1) {
-    ind=snpCode & 1;
-    ret.push_back((i<<1)|ind);
-    snpCode=snpCode>>1;
-  }
-  return ret;
-}
-
-vector<double> TFBSscan::WatsonScore() 
-{
-  vector<double> ret;
-  
-  for(unsigned int i=0;i<this->history.size();i++) {
-    ret.push_back(this->history[i].front());
-  }
-
-  return ret;
-}
-
-
-vector<double> TFBSscan::CrickScore() 
-{
-  vector<double> ret;
-  for(unsigned int i=0;i<this->compl_history.size();i++) {
-    ret.push_back(this->compl_history[i].front());
-  }
-
-  return ret;
-}
-
-TFBSscan::TFBSscan(PyObject *mat,double cutoff)
-{
-  this->py_matrix=mat;
-  this->bound=cutoff;
-
-
-#ifndef NDEBUG
-  PyObject *name=PyObject_GetAttrString(this->py_matrix,"name");
-  cerr <<PyString_AsString(name)<<" bound:"<<cutoff<<endl;
-  Py_DECREF(name);
-#endif
-
-
-  PyObject *matListList=PyObject_GetAttrString(this->py_matrix,"M_weight");
-  if(!matListList) {
-    PyErr_SetString(PyExc_ValueError,"Malformed matrix");
-    return;
-  }
-  this->M=parse(matListList);
-  if(this->M.empty()||this->M.size()==0) {
-    PyErr_SetString(PyExc_ValueError,"Malformed matrix");
-    return;
-  }
-  this->mat_length=this->M[0].size();
-  this->history.push_front( deque<double>(this->mat_length,0.0) );
-  this->compl_history.push_front(deque<double>(this->mat_length,0.0));
-}
-
-void TFBSscan::doubleHistory()
-{
-  int hSize=this->history.size();
-  for(int i=0;i<hSize;i++) {
-    this->history.push_back(this->history[i]);
-  }
-
-  assert(hSize==this->compl_history.size());
-
-  for(int i=0;i<hSize;i++) {
-    this->compl_history.push_back(this->compl_history[i]);
-  }
-
-
-
-
-  // These range inserts are not good for you
-//   this->history.insert(this->history.end(),
-// 		       this->history.begin(),this->history.end());
-//   this->compl_history.insert(this->compl_history.end(),
-// 			     this->compl_history.begin(),this->compl_history.end());
-
-  // Neither are these 
-//   deque<deque<double> >::iterator hEnd=this->history.end();
-
-//   for(deque<deque<double> >::iterator hI=this->history.begin();
-//       hI<hEnd;hI++) {
-//     this->history.push_back(*hI);
-//   }
-
-//   deque<deque<double> >::iterator chEnd=this->compl_history.end();
-
-//   for(deque<deque<double> >::iterator chI=this->compl_history.begin();
-//       chI<chEnd;chI++) {
-//     this->compl_history.push_back(*chI);
-//   }
-
-
-
-}
-  
-void TFBSscan::nextChar(char const chr)
-{
-
-  char *allels=getAllels(chr);
-
-
-  if(allels==NULL) {
-    this->nextACGT(chr);
-  } else {
-    int newStart=this->history.size();
-    for(int allel_p=0;allel_p<2;allel_p++) {
-      //this->SNPs.push_back(SNPdat(chr,allels[allel_p],0));
-      if(allel_p==0) {
-	//newStart=this->history.size();
-
-	this->doubleHistory();
-	this->nextACGT(allels[allel_p],0,newStart);
-      } else if(allel_p==1) {
-	this->nextACGT(allels[allel_p],newStart);
-      } else {
-	cout<<"Nobody expects the Spanish Inquisition!"<<endl;
-      }
-    }
-//      printf("added snp buffers: %d\n",this->history.size());
-  }
-
-
-}
-
-
-void TFBSscan::nextACGT(char const chr,int fromCode,int toCode)
-{
-  //printf("chr: %c fromCode: %d history.size(): %d\n",chr,fromCode,this->history.size());
-  if(toCode<=fromCode) {
-    toCode=this->history.size();
-  }
-#ifndef NDEBUG
-  if(toCode>8) {
-    printf("toCode: %d\n",toCode);
-  }
-#endif
-  for(int i=fromCode;i<toCode;i++) {
-    this->nextACGTsingle(chr,i);
-    //cout<<i<<endl;
-  }
-
-}
-
-void TFBSscan::nextACGTsingle(char const chr,int snpCode)
-{
-  int nucleotide=-1,compl_nucleotide=-1;
-
-  assert(snpCode>=0 && snpCode<this->history.size());
-  //histories are used like queues
-  this->history[snpCode].pop_front();
-  this->history[snpCode].push_back(0.0);
-  
-  this->compl_history[snpCode].pop_front();
-  this->compl_history[snpCode].push_back(0.0);
-  
-
-  switch(chr) {
-  case 'A':
-    //nucleotide stores in which line of the matrix is to search
-    nucleotide=0;        
-    compl_nucleotide=3;
-    break;
-  case 'C':
-    nucleotide=1;
-    compl_nucleotide=2;
-    break;
-  case 'G':
-    nucleotide=2;
-    compl_nucleotide=1;
-    break;
-  case 'T':
-    nucleotide=3;
-    compl_nucleotide=0;
-    break;
-  default:
-    //cerr<<"Wrong letter in Sequence! Reading it like 'N'"<<endl;
-  case 'N': 
-  case 'X':
-    //histories are used like queues
-    this->history[snpCode].pop_front();
-    this->history[snpCode].push_back(-1000.0);
-    this->compl_history[snpCode].pop_front();
-    this->compl_history[snpCode].push_back(-1000.0);
-
-    // in case of 'N' a specific value is added to the histories
-    // to make sure, that it becomes no hit
-    deque<double>::reverse_iterator iter=this->history[snpCode].rbegin();
-    deque<double>::iterator compl_iter=this->compl_history[snpCode].begin();
-      
-    for(int j=0; j<this->mat_length; j++) {
-      *iter+=-1000.0;              //what do I add best to the histories?
-      ++iter;  
-      
-      *compl_iter+=-1000.0;        //what do I add best to the histories?
-      ++compl_iter;
-    }
-    nucleotide=-1;
-    compl_nucleotide=-1;
-    return;
-    break;
-  }
-  // If we got a proper nucleotide
-  // Add the score from nucleotide seq[seq_i] to the lists.
-  deque<double>::reverse_iterator iter=this->history[snpCode].rbegin();
-  deque<double>::iterator compl_iter=this->compl_history[snpCode].begin();
-
-  for(int j=0; j<this->mat_length; j++) {
-    //printf("pos:%d score:%g\n",j,this->M[nucleotide][j]);      
-    *iter+= this->M[nucleotide][j];
-    ++iter; 
-	  
-    //*compl_iter+=M[compl_nucleotide][mat_length-j-1];
-    *compl_iter+=this->M[compl_nucleotide][j];
-    ++compl_iter;
-  }
-
- //  printf("\n%c %d\n",chr,snpCode);
-//   for(unsigned int j=0;j<this->history[snpCode].size();j++) {
-//     printf("%g,",this->history[snpCode][j]);
-//   }
-//   printf("\n");
-  
-
-}
-
-TFBShit::TFBShit(TFBSscan* mat,unsigned int seqPos,char strand)
-{
-  this->mat=mat;
-  this->pos=seqPos-mat->length()+1; // seqPos is the sequence number of the last nucleotide of the site.
-  this->strand=strand;
-  this->score=-DBL_MAX;
-  this->minScore=DBL_MAX;
-}
-
-void TFBShit::addHit(double Score,vector<class SNPdat> &genotype)
-{
-
-  // Be nice and give the maximum score if both alleles are accepted.
-  this->score=max(this->score,Score);
-  this->minScore=min(this->score,Score);
-
-
-//   printf("%g: ",Score);
-//   for(int i=0;i<genotype.size();i++) {
-//     printf("%d%c%c ",genotype[i].pos,genotype[i].ambig,genotype[i].allele);
-//   }
-//   cout<<endl;
-
-
-  if(this->sigGenotype.size()==0 && genotype.size()>0) {
-    this->sigGenotype=genotype;
-  } else {
-    assert(this->sigGenotype.size()==genotype.size());
-    for(unsigned int i=0;i<this->sigGenotype.size();i++) {
-      assert(this->sigGenotype[i].pos==genotype[i].pos);
-      assert(this->sigGenotype[i].ambig==genotype[i].ambig);
-      if(this->sigGenotype[i].allele!=genotype[i].allele) {
-// 	printf("N:ing. %d%c%c %d%c%c\n",this->sigGenotype[i].pos,this->sigGenotype[i].ambig,this->sigGenotype[i].allele,genotype[i].pos,genotype[i].ambig,genotype[i].allele);
-	this->sigGenotype[i].allele='N';
-      }
-    }
-
-  
-  }
-
-#ifndef NDEBUG
-  if(this->sigGenotype.size()>0) {
-    //int kokoe=this->sigGenotype.size();
-    for(unsigned int i=0;i<this->sigGenotype.size();i++) {
-      SNPdat apu=this->sigGenotype[i];
-      if(!(this->sigGenotype[i].allele=='A' ||
-	   this->sigGenotype[i].allele=='C' ||
-	   this->sigGenotype[i].allele=='G' ||
-	   this->sigGenotype[i].allele=='T' ||
-	   this->sigGenotype[i].allele=='N'))
-	printf("i=%d size:%d pos,ambig,al %d %d %d\n",i,this->sigGenotype.size(),this->sigGenotype[i].pos,this->sigGenotype[i].ambig,this->sigGenotype[i].allele);
-    }
-  }
-
-#endif
-}
-
-
-char *SNPdat::alleles()
-{
-  return getAllels(this->ambig);
-}
-
-double TFBSscan::setSNPscoreDif(SNPdat &snp,int crick)
-{
-
-  char *allels=snp.alleles();
-  int pos=this->length()-snp.pos-1;
-
-  assert(allels);
-  assert(snp.pos>=0);
-
-
-  if(pos>=0) {  // SNPs in the background context does not affect this.
-    assert(pos>=0);
-    assert(pos<this->length());
-
-    snp.scoreDif=this->matItem(pos,allels[0],crick)-this->matItem(pos,allels[1],crick);
-  } else {
-    snp.scoreDif=0.0;
-  }
-
-  return snp.scoreDif;
-
-
-}
-
-double TFBSscan::matItem(int i,char nucl,int crick)
-{
-  int code=TFBSscan::ACGTtoCode(nucl);
-
-  if(crick) {
-    code=3-code;
-    i=this->length()-1-i;
-  }
-
-  assert(i>=0);
-  assert(i<this->length());
-  assert(code<4 && code>=0);
-
-  return this->M[code][i];
-}
-
-int TFBSscan::ACGTtoCode(char nucl)
-{
-  int nucleotide;
-
-  switch(nucl) {
-  case 'A':
-    //nucleotide stores in which line of the matrix is to search
-    nucleotide=0;        
-    break;
-  case 'C':
-    nucleotide=1;
-    break;
-  case 'G':
-    nucleotide=2;
-    break;
-  case 'T':
-    nucleotide=3;
-    break;
-  default:
-    nucleotide=-1;
-  }
-
-
-  // Complement is 3-nucleotide
-  return nucleotide;
-}
- 
-vector<SNPdat> TFBShelper::getSNPs(int snpCode,int matInd,int crick)
-{
-
-  // Get SNPs for the matrix matInd.  This might have less SNP matches 
-  // than the recorded background region.
-
-  vector<SNPdat> ret;
-
-
-  if(this->SNPcount()>0) {
-
-    // Correct the snpCode for the larger number of SNPs
-    if(matInd>=0 && this->matricies[matInd]->allelCount()<this->allelCount()) {
-      snpCode*=this->allelCount()/this->matricies[matInd]->allelCount();
-    }
-
-    vector<int> ind=snpIndexFromCode(snpCode,this->SNPcount());
-//     if(this->SNPcount()>2) {
-//       for(int i=0;i<this->SNPs.size();i++){
-// 	printf("%d%c%c\n",this->SNPs[i].pos,this->SNPs[i].ambig,this->SNPs[i].allele);
-//       }
-//     }
-    for(unsigned int i=0;i<ind.size();i++) {
-      assert(ind[i]<(int)this->allelCount());
-      if(matInd<0 || this->SNPs[ind[i]].pos<(int)(this->matricies[matInd]->length()+this->bgOrder())) {
-	// Don't record the SNPs that are not on the matrices region.
-
-	// Make a copy
-	SNPdat curSnp=this->SNPs[ind[i]];
-	this->matricies[matInd]->setSNPscoreDif(curSnp,crick);
-	ret.push_back(curSnp);
-      }
-    }
-  }
-  
-  return ret;
-  
-}
-
-
-
-
-vector<TFBShit*> TFBShelper::getMatches()
-{
-
-  vector<TFBShit*> ret;
-#ifndef NDEBUG
-  if(this->SNPcount()>3) {
-    printf("SNPs: %d\n",this->SNPcount());
-  }
-#endif
-
-  for(unsigned int matInd=0;matInd<this->matrixCount();matInd++) {
-    if(((unsigned int)this->matricies[matInd]->length())>this->seqPos()) {
-      continue;
-    }
-
-
-    vector<double> WatsonScores=this->matricies[matInd]->WatsonScore();
-    vector<double> CrickScores=this->matricies[matInd]->CrickScore();
-    double scoreBound=this->matricies[matInd]->bound;
-
-    class TFBShit *watson=NULL,*crick=NULL;
-
-    for(unsigned int snpCode=0;snpCode<this->matricies[matInd]->allelCount();snpCode++) {
-      assert(WatsonScores.size()==CrickScores.size());
-      assert(WatsonScores.size()==this->matricies[matInd]->allelCount());
-      double bgProb=this->getBGprob(matInd,snpCode);
-      double WatsonScore=WatsonScores[snpCode]-bgProb;
-      double CrickScore=CrickScores[snpCode]-bgProb;
-      if(WatsonScore>scoreBound) {
-	if(!watson) {
-	  watson=new TFBShit(this->matricies[matInd],this->seqPos(),'+');
-	}
-// 	printf("bgprob:%g, watsonscore:%g %d\n",bgProb,WatsonScore,snpCode);
-	vector<SNPdat> mySNPs=this->getSNPs(snpCode,matInd);
-	watson->addHit(WatsonScore,mySNPs);
-      }
-      if(CrickScore>scoreBound) {
-	if(!crick) {
-	  crick=new TFBShit(this->matricies[matInd],this->seqPos(),'-');
-	}
-	vector<SNPdat> mySNPs=this->getSNPs(snpCode,matInd,1);
-	crick->addHit(CrickScore,mySNPs);
-      }
-    }
-    if(watson) {
-      ret.push_back(watson);
-    }
-    if(crick) {
-      ret.push_back(crick);
-    }
-  }
-  return ret;
-}
-
-double TFBShelper::getBGprob(int matInd,int snpCode)
-{
-
-  if(!this->haveBG) {
-    return 0.0;
-  }
- 
-  TFBSscan *mat=this->matricies[matInd];
-  unsigned int matAlleles=mat->allelCount();
-
-  int pos=mat->length()-1;
-
-  double bgP=-DBL_MAX;
-  int alleleFactor=this->allelCount()/matAlleles;
-
-
-#ifndef NDEBUG
-  if(this->allelCount()!=this->bg.size()) {
-    printf("allels=%d  bg.size()=%d bgProb.size()=%d\n",this->allelCount(),this->bg.size(),this->probBuffer.size());
-  }
-  assert(this->allelCount()==this->bg.size());
-  double oldBgP=this->probBuffer[snpCode*alleleFactor][pos];
-
-
-  // Return the most likely background probability i.e. Be conservative.
-  for(int sCode=snpCode*alleleFactor;sCode<(snpCode+1)*alleleFactor;sCode++) {
-    //printIntBits(sCode);
-    bgP=max(bgP,this->probBuffer[sCode][pos]);
-    // Since we report the SNPs in the markov context, we should get equal values here. 
-    // i.e. this should be innecessary loop.
-    if(fabs(oldBgP-bgP)>=1e-5) {
-      printf("ERO: %g\n",fabs(oldBgP-bgP));
-      vector<int> ind=snpIndexFromCode(snpCode,this->SNPcount());
-      for(unsigned int i=0;i<ind.size();i++) {
-	printf("%d%c%c\n",this->SNPs[i].pos,this->SNPs[i].ambig,this->SNPs[i].allele);
-      }
-      assert(fabs(oldBgP-bgP)<1e-5);
-
-    }
-  }
-#else
-  bgP=this->probBuffer[snpCode*alleleFactor][pos];
-
-#endif
-
-  return bgP;
-}
-
-
-vector<double> TFBShelper::getBGprobs(int matInd)
-{
-
-  vector<double> P;
-
-  for(unsigned int i=0;i<this->probBuffer.size();i++) {
-    P.push_back(this->getBGprob(matInd,i));
-  }
-  //printf("Giving %g for mat length %d(%d)\n",P,mat->length(),pos);
-
-  return P;
-}
-
-TFBShelper::TFBShelper(matrix_bgObject *bgIn,vector<TFBSscan*> &mat) : matricies(mat)
-{ 
-  this->seqCount=0;
-
-  this->maxLen=0;
-
-  for(unsigned int i=0;i<this->matricies.size();i++) {
-#ifndef NDEBUG
-    cout<<this->matricies[i]->length()<<endl;
-#endif
-    this->maxLen=max(this->maxLen,this->matricies[i]->length());
-  }
-
-
-  this->haveBG=(bgIn!=NULL);
-  if(this->haveBG) {
-#ifndef NDEBUG
-    printf("Best log2(p)=%g\n",logBestP(bgIn));
-#endif
-    this->bg.push_back(*bgIn);  //Copy !!!
-    this->maxLen+=this->bgOrder();
-    this->probBuffer.push_back(deque<double>(this->maxLen,0.0));
-  }
-
-}
-
-
-void TFBShelper::removeScannerHistories()
-{
-
-
-  int snpId=0;
-  unsigned int lookBackDist=0;
-
-  // Longest matrix first
-  for(int i=this->matricies.size()-1;i>=0 && snpId<(int)this->SNPs.size();i--) {
-    // Loop min(number of matricies, number of SNPs) times.
-
-
-    lookBackDist=this->matricies[i]->length()+this->bgOrder();
-    
-
-    // Furthest SNP first
-    while(snpId<(int)this->SNPs.size() && this->SNPs[snpId].pos>(int)lookBackDist) {
-      snpId++;
-    }
-    if(snpId<(int)this->SNPs.size() && this->SNPs[snpId].pos==(int)lookBackDist) {
-      this->matricies[i]->halfHistories();
-    }
-  }
-
-
-
-
-}
-
-void TFBShelper::doubleBackground()
-{
-
-  int pbSize=this->probBuffer.size();
-  int bgSize=this->bg.size();
-  for(int i=0;i<pbSize;i++) {
-    this->probBuffer.push_back(this->probBuffer[i]);
-  }
-
-  // g++ doesn't have anything against this, but since it doesn't work
-  // for this->bg I don't want to use it here either.
-  //this->probBuffer.insert(this->probBuffer.end(),
-  // this->probBuffer.begin(),this->probBuffer.end());
-
-  for(int i=0;i<bgSize;i++) {
-    this->bg.push_back(this->bg[i]);
-  }
-
-
-  // For some reason, G++ doesn't like this:
-
-  //  this->bg.insert(this->bg.end(),
-  //		  this->bg.begin(),this->bg.end());
-}
-
-void TFBShelper::nextChar(char chr)
-{
-
-
-  this->seqCount++;
-
-
-
-  for(unsigned int i=0;i<this->SNPs.size();i++) {
-    this->SNPs[i].pos++;
-  }
-  //static int erot=0;
-
-
-  // Remove the SNPs that we have past and left behind
-  if(this->SNPs.size()>0) {
-
-    this->removeScannerHistories();
-
-    if( this->SNPs[0].pos>this->maxLen) {
-
-
-
-      // Remove the passed SNP alleles
-      this->SNPs.pop_front();
-      this->SNPs.pop_front();
-      
-      if(this->haveBG) {
-	// Remove record keeping for the alleles for the background
-	deque<deque<double> >::iterator probIter=this->probBuffer.begin();
-	deque<matrix_bgObject>::iterator bgIter=this->bg.begin();
-	// Remove every second value
-	for(int i=0;i<this->probBuffer.size();i++) {
-	  this->probBuffer.erase(this->probBuffer.begin()+i);
-	  this->bg.erase(this->bg.begin()+i);
-	}
-// 	while(probIter!=this->probBuffer.end()) {
-// 	  probIter=this->probBuffer.erase(probIter);
-// 	  probIter++;
-// 	  bgIter=this->bg.erase(bgIter);
-// 	  bgIter++;
-// 	}
-
-      }
-      
-    }
-  }
-
-
-  
-  
-  char *allels=getAllels(chr);
-
-
-  if(allels && this->SNPs.size()>=(unsigned int)2*MAX_SNP_COUNT) {
-    // Safety for long stretch of SNPs. 
-#ifdef DEBUG_OUTPUT
-    printf("Hitting MAX_SNP_COUNT on position %d.\n",this->seqCount);
-#endif
-    allels=NULL;
-    chr='N';
-  }
-
-  if(allels) {
-    for(int allel_p=0;allel_p<2;allel_p++) {
-      this->SNPs.push_back(SNPdat(chr,allels[allel_p],0));
-    }
-  }
-  for(unsigned int i=0;i<this->matricies.size();i++) {
-    this->matricies[i]->nextChar(chr);
-  }
-
-
-  if(this->haveBG) {
-    if(allels==NULL) {
-      this->nextACGT(chr);
-    } else {
-      int newStart=this->probBuffer.size();
-
-      this->doubleBackground();
-
-      for(int allel_p=0;allel_p<2;allel_p++) {
-	if(allel_p==0) {
-	  this->nextACGT(allels[allel_p],0,newStart);
-	} else if(allel_p==1) {
-	  this->nextACGT(allels[allel_p],newStart);
-	} else {
-	  cout<<"Now something completely different!"<<endl;
-	}
-      }
-    }
-//     printf("added BG snps: %d buffers: %d\n",this->SNPcount(),this->probBuffer.size());
-  }
-  
-//   if(chr!='A' && chr!='C' && chr!='G' && chr!='T' ) {
-//     printf("snps: %d buffers: %d bg=%d\n",this->SNPcount(),this->probBuffer.size(),this->haveBG);
-//   }
-
-}
-
-void TFBShelper::nextACGT(char const chr,unsigned int startFrom,unsigned int upTo)
-{
-
-  if(upTo<=startFrom) {
-    upTo=this->probBuffer.size();
-  }
-
-  for(unsigned int i=startFrom;i<upTo;i++) {  // ACG or T with previous snps
-
-    double bgP=logPnextInStream(&this->bg[i],chr);
-
-    // Iterate the buffer
-    this->probBuffer[i].pop_back();
-    this->probBuffer[i].push_front(0.0);
-
-  // Add the probabilities for this character
-    for(int j=0;j<this->maxLen;j++) {
-      this->probBuffer[i][j]+=bgP;
-    }
-  }
-}
-
-vector<TFBSscan*> parseMatricies(int *count,PyObject *mats,PyObject *cutoffs,double cutoff)
-{
-  double bound;
-  *count=PySequence_Length(mats);
-  vector<TFBSscan*> ret;
-  
-
-
-  assert(PySequence_Check(mats));
-  for(int i=0;i<*count;i++) {
-    //assert(PySequence_Check(ret[i].py_matrix));
-
-    if(cutoffs) {
-      PyObject *pyBoundNumber=PySequence_GetItem(cutoffs,i);
-      PyObject *pyBound=PyNumber_Float(pyBoundNumber);
-      bound=PyFloat_AsDouble(pyBound);
-      Py_DECREF(pyBoundNumber);
-      Py_DECREF(pyBound);
-    } else {
-      bound=cutoff;
-    }
-    PyObject *pySeq=PySequence_GetItem(mats,i);
-    ret.push_back(new TFBSscan(pySeq,bound));
-    Py_XDECREF(pySeq);
-
-
-    if(PyErr_Occurred()!=NULL) {
-      return vector<TFBSscan*>();
-    }
-  }
-
-
-
-  return ret;
-}
-
 // c++ p-value code generously donated by Pasi Rastas under GPL
-
-#include <iostream>
-#include <map>
-#include <vector>
 
 #ifdef  _GLIBCXX_DEBUG
 #include <ext/hash_map>
-// #include <debug/hash_map>
 using __gnu_debug::hash_map;
 #else
 #include <ext/hash_map>
 using __gnu_cxx::hash_map;
 #endif
-typedef vector< int > intArray;
-typedef vector< double > doubleArray;
 typedef hash_map< int, double > myHashMap;
-typedef vector< intArray > intMatrix;
-typedef vector< doubleArray > doubleMatrix;
-typedef vector< unsigned char > charArray;
 
 //this one uses table
 int tresholdFromP(const intMatrix &mat, const double &p,const doubleArray bgDist)
@@ -2279,230 +1414,1121 @@ matrix_thresholdFromP(PyObject *self, PyObject *args)
 
 
 
+//################################################################################
+// TFBS search
+
+// Code-character transformation tables
+static const int code_to_char[] = {'A', 'C', 'G', 'T', 'N', 'R', 'Y', 'M', 'K', 'S', 'W'};
+static const int snptable[][2] = {{0,2},  // R -> AG
+    {1,3},  // Y -> CT
+    {0,1},  // M -> AC
+    {2,3},  // K -> GT
+    {1,2},  // S -> GC
+    {0,3}}; // W -> AT
 
 
 
+static PyObject * matrix_getAllTFBSzeroOrderBG(PyObject *self, PyObject *args){
 
-//Returns a map from matrix to index to score of possible TFBS.
-//The arguments are matrix, sequence and bound.
-static PyObject *
-matrix_getAllTFBSwithBG(PyObject *self, PyObject *args)
-{
-  char *Seq=NULL; 
-  PyObject *py_infile,*py_cutoff,*py_matlist;
-  double cutoff;
-  int matrixCount=-1,seq_i;
+    // Check parameters
+    PyObject *py_sequence,*py_cutoff,*py_matlist, *py_bgA, *py_bgC, *py_bgG, *py_bgT;
 
-  int loop_status;
-
-  int bytes_read,buf_p;
-  int const loop_continue=1,loop_break=2,loop_OK=0;
-  matrix_bgObject *bg=NULL;
-
-
-#ifdef TIME_TFBS
-  clock_t before,after;
-
-  // Start timing
-  before=clock();
-#endif
-
-
-  if (!PyArg_ParseTuple(args, "OOO|O" ,&py_matlist,&py_infile,&py_cutoff,&bg)){
-    return NULL;
-  }
-  // Check background
-  if((PyObject*)bg==Py_None) {
-    bg=NULL;
-  }
-
-
-  // Check cutoff
-  if(PyNumber_Check(py_cutoff)) {
-    cutoff=PyFloat_AsDouble(PyNumber_Float(py_cutoff));
-    py_cutoff=NULL;
-  } else if( PySequence_Check(py_cutoff) && 
-	     PySequence_Length(py_cutoff)==PySequence_Length(py_matlist) ) {
-    cutoff=0.0;
-  } else {
-    PyErr_SetString(PyExc_ValueError,"Wrong number of cutoffs/matrices.");
-    return 0;
-  }
-
-  // Use subroutine to parse matrices
-  vector<TFBSscan*> Mat=parseMatricies(&matrixCount,py_matlist,py_cutoff,cutoff);
-
-  if(Mat.size()==0 || PyErr_Occurred()!=NULL) {
-    return 0;
-  }
-  sort(Mat.begin(),Mat.end(),lessThan);
-  TFBShelper scanner(bg,Mat);
-  /*
-  printf("matricies: %d cutoffs: %d cutoff: %g \n",
-	 PySequence_Length(py_matlist),(py_cutoff?PySequence_Length(py_cutoff):-1),
-	 cutoff);
-
-  */
-  PyObject* ret;
-
-  if(!(ret=PyDict_New())) {
-    PyErr_NoMemory();
-    return 0;
-  }
-  
-
-
-  PyObject *py_read=NULL;
-  
-  
-  unsigned long fileStartPos=py_fileLikeTell(py_infile);
-
-
-  py_read=PyObject_GetAttrString(py_infile,"read");
-
-
-  PyObject *py_readParam=NULL;
-  PyObject *py_strBuf=NULL;
-
-  py_readParam=Py_BuildValue("(l)",SEQ_BUFFER_SIZE);
-
-
-
-
-  loop_status=loop_OK;
-
-
-  bytes_read=1;
-  buf_p=1;
-  
-   
-  for (seq_i=0; bytes_read>0; seq_i++,buf_p++) {
-    if(buf_p>=bytes_read) {
-      //PyObject_Print(PyObject_Repr(py_infile),stdout,0);
-
-      // Reading from a file like object.
-      if(py_strBuf)
-	Py_DECREF(py_strBuf);
-      
-      py_strBuf=PyObject_CallObject(py_read,py_readParam);
-      Seq=PyString_AsString(py_strBuf);
-      bytes_read=PyObject_Size(py_strBuf);
-
-      Seq[bytes_read]=0;
-      buf_p=0;
-      //cout<<"Read "<<bytes_read<<" more bytes"<<endl;
-#ifdef DEBUG_OUTPUT
-      cout<<"."<<flush;
-#endif
-      if(bytes_read==0) {
-	break;
-      }
-    } // End of read.
-    
-    char nuclChr;
-    switch(nuclChr=toupper(Seq[buf_p]))
-      {
-      case '\n':
-      case ' ':
-	seq_i--;
-	loop_status=loop_continue;
-	break;
-      case '>':
-	PyErr_SetString(PyExc_ValueError,"Encountered unexpectedly an another sequence!");
-	// DECREFING??????
-	{
-	  PyObject *pyNextSeq=PyString_FromString("NEXT_SEQ");
-	  PyObject *pyFilePos=PyLong_FromUnsignedLong(py_fileLikeTell(py_infile));
-	  PyDict_SetItem(ret,pyNextSeq,pyFilePos);
-	  Py_DECREF(pyNextSeq);
-	  Py_DECREF(pyFilePos);
-	}
-	loop_status=loop_break;
-	break;
-      default:
-	scanner.nextChar(nuclChr);
-	break;
-      }
-
-
-      
-
-
-    if(loop_status==loop_break) {
-      break;
-    } else if(loop_status==loop_continue) {
-      loop_status=loop_OK;
-      continue;
+    if (!PyArg_ParseTuple(args, "OOOOOOO" ,&py_matlist,&py_sequence,&py_cutoff, &py_bgA, &py_bgC, &py_bgG, &py_bgT)){
+        return NULL;
     }
-    
-    if(seq_i>=0) {  // Don't report matches overlapping the beginning of the sequence
-    
-      vector<TFBShit*> hits=scanner.getMatches();
-      //     if(hits.size()>0) {
-      //       printf("hits: %d pos=%d\n",hits.size(),scanner.seqPos());
-      //     }
-      for(unsigned int i=0;i<hits.size();i++) {
-	PyObject *snps=hits[i]->buildPySNPs();
-	printDebug("refcount(snps of size %d)=%d",PyTuple_Size(snps),getRefCount(snps));
-	assert(PyTuple_Check(snps));
-	assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
-	assert(ret);
-	addMatchWithKey(ret,hits[i]->mat->py_matrix,hits[i]->pos,hits[i]->strand,hits[i]->score,snps,hits[i]->minScore);
 
-#ifndef NDEBUG
-	if((hits[i]->score-hits[i]->minScore)>1.0) {
-	  char *str=PyString_AsString(PyObject_GetAttrString(hits[i]->mat->py_matrix,"name"));
+    // Get background
+    doubleArray bg(4,0);
+    bg[0] = PyFloat_AsDouble(PyNumber_Float(py_bgA));
+    bg[1] = PyFloat_AsDouble(PyNumber_Float(py_bgC));
+    bg[2] = PyFloat_AsDouble(PyNumber_Float(py_bgG));
+    bg[3] = PyFloat_AsDouble(PyNumber_Float(py_bgT));
 
-	  printf("pos=%d %s score_delta=%g\n",hits[i]->pos,str,hits[i]->score-hits[i]->minScore);
-	}
-#endif
-	delete hits[i];
-	hits[i]=NULL;
-	if(PyErr_Occurred()!=NULL) {
-	  return NULL;
-	}
-      }
+    // We need to know how many matrices there are
+    int matrixcount = PySequence_Length(py_matlist);
+
+    // Check cutoff
+    double cutoffs[matrixcount];
+
+    if(PyNumber_Check(py_cutoff)) { // Absolute cutoff, same for each matrix
+        double cutoff=PyFloat_AsDouble(PyNumber_Float(py_cutoff));
+        for (int i = 0; i < matrixcount; ++i){
+            cutoffs[i] = cutoff;
+        }
     }
-    
-  }
+    else if( PySequence_Check(py_cutoff) && PySequence_Length(py_cutoff)==PySequence_Length(py_matlist) )
+    {
+        for (int i = 0; i < matrixcount; ++i){
+            cutoffs[i] = PyFloat_AsDouble(PyNumber_Float(PySequence_GetItem(py_cutoff,i)));
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_ValueError,"Wrong number of cutoffs/matrices.");
+        return NULL;
+    }
 
+    PyObject* ret;
 
-  // Reset file position
-  if(!py_fileLikeSeek(py_infile,fileStartPos)) {
-    return NULL;
-  }
+    if(!(ret=PyDict_New())) {
+        PyErr_NoMemory();
+        return NULL;
+    }
 
-  Py_DECREF(py_readParam);
-  Py_DECREF(py_read);
+    // -----------------
+    // Read the sequence
+    // This supposes that we can read the whole sequence to memory at once
 
-#ifdef TIME_TFBS
-  // End timing
-  after=clock();
-  cout<<"CPU secs: "
-      <<((after-before)*1.0/CLOCKS_PER_SEC<<endl;
+    charArray sequence;
+    vector<int> start_pos;
+    vector<int> end_pos;
+    vector<int> snp_pos;
 
-#endif
+    unsigned long fileStartPos=py_fileLikeTell(py_sequence);
 
-  if(py_strBuf)
-    Py_DECREF(py_strBuf);
+    // Get the length of the sequence
+    int seq_length = PySequence_Length(py_sequence);
 
-  return ret;
+    // Length as a Python object
+    PyObject *py_readParam = Py_BuildValue("(l)",seq_length);
+
+    // We want to call "read" on py_sequence
+    PyObject *py_read = PyObject_GetAttrString(py_sequence,"read");
+
+    // Calling "read" and accessing the resulting string in C++
+    PyObject *py_seq_as_string = PyObject_CallObject(py_read,py_readParam);
+    char * raw_sequence = PyString_AsString(py_seq_as_string);
+
+    int position = 0;
+    int clean = 0;
+    sequence.reserve(seq_length);
+
+    for (int i = 0; i < seq_length; ++i){
+        char nuclChr = toupper(raw_sequence[i]);
+        int code = -1;
+
+        switch (nuclChr){
+            case 'A': code = 0; break;
+            case 'C': code = 1; break;
+            case 'G': code = 2; break;
+            case 'T': code = 3; break;
+            case 'R': code = 5; break;
+            case 'Y': code = 6; break;
+            case 'M': code = 7; break;
+            case 'K': code = 8; break;
+            case 'S': code = 9; break;
+            case 'W': code = 10; break;
+            case '\n':
+                case ' ': code = -1; break;
+                case '>': // Beginning of an another sequence. Shouldn't happen.
+                    PyErr_SetString(PyExc_ValueError,"Encountered unexpectedly an another sequence!");
+                    {
+                        PyObject *pyNextSeq=PyString_FromString("NEXT_SEQ");
+                        PyObject *pyFilePos=PyLong_FromUnsignedLong((unsigned long)sequence.size()+1);
+                        PyDict_SetItem(ret,pyNextSeq,pyFilePos);
+                        Py_DECREF(pyNextSeq);
+                        Py_DECREF(pyFilePos);
+                    }
+                    return ret;
+            case 'N':
+            case 'X':
+                default:  code = 4; break; // Wrong characters are read as N
+        }
+
+        if (code != -1){
+            sequence.push_back(code);
+
+            if (code < 4 && !clean){
+                clean = 1;
+                start_pos.push_back(position);
+            }
+            else if (code >= 4 && clean ){
+                clean = 0;
+                end_pos.push_back(position);
+            }
+            
+            if (code >= 5){
+                snp_pos.push_back(position);
+            }
+            ++position;
+        }
+
+    }
+    end_pos.push_back(position);
+
+    Py_DECREF(py_readParam);
+    Py_DECREF(py_read);
+    Py_DECREF(py_seq_as_string);
+
+    // Reset file position
+    if(!py_fileLikeSeek(py_sequence,fileStartPos)) {
+        return NULL;
+    }
+
+    // The actual scanning part!
+
+    vector<doubleMatrix> matrices;
+    doubleArray cutoffs_parameter;
+    vector<PyObject*> py_matrices;
+    charArray strands;
+
+    // Process the matrices for scanning
+    for (int matrix = 0; matrix < matrixcount; ++matrix){
+        PyObject * py_matrix = PySequence_GetItem(py_matlist,matrix);
+        PyObject * matListList=PyObject_GetAttrString(py_matrix,"freq");
+        if(!matListList) {
+            PyErr_SetString(PyExc_ValueError,"Malformed matrix");
+            return NULL;
+        }
+        doubleMatrix freq_matrix = parse(matListList);
+
+        assert(freq_matrix.size() == 4);
+        int mat_len = freq_matrix[0].size();
+        for (int i = 1; i < 4; ++i){
+            assert(freq_matrix[i].size() == mat_len);
+        }
+
+        // Matrix as given, for scanning Watson strand
+        doubleMatrix pssm;
+
+        for (int i = 0; i < 4;++i){
+            doubleArray row;
+            for (int j = 0; j < mat_len; ++j){
+                row.push_back( (log(freq_matrix[i][j]) - log(bg[i])) / log(2) );
+            }
+            pssm.push_back(row);
+        }
+
+        matrices.push_back(pssm);
+        cutoffs_parameter.push_back(cutoffs[matrix]);
+        py_matrices.push_back(py_matrix);
+        strands.push_back('+');
+
+        // Check positions overlapping SNPs first. 
+        // Assuming there are relatively few SNPs, this shouldn't take too long
+        getHitsWithSNPs(sequence, snp_pos, pssm, bg, cutoffs[matrix], ret, py_matrix, '+');
+
+        // Reverse complement, for Crick strand
+        doubleMatrix pssm_inverse;
+
+        for (int i = 0; i < 4;++i){
+            doubleArray row;
+            for (int j = 0; j < mat_len; ++j){
+                row.push_back( (log(freq_matrix[3 - i][mat_len - j - 1]) - log(bg[i])) / log(2) );
+            }
+            pssm_inverse.push_back(row);
+        }
+
+        matrices.push_back(pssm_inverse);
+        cutoffs_parameter.push_back(cutoffs[matrix]);
+        py_matrices.push_back(py_matrix);
+        strands.push_back('-');
+
+        // SNP positions for reverse complement matrix
+        getHitsWithSNPs(sequence, snp_pos, pssm_inverse, bg, cutoffs[matrix], ret, py_matrix, '-');
+    }
+
+    // Scan "clean" sections of sequence with Aho-Corasick filter algorithm
+    multipleMatrixAhoCorasickLookaheadFiltration(sequence, start_pos, end_pos, matrices, bg, cutoffs_parameter, ret, py_matrices, strands);
+
+    return ret;
 }
 
 
+doubleArray expectedDifferences(const doubleMatrix &mat, const doubleArray &bg)
+{
+    int numA = mat.size();
+    int m = mat[0].size();
+    doubleArray ret(m);
+    
+    for (int i = 0; i < m; ++i)
+    {
+        double max = DBL_MIN;
+        for (int j = 0; j < numA; ++j)
+        {
+            if (max < mat[j][i])
+                max = mat[j][i];
+        }
+        
+        ret[i] = max;
+        
+        for (int j = 0; j < numA; ++j)
+        {
+            ret[i] -= bg[j] * mat[j][i];
+        }
+    }
+    
+    return ret;
+}
+
+
+// Actual scanning subroutine for zero-order background
+// Uses a Aho-Corasick-based filter to find potential matches
+// Scans only the parts of the sequence marked as "clean", ie.
+// no SNPs or symbol N. 
+void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intArray &start_pos, const intArray &end_pos, const vector<doubleMatrix> &matrices, const doubleArray &bg, const doubleArray &tol, PyObject *ret_dict, vector<PyObject*> py_matrices, const charArray &strands)
+{
+
+    const int numA = 4;
+    const int q = 8; 
+
+    intArray m(matrices.size(), 0);
+    int min_length = INT_MAX;
+
+    for (int i = 0; i < (int) matrices.size(); ++i)
+    {
+        m[i] = matrices[i][0].size();
+        min_length = min(min_length, m[i]);
+    }
+        
+    // Calculate entropies for all matrices
+    vector<doubleArray> goodnesses;
+    goodnesses.reserve(matrices.size());
+    
+    for (int i = 0; i < (int)matrices.size(); ++i)
+    {
+        goodnesses.push_back(expectedDifferences(matrices[i], bg));
+    }
+    
+    // Find best window positions for all matrices
+    intArray window_positions;
+    window_positions.reserve(matrices.size());
+    for (int k = 0; k < (int)matrices.size(); ++k)
+    {
+        if (q >= m[k])
+        {
+            window_positions.push_back(0);
+        }
+        else
+        {
+            double current_goodness = 0;
+            for (int i = 0; i < q; ++i)
+            {
+                current_goodness += goodnesses[k][i];
+            }
+            
+            double max_goodness = current_goodness;
+            int window_pos = 0;
+            
+            for (int i = 0; i < m[k] - q; ++i)
+            {
+                current_goodness -= goodnesses[k][i];
+                current_goodness += goodnesses[k][i+q];
+                if (current_goodness > max_goodness)
+                {
+                    max_goodness = current_goodness;
+                    window_pos = i+1;
+                }
+            }
+            window_positions.push_back(window_pos);
+        }
+    }
+        
+    // Calculate lookahead scores for all matrices
+    doubleMatrix T;
+    T.reserve(matrices.size());
+    
+    for (int k = 0; k < (int)matrices.size(); ++k)
+    {
+        doubleArray C(m[k],0);
+        for (int j = m[k] - 1; j > 0; --j) {
+            double max = DBL_MIN;
+            for (int i = 0; i < numA; ++i) {
+                if (max < matrices[k][i][j])
+                    max = matrices[k][i][j];
+            }
+            C[j - 1] = C[j] + max;
+        }
+        T.push_back(C);
+    }
+    
+    // Pre-window scores
+    doubleArray P;
+    P.reserve(matrices.size());
+    for (int k = 0; k < (int)matrices.size(); ++k)
+    {
+        double B = 0;
+        for (int j = 0; j < window_positions[k]; ++j)
+        {
+            double max = DBL_MIN;
+            for (int i = 0; i < numA; ++i) {
+                if (max < matrices[k][i][j])
+                    max = matrices[k][i][j];
+            }
+            B += max;
+        }
+        P.push_back(B);
+    }
+    
+    // Arrange matrix indeces not in window by entropy, for use in scanning
+    intMatrix orders;
+    orders.reserve(matrices.size());
+    doubleMatrix L;
+    L.reserve(matrices.size());
+    
+    for (int k = 0; k < (int) matrices.size(); ++k)
+    {
+        if (q >= m[k])
+        {
+            intArray temp_int;
+            orders.push_back(temp_int);
+            doubleArray temp_dbl;
+            L.push_back(temp_dbl);
+        }
+        else
+        {
+            intArray order(m[k]-q, 0);
+            for (int i = 0; i < window_positions[k]; ++i)
+            {
+                order[i] = i;
+            }
+            for (int i = window_positions[k]+q; i < m[k]; ++i)
+            {
+                order[i-q] = i;
+            }
+            
+            compareRows comp;
+            comp.goodness = &(goodnesses[k]);
+            
+            sort(order.begin(), order.end(), comp);
+            
+            // Scanning lookahead scores
+            orders.push_back(order);
+            
+            doubleArray K(m[k]-q, 0); 
+            for (int j = m[k]-q-1; j > 0; --j)
+            {
+                double max = DBL_MIN;
+                for (int i = 0; i < numA; ++i)
+                {
+                    if (max < matrices[k][i][order[j]])
+                        max = matrices[k][i][order[j]];
+                }
+                K[j - 1] = K[j] + max;
+            }
+            L.push_back(K);
+        }
+    }
+    
+    // Actual automaton construction begins
+    
+    // We first construct a temporary transition table that uses integers to indicate transitions
+    // Pointers cannot be used because vector resizes would mess them up
+    vector<ConstructionACStateMulti> tempACMachine;
+    queue<ConstructionQueueElementMulti> stateQ;
+    
+    // Construct states
+    
+    ConstructionACStateMulti newState;
+    for (int i = 0; i < numA; ++i)
+    {
+        newState.transition[i] = -1;
+    }
+    
+    tempACMachine.push_back(newState);
+    
+    ConstructionQueueElementMulti qElement;
+    qElement.prev = 0;
+    qElement.i = 0;
+    {
+        OutputListElementMulti temp;
+        temp.score = 0;
+        temp.full = false;
+        for (int i = 0; i < (int)matrices.size(); ++i)
+        {
+            temp.matrix = i;
+            qElement.scores.push_back(temp);
+        }
+    }
+    stateQ.push(qElement);
+    
+    while (!stateQ.empty())
+    {
+        qElement = stateQ.front();
+        stateQ.pop();
+        
+        if (qElement.i == q)
+        {
+            tempACMachine[qElement.prev].output.insert(tempACMachine[qElement.prev].output.end(), qElement.scores.begin(), qElement.scores.end());
+        }
+        else if (qElement.i < q)
+        {
+            for (int j = 0; j < numA; ++j)
+            {
+                list<OutputListElementMulti> expand;
+                list<OutputListElementMulti> finished;
+                for (list<OutputListElementMulti>::iterator x = qElement.scores.begin(); x != qElement.scores.end(); ++x)
+                {
+                    if (x->score + matrices[x->matrix][j][qElement.i+window_positions[x->matrix]] + T[x->matrix][qElement.i+window_positions[x->matrix]] + P[x->matrix] >= tol[x->matrix])
+                    {
+                        if (m[x->matrix] == qElement.i + 1)
+                        {
+                            finished.push_back(*x);
+                            finished.back().score += matrices[x->matrix][j][qElement.i];
+                            finished.back().full = true;
+                        }
+                        else 
+                        {
+                            expand.push_back(*x);
+                            expand.back().score += matrices[x->matrix][j][qElement.i + window_positions[x->matrix]];
+                        }
+                    }
+                }
+                
+                
+                if (!expand.empty() || !finished.empty())
+                {
+                    
+                    ConstructionQueueElementMulti newElement;
+                    newState.output.clear();
+                    newState.output.insert(newState.output.end(), finished.begin(), finished.end());
+                    tempACMachine.push_back(newState);
+                    tempACMachine[qElement.prev].transition[j] = tempACMachine.size() - 1;
+                    if (!expand.empty())
+                    {
+                        newElement.prev = tempACMachine.size() - 1;
+                        newElement.scores.insert(newElement.scores.end(), expand.begin(), expand.end());
+                        newElement.i = qElement.i + 1;
+                        stateQ.push(newElement);
+                    }
+                }
+            }
+        }
+    }
+    
+    for (int i = 0; i < numA; ++i)
+    {
+        if (tempACMachine[0].transition[i] == -1)
+            tempACMachine[0].transition[i] = 0;
+    }
+    
+    // Construct fail function and final output function
+    
+    int * fail;
+    fail = new int [tempACMachine.size()]; // temp array for fail function
+    fail[0] = 0; // probably unnecessary
+    
+    queue<int> failQ;
+    for (int i = 0; i < numA; ++i)
+    {
+        if (tempACMachine[0].transition[i] != 0)
+        {
+            failQ.push(tempACMachine[0].transition[i]);
+            fail[tempACMachine[0].transition[i]] = 0;
+        }
+    }
+    while(!failQ.empty())
+    {
+        int current = failQ.front();
+        failQ.pop();
+        for (int i = 0; i < numA; ++i)
+        {
+            if (tempACMachine[current].transition[i] != -1)
+            {
+                int next = tempACMachine[current].transition[i];
+                failQ.push(next);
+                int state = fail[current];
+                while (tempACMachine[state].transition[i] == -1)
+                    state = fail[state];
+                fail[next] = tempACMachine[state].transition[i];
+                tempACMachine[next].output.insert(tempACMachine[next].output.end(), tempACMachine[fail[next]].output.begin(), tempACMachine[fail[next]].output.end());
+                
+            }
+        }
+    }
+    
+    // The final AC automaton that will be used in scanning
+    // Storing transitions as pointers to next state saves a significant amount of time during scanning, as there's no need to do pointer arithmetics
+    FinalACStateMulti * FinalACMachine;
+    FinalACMachine = new FinalACStateMulti[tempACMachine.size()];
+    
+    // Convert the temporary AC automaton to final one using pointers and precompute all transitions
+    
+    for (int j = 0; j < (int) tempACMachine.size(); ++j)
+    {
+        for (int i = 0; i < numA; ++i)
+        {
+            int state = j;
+            while (tempACMachine[state].transition[i] == -1)
+            {
+                state = fail[state];
+            }
+            FinalACMachine[j].transition[i] = &(FinalACMachine[tempACMachine[state].transition[i]]);
+        }
+        FinalACMachine[j].output = tempACMachine[j].output;
+    }
+    
+    delete[] fail;
+    int number_of_states = (int) tempACMachine.size();
+    tempACMachine.clear();
+    
+    // AC automaton is now ready
+    
+    
+    
+    if (number_of_states <= 1)
+    {
+        delete[] FinalACMachine;
+        return;
+    }
+    
+    // Scan the given sequence with the AC automaton
+    
+    FinalACStateMulti * state;
+    
+    charArray::const_iterator x;
+    
+    for (int slice = 0; slice < (int) start_pos.size(); ++slice){
+
+        int start = start_pos[slice];
+        int end = end_pos[slice];
+
+        if (end - start + 1 >= min_length){
+            
+            x = s.begin() + start;
+            state  = FinalACMachine;
+
+            for (int i = start; i < end; ++i )
+            {
+                state = (*state).transition[*x];
+                ++x;
+                if (!(state->output.empty()))
+                {
+                    for (list<OutputListElementMulti>::iterator y = state->output.begin(); y != state->output.end(); ++y)
+                    {
+                        if (y->full == true)
+                        {
+                            PyObject *snps=PyTuple_New(0);
+                            addMatchWithKey(ret_dict,py_matrices[y->matrix],(i-m[y->matrix] + 2),strands[y->matrix],y->score,snps,y->score);
+
+                            continue;
+                        }
+                        if (i - q - window_positions[y->matrix] + 1 >= start && i + m[y->matrix] - q - window_positions[y->matrix] < end)
+                        {
+                            double score = y->score;
+                            int k = y->matrix;
+                            int limit = m[k] - q;
+                            int ii = i - q - window_positions[k] + 1;
+                            double tolerance = tol[k];
+                            intArray::iterator z = orders[k].begin();   
+                            for (int j = 0; j < limit  ;++j)
+                            {
+                                score += matrices[k][s[ii+(*z)]][*z];
+                                if (score + L[k][j] < tolerance)
+                                    break;
+                                ++z;
+                            }
+                            if (score >= tolerance)
+                            {
+                                PyObject *snps=PyTuple_New(0);
+                                addMatchWithKey(ret_dict,py_matrices[k],(i-q-window_positions[k]+2),strands[k],score,snps,score);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    delete[] FinalACMachine;
+}
+
+
+// Finds matches for a single matrix near given SNP positions
+// A bit inefficient, but does the job.
+void getHitsWithSNPs(const charArray &sequence, const intArray &snp_pos, const doubleMatrix &pssm, const doubleArray &bg, const double cutoff, PyObject *ret_dict, PyObject *py_matrix, const char strand)
+{
+    if (snp_pos.empty())
+        return;
+
+    int mat_len = pssm[0].size();
+
+    vector<int>::const_iterator snp_first = snp_pos.begin();
+    vector<int>::const_iterator snp_last = snp_pos.begin();
+    int snps_in_window = 1;
+
+    int position = max(0, (*snp_last) - mat_len + 1);
+    int end = min((int)sequence.size() - mat_len + 1, (*snp_first)+1);
+
+    double score;
+    double minscore;
+    double maxscore;
+
+    int code;
+
+    // Iterates over all sequence positions overlapping SNPs
+
+    while (snp_last != snp_pos.end()){
+
+        while (position < end){
+            if (position + mat_len - 1 == *(snp_first+1)){ // A new SNP just entered the scanning window
+                snps_in_window += 1;
+                snp_first += 1;
+                end = min((int)sequence.size() - mat_len + 1, (*snp_first)+1);
+            }
+
+            score = 0;
+            
+            if (snps_in_window <= MAX_SNP_COUNT){
+
+                // Gets the maximum score at given position
+        
+                for (int i = 0; i < mat_len; ++i){
+                    code = sequence[position + i];
+                    if (code < 4)
+                        score += pssm[code][i];
+                    else if (code == 4){
+                        score = DBL_MIN;  // Fail.
+                        break;
+                    }
+                    else {
+                        score += max(pssm[snptable[code-5][0]][i], pssm[snptable[code-5][1]][i]);
+                    }
+                }
+        
+                // There is a hit iff the maximum score at the position exceeds the cutoff bound
+        
+                if (score >= cutoff){
+        
+                    // This messy bit finds out which alleles may occur at which positions
+                    // and constructs the appropriate entry to the return dictionary
+                    // Yes, it's messy. I'm sorry.
+        
+                    maxscore = score;
+                    minscore = score;
+        
+                    charArray allele(snps_in_window, 0);
+        
+                    // Iterate over possible allele combinations to see which ones score enough
+        
+                    for (int snpcode = 0; snpcode < (1 << snps_in_window); ++snpcode){
+                        int current_snpcode = snpcode;
+                        score = 0;
+        
+                        for (int i = 0; i < mat_len; ++i){
+                            code = sequence[position + i];
+                            if (code < 4)
+                                score += pssm[code][i];
+                            else {
+                                score += pssm[snptable[code-5][current_snpcode & 1]][i];
+        
+                                current_snpcode = current_snpcode >> 1;
+                            }
+                        }
+        
+                        if (score >= cutoff){
+                            minscore = min(score, minscore);
+                            current_snpcode = snpcode;
+        
+        
+        
+                            for (int i = 0; i < snps_in_window; ++i){
+                                code = sequence[*(snp_last+i)];
+                                if(allele[i] == 0){
+                                    allele[i] = code_to_char[snptable[code-5][current_snpcode & 1]];
+                                }
+                                else if (allele[i] != code_to_char[snptable[code-5][current_snpcode & 1]]){
+                                    allele[i] = 'N'; // If both alleles are possible, mark it as N
+                                }
+                                current_snpcode = current_snpcode >> 1;
+                            }
+                        }
+                    }
+        
+                    // If both alleles are possible and they score almost the same,
+                    // the SNP is omited from data
+                    // LARGE_AFFY_DELTA is declared as preprocessor constant
+        
+                    int real_size = 0;
+        
+                    for (int i = 0; i < snps_in_window; ++i){
+                        code = sequence[*(snp_last+i)];
+                        double scorediff = pssm[snptable[code-5][0]][*(snp_last+i)-position] - pssm[snptable[code-5][1]][*(snp_last+i)-position];
+                        if (allele[i] != 'N' || fabs(scorediff) > LARGE_AFFY_DELTA) ++real_size;
+                    }
+        
+                    // This part finally constructs the Python tuple for SNP data
+        
+                    PyObject *snps = PyTuple_New( real_size );
+                    int tuple_pos = 0;
+        
+                    for (int i = 0; i < snps_in_window; ++i){
+                        code = sequence[*(snp_last+i)];
+                        double scorediff = pssm[snptable[code-5][0]][*(snp_last+i)-position] - pssm[snptable[code-5][1]][*(snp_last+i)-position];
+                        if (allele[i] != 'N' || fabs(scorediff) > LARGE_AFFY_DELTA){
+                            PyObject *py_snp = Py_BuildValue("(ccid)", code_to_char[code], allele[i],  *(snp_last+i) - position + 1, scorediff);
+        
+                            PyTuple_SetItem(snps, tuple_pos, py_snp);
+                            ++tuple_pos;
+                        }
+                    }
+        
+                    addMatchWithKey(ret_dict, py_matrix, position + 1, strand, maxscore, snps, minscore);
+                }
+            }
+
+            position += 1;
+            if (position == (*snp_last) + 1){ // Last SNP in window just fell out of the window
+                snps_in_window -= 1;
+                snp_last += 1;
+            }
+
+        }
+
+        // No more SNPs in current window, jump to next SNP
+
+        snp_first += 1;
+        snp_last = snp_first;
+        snps_in_window = 1;
+
+        position = max(0, (*snp_last) - mat_len + 1);
+        end = min((int)sequence.size() - mat_len + 1, (*snp_first)+1);
+    }
+}
+
+
+static PyObject * matrix_getAllTFBSMarkovBG(PyObject *self, PyObject *args){
+
+    // Check parameters
+    PyObject *py_sequence,*py_cutoff,*py_matlist;
+    matrix_bgObject *bg; 
+
+    if (!PyArg_ParseTuple(args, "OOOO" ,&py_matlist,&py_sequence,&py_cutoff, &bg)){
+        return NULL;
+    }
+
+    // We need to know how many matrices there are
+    int matrixcount = PySequence_Length(py_matlist);
+
+    // Check cutoff
+    double cutoffs[matrixcount];
+
+    if(PyNumber_Check(py_cutoff)) { // Absolute cutoff, same for each matrix
+        double cutoff=PyFloat_AsDouble(PyNumber_Float(py_cutoff));
+        for (int i = 0; i < matrixcount; ++i){
+            cutoffs[i] = cutoff;
+        }
+    }
+    else if( PySequence_Check(py_cutoff) && PySequence_Length(py_cutoff)==PySequence_Length(py_matlist) )
+    {
+        for (int i = 0; i < matrixcount; ++i){
+            cutoffs[i] = PyFloat_AsDouble(PyNumber_Float(PySequence_GetItem(py_cutoff,i)));
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_ValueError,"Wrong number of cutoffs/matrices.");
+        return NULL;
+    }
+
+    PyObject* ret;
+
+    if(!(ret=PyDict_New())) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    // -----------------
+    // Read the sequence
+    // This supposes that we can read the whole sequence to memory at once
+
+    charArray sequence;
+    doubleArray bgProps;
+
+
+    unsigned long fileStartPos=py_fileLikeTell(py_sequence);
+
+    // Get the length of the sequence
+    int seq_length = PySequence_Length(py_sequence);
+
+    // Length as a Python object
+    PyObject *py_readParam = Py_BuildValue("(l)",seq_length);
+
+    // We want to call "read" on py_sequence
+    PyObject *py_read = PyObject_GetAttrString(py_sequence,"read");
+
+    // Calling "read" and accessing the resulting string in C++
+    PyObject *py_seq_as_string = PyObject_CallObject(py_read,py_readParam);
+    char * raw_sequence = PyString_AsString(py_seq_as_string);
+
+    sequence.reserve(seq_length);
+    bgProps.reserve(seq_length);
+    logPnextInStream(bg, 'N');
+
+    for (int i = 0; i < seq_length; ++i){
+        char nuclChr = toupper(raw_sequence[i]);
+        int code = -1;
+
+        switch (nuclChr){
+            case 'A': code = 0; break;
+            case 'C': code = 1; break;
+            case 'G': code = 2; break;
+            case 'T': code = 3; break;
+            case 'R': code = 5; break;
+            case 'Y': code = 6; break;
+            case 'M': code = 7; break;
+            case 'K': code = 8; break;
+            case 'S': code = 9; break;
+            case 'W': code = 10; break;
+            case '\n':
+                case ' ': code = -1; break;
+                case '>': // Beginning of an another sequence. Shouldn't happen.
+                    PyErr_SetString(PyExc_ValueError,"Encountered unexpectedly an another sequence!");
+                    {
+                        PyObject *pyNextSeq=PyString_FromString("NEXT_SEQ");
+                        PyObject *pyFilePos=PyLong_FromUnsignedLong((unsigned long)sequence.size()+1);
+                        PyDict_SetItem(ret,pyNextSeq,pyFilePos);
+                        Py_DECREF(pyNextSeq);
+                        Py_DECREF(pyFilePos);
+                    }
+                    return ret;
+            case 'N':
+                case 'X': code = 4; break;
+                default:  code = 4; break; // Wrong characters are read as N
+        }
+
+        if (code != -1){
+            sequence.push_back(code);
+            if (code < 4){
+                bgProps.push_back(logPnextInStream(bg, nuclChr));
+            }
+            else {
+                bgProps.push_back(logPnextInStream(bg, 'N'));
+            }
+        }
+
+    }
+
+    Py_DECREF(py_readParam);
+    Py_DECREF(py_read);
+    Py_DECREF(py_seq_as_string);
+
+    // Reset file position
+    if(!py_fileLikeSeek(py_sequence,fileStartPos)) {
+        return NULL;
+    }
+
+    // The actual scanning part!
+
+    for (int matrix = 0; matrix < matrixcount; ++matrix){
+        PyObject * py_matrix = PySequence_GetItem(py_matlist,matrix);
+        PyObject * matListList=PyObject_GetAttrString(py_matrix,"M_weight");
+        if(!matListList) {
+            PyErr_SetString(PyExc_ValueError,"Malformed matrix");
+            return NULL;
+        }
+
+        // Matrix as given, for scanning Watson strand
+        // As BG is higher order, background is not included in weight matrix
+        doubleMatrix pssm = parse(matListList);
+
+        assert(pssm.size() == 4);
+        int mat_len = pssm[0].size();
+        for (int i = 1; i < 4; ++i){
+            assert(pssm[i].size() == mat_len);
+        }
+
+        // Find all hits for the matrix
+        getHitsWithMarkovBG(sequence, pssm, bg, bgProps, cutoffs[matrix], ret, py_matrix, '+');
+
+        // Reverse complement, for Crick strand
+        doubleMatrix pssm_inverse;
+
+        for (int i = 0; i < 4;++i){
+            doubleArray row;
+            for (int j = 0; j < mat_len; ++j){
+                row.push_back( pssm[3 - i][mat_len - j - 1]);
+            }
+            pssm_inverse.push_back(row);
+        }
+
+        // Find all hits for the matrix
+        getHitsWithMarkovBG(sequence, pssm_inverse, bg, bgProps, cutoffs[matrix], ret, py_matrix, '-');
+    }
+
+    return ret;
+}
+
+void getHitsWithMarkovBG(const charArray &sequence, const doubleMatrix &pssm, matrix_bgObject * bg, const doubleArray &bgProps, const double cutoff, PyObject *ret_dict, PyObject *py_matrix, const char strand){
+
+    const int n = sequence.size();
+    const int m = pssm[0].size();
+
+    int snps_in_window = 0;
+    double score = 0;
+    char allele [MAX_SNP_COUNT];
+    double score_diffs [MAX_SNP_COUNT];
+    int positions [MAX_SNP_COUNT];
+
+    for (int i = 0; i < m - 1; ++i){
+        if (sequence[i] > 4)
+            ++snps_in_window;
+    }
+
+    for (int i = 0; i < n - m + 1; ++i){
+        if (sequence[i + m - 1] > 4)
+            ++snps_in_window;
+
+        if (snps_in_window == 0){ // No SNPs
+            score = 0;
+
+            // Calculate the score
+            for (int j = 0; j < m; ++j){
+                if (sequence[i+j] == 4){
+                    score = DBL_MIN;
+                    break;
+                }
+                score += pssm[sequence[i+j]][j];
+                score -= bgProps[i+j];
+            }
+            if (score > cutoff){
+                PyObject *snps=PyTuple_New(0);
+                addMatchWithKey(ret_dict,py_matrix, i+1, strand, score, snps, score);
+            }
+        }
+
+
+        else if (snps_in_window <= MAX_SNP_COUNT){ // SNPs 
+            double maxscore = DBL_MIN;
+            double minscore = DBL_MAX;
+            char N_in_window = 0;
+
+    // Dynamically allocating this array every time we have SNPs
+    // is not very satisfactory.
+            for (int j = 0; j < snps_in_window; ++j){
+                allele[j] = 0;
+            }
+            int code;
+
+    // Iterate over possible SNP combinations
+    // Gets quite messy again.
+            for (int snpcode = 0; snpcode < (1 << snps_in_window); ++snpcode){
+                int current_snpcode = snpcode;
+                score = 0;
+
+                logPnextInStream(bg, 'N'); // Resets the stream
+
+        // Position just before the actual window
+        // Take alleles into account in calculation BG prop.
+                for (int j = min((int)bg->order, i); j > 0; --j){
+                    code = sequence[i-j];
+                    if (code <= 4)
+                        logPnextInStream(bg, code_to_char[code]);
+                    else {
+                        logPnextInStream(bg, code_to_char[snptable[code-5][current_snpcode & 1]]);
+                        current_snpcode = current_snpcode >> 1;
+                    }
+                }
+
+        // Calculate the score
+                for (int j = 0; j < m; ++j){
+                    code = sequence[i + j];
+                    if (code < 4){
+                        score += pssm[code][j];
+                        score -= logPnextInStream(bg, code_to_char[code]);
+                    }
+                    else if (code > 4) {
+                        score += pssm[snptable[code-5][current_snpcode & 1]][j];
+                        score -= logPnextInStream(bg, code_to_char[snptable[code-5][current_snpcode & 1]]);
+                        current_snpcode = current_snpcode >> 1;
+                    }
+                    else {
+                        N_in_window = 1;
+                        break;
+                    }
+                }
+                if (N_in_window){
+                    maxscore = DBL_MIN;
+                    break;
+                }
+
+        // Do bookkeeping stuff if given combination scores well enough
+                if (score > cutoff){
+                    maxscore = max(score, maxscore);
+                    minscore = min(score, minscore);
+                    current_snpcode = snpcode;
+
+                    int allele_n = 0;
+
+                    for (int j = -min((int)bg->order, i); j < m; ++j){
+                        code = sequence[i + j];
+                        if (code > 4){
+                            if(allele[allele_n] == 0){
+                                allele[allele_n] = code_to_char[snptable[code-5][current_snpcode & 1]];
+                            }
+                            else if (allele[allele_n] != code_to_char[snptable[code-5][current_snpcode & 1]]){
+                                allele[allele_n] = 'N'; // If both alleles are possible, mark it as N
+                            }
+                            current_snpcode = current_snpcode >> 1;
+                            ++allele_n;
+                        }
+                    }
+                }
+            }
+
+            if (maxscore > cutoff){ // We actually got a hit - store it to the dictionary
+
+        // If both alleles are possible and they score almost the same,
+        // the SNP is omited from data
+        // LARGE_AFFY_DELTA is declared as preprocessor constant
+
+                int real_size = 0;
+                int k = 0;
+
+                for (int j = -min((int)bg->order, i); j < m; ++j){
+                    code = sequence[i+j];
+                    if (code > 4){
+                        if (j < 0){ // SNP in background only
+                            score_diffs[k] = 0;
+                        }
+                        else{
+                            score_diffs[k] = pssm[snptable[code-5][0]][j] - pssm[snptable[code-5][1]][j];
+                        }
+                        positions[k] = j;
+                        if (allele[k] != 'N' || fabs(score_diffs[k]) > LARGE_AFFY_DELTA) ++real_size;
+                        ++k;
+                    }
+                }
+
+        // This part finally constructs the Python tuple for SNP data
+
+                PyObject *snps = PyTuple_New( real_size );
+                int tuple_pos = 0;
+
+                for (k = 0; k < snps_in_window; ++k){
+                    if (allele[k] != 'N' || fabs(score_diffs[k]) > LARGE_AFFY_DELTA){
+                        code = sequence[i+positions[k]];
+                        PyObject *py_snp = Py_BuildValue("(ccid)", code_to_char[code], allele[k],  positions[k] + 1, score_diffs[k]);
+
+                        PyTuple_SetItem(snps, tuple_pos, py_snp);
+                        ++tuple_pos;
+                    }
+                }
+
+                addMatchWithKey(ret_dict, py_matrix, i + 1, strand, maxscore, snps, minscore);
+            }
+
+        }
+
+        if ((i - (int)(bg->order)) >= 0){
+            if (sequence[i - (int)(bg->order)] > 4){
+                --snps_in_window;
+            }
+        }
+    }
+}
 
 static PyMethodDef matrixMethods[] = {
-  {"draw",  matrix_draw, METH_VARARGS,
-   "Draws a matrix"},
-  {"computeBG",  matrix_computeBG, METH_VARARGS,
-   "Kind of computes higher order Background: (seq,order)"},
-  {"getAllTFBSwithBg", matrix_getAllTFBSwithBG, METH_VARARGS,
-   "Returns a map from matrix to index to score of possible TFBS.\nThe arguments are a list of matricies, the sequence, list/float of cutoffs and a background object."},
-  {"thresholdFromP", matrix_thresholdFromP, METH_VARARGS,
-   "Returns a score threshold for given matrix corresponding to a p-value\nArguments: a [[matrix]], p-value, [background distribution]."},
-  {NULL, NULL, 0, NULL}        /* Sentinel */
+    {"draw",  matrix_draw, METH_VARARGS,
+    "Draws a matrix"},
+    {"computeBG",  matrix_computeBG, METH_VARARGS,
+    "Kind of computes higher order Background: (seq,order)"},
+    {"getAllTFBSzeroOrderBG", matrix_getAllTFBSzeroOrderBG, METH_VARARGS,
+    "Returns a map from matrix to index to score of possible TFBS given zero-order background.\nThe arguments are a list of matricies, the sequence, list/float of cutoffs and A/C/G/T frequences as floats."},
+    {"getAllTFBSMarkovBG", matrix_getAllTFBSMarkovBG, METH_VARARGS,
+    "Returns a map from matrix to index to score of possible TFBS given a markov background\nThe arguments are a list of matricies, the sequence, list/float of cutoffs and a background object."},
+    {"thresholdFromP", matrix_thresholdFromP, METH_VARARGS,
+    "Returns a score threshold for given matrix corresponding to a p-value\nArguments: a [[matrix]], p-value, [background distribution]."},
+    {NULL, NULL, 0, NULL}        /* Sentinel */
 };
-
 
 //PyMODINIT_FUNC
 extern "C"
