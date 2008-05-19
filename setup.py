@@ -97,7 +97,7 @@ else:
 modMatrix = Extension('eellib._c_matrix',
                     libraries = commonLibs,
                     sources = ['src/_c_matrix.cc'],
-                    extra_compile_args = common_compile_args+["-DSEQ_BUFFER_SIZE=5000000","-DLARGE_AFFY_DELTA=0.0","-DMAX_SNP_COUNT=7"],
+                    extra_compile_args = common_compile_args+["-DSEQ_BUFFER_SIZE=5000000","-DLARGE_AFFY_DELTA=0.0","-DMAX_SNP_COUNT=7","-DSCANNING_WINDOW_SIZE=9"],
                     extra_link_args = [])
 
 
