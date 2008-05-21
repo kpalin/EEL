@@ -22,6 +22,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.21  2008/05/19 08:14:24  jazkorho
+ * Rewrote TFBS search code. Scanning with zero-order bg is much faster now.
+ *
  * Revision 1.20  2008/02/29 09:10:09  kpalin
  * Report all snps
  *
@@ -1427,7 +1430,7 @@ static const int snptable[][2] = {{0,2},  // R -> AG
     {0,3}}; // W -> AT
 
 
-
+// TFBS search with zero-order background
 static PyObject * matrix_getAllTFBSzeroOrderBG(PyObject *self, PyObject *args){
 
     // Check parameters
@@ -2185,7 +2188,7 @@ void getHitsWithSNPs(const charArray &sequence, const intArray &snp_pos, const d
     }
 }
 
-
+// TFBS search with higher-order markov background
 static PyObject * matrix_getAllTFBSMarkovBG(PyObject *self, PyObject *args){
 
     // Check parameters
@@ -2229,6 +2232,9 @@ static PyObject * matrix_getAllTFBSMarkovBG(PyObject *self, PyObject *args){
     // -----------------
     // Read the sequence
     // This supposes that we can read the whole sequence to memory at once
+    // Also, we precalculate the probabilities given by the background
+    // so we only need to do bg calculations near SNP positions when
+    // scanning. This, of course, requires quite much memory.
 
     charArray sequence;
     doubleArray bgProps;
@@ -2294,7 +2300,6 @@ static PyObject * matrix_getAllTFBSMarkovBG(PyObject *self, PyObject *args){
                 bgProps.push_back(logPnextInStream(bg, 'N'));
             }
         }
-
     }
 
     Py_DECREF(py_readParam);
@@ -2347,6 +2352,8 @@ static PyObject * matrix_getAllTFBSMarkovBG(PyObject *self, PyObject *args){
     return ret;
 }
 
+// Actual scanning part for markov bg
+// Finds hits for single TFBS matrix
 void getHitsWithMarkovBG(const charArray &sequence, const doubleMatrix &pssm, matrix_bgObject * bg, const doubleArray &bgProps, const double cutoff, PyObject *ret_dict, PyObject *py_matrix, const char strand){
 
     const int n = sequence.size();
@@ -2357,6 +2364,7 @@ void getHitsWithMarkovBG(const charArray &sequence, const doubleMatrix &pssm, ma
     char allele [MAX_SNP_COUNT];
     double score_diffs [MAX_SNP_COUNT];
     int positions [MAX_SNP_COUNT];
+
 
     for (int i = 0; i < m - 1; ++i){
         if (sequence[i] > 4)
@@ -2391,8 +2399,7 @@ void getHitsWithMarkovBG(const charArray &sequence, const doubleMatrix &pssm, ma
             double minscore = DBL_MAX;
             char N_in_window = 0;
 
-    // Dynamically allocating this array every time we have SNPs
-    // is not very satisfactory.
+    // Resets the alleles after previous SNP
             for (int j = 0; j < snps_in_window; ++j){
                 allele[j] = 0;
             }
@@ -2404,10 +2411,17 @@ void getHitsWithMarkovBG(const charArray &sequence, const doubleMatrix &pssm, ma
                 int current_snpcode = snpcode;
                 score = 0;
 
+        // The BG object is used to give the background score
+        // at this position for the given allele combination.
+        // As we have to do this for each combination at each
+        // position, this takes quite a lot unnecessary time
+        // if there are lots of SNPs. Improving this should
+        // be a priority.
+
                 logPnextInStream(bg, 'N'); // Resets the stream
 
         // Position just before the actual window
-        // Take alleles into account in calculation BG prop.
+        // Take alleles into account in calculation of BG prop.
                 for (int j = min((int)bg->order, i); j > 0; --j){
                     code = sequence[i-j];
                     if (code <= 4)
