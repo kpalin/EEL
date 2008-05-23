@@ -1,5 +1,8 @@
 //
 // $Log$
+// Revision 1.9  2008/05/19 08:14:40  jazkorho
+// Rewrote TFBS search code.
+//
 // Revision 1.8  2008/02/29 09:10:09  kpalin
 // Report all snps
 //
@@ -144,6 +147,9 @@ struct ConstructionQueueElementMulti
 
 
 
+void naiveAlgorithm(const charArray &s, const intArray &start_pos, const intArray &end_pos, const doubleMatrix &p, const double tol, PyObject *ret_dict, PyObject * py_matrix, const char strand);
+
+
 doubleArray expectedDifferences(const doubleMatrix &mat, const doubleArray &bg);
 
 void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intArray &start_pos, const intArray &end_pos, const vector<doubleMatrix> &matrices, const doubleArray &bg, const doubleArray &tol, PyObject *ret_dict, vector<PyObject*> py_matrices, const charArray &strands);
@@ -153,7 +159,6 @@ void getHitsWithSNPs(const charArray &s, const intArray &snp_pos, const doubleMa
 
 static PyObject * matrix_getAllTFBSMarkovBG(PyObject *self, PyObject *args);
 void getHitsWithMarkovBG(const charArray &sequence, const doubleMatrix &pssm,  matrix_bgObject * bg, const doubleArray &bgProps, const double cutoff, PyObject *ret_dict, PyObject *py_matrix, const char strand);
-void getHitsWithMarkovBG_v2(const charArray &sequence, const doubleMatrix &pssm,  matrix_bgObject * bg, const doubleArray &bgProps, const double cutoff, PyObject *ret_dict, PyObject *py_matrix, const char strand);
 
 
 

@@ -22,6 +22,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.22  2008/05/21 11:49:08  jazkorho
+ * Added comments.
+ *
  * Revision 1.21  2008/05/19 08:14:24  jazkorho
  * Rewrote TFBS search code. Scanning with zero-order bg is much faster now.
  *
@@ -1503,7 +1506,17 @@ static PyObject * matrix_getAllTFBSzeroOrderBG(PyObject *self, PyObject *args){
 
     int position = 0;
     int clean = 0;
-    sequence.reserve(seq_length);
+    try {
+        sequence.reserve(seq_length);
+    }
+    catch (...) {
+        PyErr_SetString(PyExc_MemoryError,"Ran out of memory trying to load sequence. This probably means that the sequence was too large for the program to handle.");
+        Py_DECREF(py_readParam);
+        Py_DECREF(py_read);
+        Py_DECREF(py_seq_as_string);
+        Py_DECREF(ret);
+        return NULL;
+    }
 
     for (int i = 0; i < seq_length; ++i){
         char nuclChr = toupper(raw_sequence[i]);
@@ -1566,13 +1579,9 @@ static PyObject * matrix_getAllTFBSzeroOrderBG(PyObject *self, PyObject *args){
     if(!py_fileLikeSeek(py_sequence,fileStartPos)) {
         return NULL;
     }
-
+    
     // The actual scanning part!
-
-    vector<doubleMatrix> matrices;
-    doubleArray cutoffs_parameter;
-    vector<PyObject*> py_matrices;
-    charArray strands;
+    // (with trivial algorithm)
 
     // Process the matrices for scanning
     for (int matrix = 0; matrix < matrixcount; ++matrix){
@@ -1601,12 +1610,9 @@ static PyObject * matrix_getAllTFBSzeroOrderBG(PyObject *self, PyObject *args){
             pssm.push_back(row);
         }
 
-        matrices.push_back(pssm);
-        cutoffs_parameter.push_back(cutoffs[matrix]);
-        py_matrices.push_back(py_matrix);
-        strands.push_back('+');
+        naiveAlgorithm(sequence, start_pos, end_pos, pssm, cutoffs[matrix], ret, py_matrix, '+');
 
-        // Check positions overlapping SNPs first. 
+        // Check positions overlapping SNPs . 
         // Assuming there are relatively few SNPs, this shouldn't take too long
         getHitsWithSNPs(sequence, snp_pos, pssm, bg, cutoffs[matrix], ret, py_matrix, '+');
 
@@ -1621,20 +1627,117 @@ static PyObject * matrix_getAllTFBSzeroOrderBG(PyObject *self, PyObject *args){
             pssm_inverse.push_back(row);
         }
 
-        matrices.push_back(pssm_inverse);
-        cutoffs_parameter.push_back(cutoffs[matrix]);
-        py_matrices.push_back(py_matrix);
-        strands.push_back('-');
+        naiveAlgorithm(sequence, start_pos, end_pos, pssm_inverse, cutoffs[matrix], ret, py_matrix, '-');
 
         // SNP positions for reverse complement matrix
         getHitsWithSNPs(sequence, snp_pos, pssm_inverse, bg, cutoffs[matrix], ret, py_matrix, '-');
     }
 
-    // Scan "clean" sections of sequence with Aho-Corasick filter algorithm
-    multipleMatrixAhoCorasickLookaheadFiltration(sequence, start_pos, end_pos, matrices, bg, cutoffs_parameter, ret, py_matrices, strands);
+//     // The actual scanning part!
+//     // (with MMACF)
+// 
+//     vector<doubleMatrix> matrices;
+//     doubleArray cutoffs_parameter;
+//     vector<PyObject*> py_matrices;
+//     charArray strands;
+// 
+//     // Process the matrices for scanning
+//     for (int matrix = 0; matrix < matrixcount; ++matrix){
+//         PyObject * py_matrix = PySequence_GetItem(py_matlist,matrix);
+//         PyObject * matListList=PyObject_GetAttrString(py_matrix,"freq");
+//         if(!matListList) {
+//             PyErr_SetString(PyExc_ValueError,"Malformed matrix");
+//             return NULL;
+//         }
+//         doubleMatrix freq_matrix = parse(matListList);
+// 
+//         assert(freq_matrix.size() == 4);
+//         int mat_len = freq_matrix[0].size();
+//         for (int i = 1; i < 4; ++i){
+//             assert(freq_matrix[i].size() == mat_len);
+//         }
+// 
+//         // Matrix as given, for scanning Watson strand
+//         doubleMatrix pssm;
+// 
+//         for (int i = 0; i < 4;++i){
+//             doubleArray row;
+//             for (int j = 0; j < mat_len; ++j){
+//                 row.push_back( (log(freq_matrix[i][j]) - log(bg[i])) / log(2) );
+//             }
+//             pssm.push_back(row);
+//         }
+// 
+//         matrices.push_back(pssm);
+//         cutoffs_parameter.push_back(cutoffs[matrix]);
+//         py_matrices.push_back(py_matrix);
+//         strands.push_back('+');
+// 
+//         // Check positions overlapping SNPs first. 
+//         // Assuming there are relatively few SNPs, this shouldn't take too long
+//         getHitsWithSNPs(sequence, snp_pos, pssm, bg, cutoffs[matrix], ret, py_matrix, '+');
+// 
+//         // Reverse complement, for Crick strand
+//         doubleMatrix pssm_inverse;
+// 
+//         for (int i = 0; i < 4;++i){
+//             doubleArray row;
+//             for (int j = 0; j < mat_len; ++j){
+//                 row.push_back( (log(freq_matrix[3 - i][mat_len - j - 1]) - log(bg[i])) / log(2) );
+//             }
+//             pssm_inverse.push_back(row);
+//         }
+// 
+//         matrices.push_back(pssm_inverse);
+//         cutoffs_parameter.push_back(cutoffs[matrix]);
+//         py_matrices.push_back(py_matrix);
+//         strands.push_back('-');
+// 
+//         // SNP positions for reverse complement matrix
+//         getHitsWithSNPs(sequence, snp_pos, pssm_inverse, bg, cutoffs[matrix], ret, py_matrix, '-');
+//     }
+// 
+//     // Scan "clean" sections of sequence with Aho-Corasick filter algorithm
+//     multipleMatrixAhoCorasickLookaheadFiltration(sequence, start_pos, end_pos, matrices, bg, cutoffs_parameter, ret, py_matrices, strands);
 
     return ret;
 }
+
+
+// The naive algorithm
+void naiveAlgorithm(const charArray &s, const intArray &start_pos, const intArray &end_pos, const doubleMatrix &p,  const double tol, PyObject *ret_dict, PyObject * py_matrix, const char strand){
+    
+    //const int n = s.size();
+    const int m = p[0].size();
+
+    for (int slice = 0; slice < (int) start_pos.size(); ++slice){
+
+        int start = start_pos[slice];
+        int end = end_pos[slice];
+
+        if (end - start + 1 >= m){
+            
+
+            for (int i = start; i < end - m + 1; ++i )
+            {
+
+                double score = 0;
+                for (int j = 0; j < m; ++j)
+                {
+                    score += p[ s[i + j] ][j];
+                }
+                if (score >= tol)
+                {
+                    PyObject *snps=PyTuple_New(0);
+                    addMatchWithKey(ret_dict, py_matrix, i + 1, strand, score, snps, score);
+
+                }
+            }
+        }
+    }
+}
+
+
 
 
 doubleArray expectedDifferences(const doubleMatrix &mat, const doubleArray &bg)
@@ -2254,9 +2357,19 @@ static PyObject * matrix_getAllTFBSMarkovBG(PyObject *self, PyObject *args){
     // Calling "read" and accessing the resulting string in C++
     PyObject *py_seq_as_string = PyObject_CallObject(py_read,py_readParam);
     char * raw_sequence = PyString_AsString(py_seq_as_string);
-
-    sequence.reserve(seq_length);
-    bgProps.reserve(seq_length);
+    
+    try {
+        sequence.reserve(seq_length);
+        bgProps.reserve(seq_length);
+    }
+    catch (...) {
+        PyErr_SetString(PyExc_MemoryError,"Ran out of memory trying to load sequence. This probably means that the sequence was too large for the program to handle.");
+        Py_DECREF(py_readParam);
+        Py_DECREF(py_read);
+        Py_DECREF(py_seq_as_string);
+        Py_DECREF(ret);
+        return NULL;
+    }
     logPnextInStream(bg, 'N');
 
     for (int i = 0; i < seq_length; ++i){
