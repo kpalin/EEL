@@ -1,5 +1,8 @@
 //
 // $Log$
+// Revision 1.10  2008/05/23 12:10:10  jazkorho
+// Switched to a simpler TFBS scanning algorithm due to problems in tests on Murska cluster
+//
 // Revision 1.9  2008/05/19 08:14:40  jazkorho
 // Rewrote TFBS search code.
 //
@@ -101,9 +104,9 @@ typedef struct {
 
 // TFBS search stuff
 
+// *********************
 // Zero-order BG version
 
-static PyObject * matrix_getAllTFBSzeroOrderBG(PyObject *self, PyObject *args);
 
 // Struct for comparing matrix rows with sort()
 struct compareRows
@@ -145,21 +148,105 @@ struct ConstructionQueueElementMulti
     list<OutputListElementMulti> scores;
 };
 
+// Algorithms
 
-
-void naiveAlgorithm(const charArray &s, const intArray &start_pos, const intArray &end_pos, const doubleMatrix &p, const double tol, PyObject *ret_dict, PyObject * py_matrix, const char strand);
-
+static PyObject * matrix_getAllTFBSzeroOrderBG(PyObject *self, PyObject *args);
 
 doubleArray expectedDifferences(const doubleMatrix &mat, const doubleArray &bg);
 
 void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intArray &start_pos, const intArray &end_pos, const vector<doubleMatrix> &matrices, const doubleArray &bg, const doubleArray &tol, PyObject *ret_dict, vector<PyObject*> py_matrices, const charArray &strands);
 void getHitsWithSNPs(const charArray &s, const intArray &snp_pos, const doubleMatrix &p, const doubleArray &bg, const double cutoff, PyObject *ret_dict, PyObject *py_matrix, const char strand);
 
+// *****************
 // Markov BG version
 
+
+class TFBSscan {
+    void nextACGTsingle(char chr,int snpCode);
+    void doubleHistory();
+    void nextACGT(char const chr,int fc=0,int tc=-1);
+    public:
+        PyObject *py_matrix;  // Pointer to the matrix itself
+        double bound;   // Cutoff
+        int mat_length;   //Matrix length
+        vector<vector<double> > M;   // Parsed matrix for easy access
+        deque<deque<double> > history;
+        deque<deque<double> >  compl_history;
+  
+  //deque<class SNPdat> SNPs;
+
+        TFBSscan(PyObject *mat,double cutoff);
+  
+        double matItem(int i,char nucl,int crick=0);
+        static int ACGTtoCode(char nucl);
+        double setSNPscoreDif(class SNPdat &snp,int crick=0);
+        void nextChar(char chr);
+        void halfHistories();
+        vector<double> WatsonScore();
+        vector<double> CrickScore();
+        unsigned int allelCount() {return this->history.size(); }
+        int const length() const { return this->mat_length; }
+};
+
+class SNPdat{
+    public:
+        char ambig;
+        char allele;
+        int pos;
+        double scoreDif;
+
+        SNPdat(char amb,char all,int p) {ambig=amb;allele=all;pos=p;scoreDif=0.0;}
+        int operator==(SNPdat &other);
+        int diffAllele(SNPdat &other);
+        PyObject *buildPySNP(int refPos);
+        char *alleles();
+};
+
+class TFBShit {
+    private:
+        TFBShit() {return; };
+    public:
+        TFBSscan *mat;
+        unsigned int pos;
+        double score;  //Max score
+        double minScore;
+        char strand;
+        vector<class SNPdat> sigGenotype; // Significant genotype
+
+        TFBShit(TFBSscan* mat,unsigned int seqPos,char strand);
+        void addHit(double Score,vector<class SNPdat> &genotype);
+
+        PyObject *buildPySNPs();
+};
+
+class TFBShelper {
+    int haveBG;
+    deque<matrix_bgObject> bg;
+    deque<deque<double> > probBuffer;
+    int maxLen;
+    vector<TFBSscan*> &matricies;
+    unsigned int seqCount;
+
+
+    void doubleBackground();
+  
+    void nextACGT(char chr,unsigned int startFrom=0,unsigned int upTo=0);
+    void removeScannerHistories();
+    public:
+        unsigned int SNPcount() {return this->SNPs.size()/2; }
+        unsigned int bgOrder() { return (this->haveBG?this->bg[0].order:0); }
+        deque<class SNPdat> SNPs;
+        unsigned int matrixCount() {return this->matricies.size(); }
+        unsigned int allelCount() {return 1<<this->SNPcount(); }
+        TFBShelper(matrix_bgObject *bg,vector<TFBSscan*> &matricies);
+        void nextChar(char chr);
+        double getBGprob(int matInd,int snpCode);
+        vector<double> getBGprobs(int matInd);
+        unsigned int seqPos() {return seqCount; }
+
+        vector<TFBShit*> getMatches();
+        vector<SNPdat> getSNPs(int snpCode,int matInd=-1,int crick=0);
+        ~TFBShelper() { for(unsigned int i=0;i<this->matricies.size();i++) delete this->matricies[i];}
+};
+
 static PyObject * matrix_getAllTFBSMarkovBG(PyObject *self, PyObject *args);
-void getHitsWithMarkovBG(const charArray &sequence, const doubleMatrix &pssm,  matrix_bgObject * bg, const doubleArray &bgProps, const double cutoff, PyObject *ret_dict, PyObject *py_matrix, const char strand);
-
-
-
-
