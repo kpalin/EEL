@@ -1,5 +1,8 @@
 //
 // $Log$
+// Revision 1.11  2008/06/06 10:56:35  jazkorho
+// Finalized new TFBS searching code. Zero-order background version now uses an Aho-Corasick based filter, but the original implementation is still used with Markov background.
+//
 // Revision 1.10  2008/05/23 12:10:10  jazkorho
 // Switched to a simpler TFBS scanning algorithm due to problems in tests on Murska cluster
 //
@@ -250,3 +253,4 @@ class TFBShelper {
 };
 
 static PyObject * matrix_getAllTFBSMarkovBG(PyObject *self, PyObject *args);
+
