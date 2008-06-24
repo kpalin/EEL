@@ -22,6 +22,9 @@ using namespace std;
 
 /*
  * $Log$
+ * Revision 1.24  2008/06/06 10:56:17  jazkorho
+ * Finalized new TFBS searching code. Zero-order background version now uses an Aho-Corasick based filter, but the original implementation is still used with Markov background.
+ *
  * Revision 1.23  2008/05/23 12:09:40  jazkorho
  * Switched to a simpler TFBS scanning algorithm due to problems in tests on Murska cluster
  *
@@ -198,7 +201,7 @@ void addMatch(PyObject *dict,int const pos,char const strand,double const score,
 
   printDebug("refcount(snps of size %d)=%d",PyTuple_Size(snps),getRefCount(snps));
   assert(PyTuple_Check(snps));
-  assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
+  assert(PyTuple_Size(snps)==0 || getRefCount(snps)==2); // There are now two reference
 
   if(PyErr_Occurred()!=NULL) {
 #ifndef NDEBUG
@@ -1695,7 +1698,6 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
 {
 
     const int numA = 4;
-    const int q = 8; 
 
     intArray m(matrices.size(), 0);
     int min_length = INT_MAX;
@@ -1720,14 +1722,14 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
     window_positions.reserve(matrices.size());
     for (int k = 0; k < (int)matrices.size(); ++k)
     {
-        if (q >= m[k])
+        if (SCANNING_WINDOW_SIZE >= m[k])
         {
             window_positions.push_back(0);
         }
         else
         {
             double current_goodness = 0;
-            for (int i = 0; i < q; ++i)
+            for (int i = 0; i < SCANNING_WINDOW_SIZE; ++i)
             {
                 current_goodness += goodnesses[k][i];
             }
@@ -1735,10 +1737,10 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
             double max_goodness = current_goodness;
             int window_pos = 0;
             
-            for (int i = 0; i < m[k] - q; ++i)
+            for (int i = 0; i < m[k] - SCANNING_WINDOW_SIZE; ++i)
             {
                 current_goodness -= goodnesses[k][i];
-                current_goodness += goodnesses[k][i+q];
+                current_goodness += goodnesses[k][i+SCANNING_WINDOW_SIZE];
                 if (current_goodness > max_goodness)
                 {
                     max_goodness = current_goodness;
@@ -1793,7 +1795,7 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
     
     for (int k = 0; k < (int) matrices.size(); ++k)
     {
-        if (q >= m[k])
+        if (SCANNING_WINDOW_SIZE >= m[k])
         {
             intArray temp_int;
             orders.push_back(temp_int);
@@ -1802,14 +1804,14 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
         }
         else
         {
-            intArray order(m[k]-q, 0);
+            intArray order(m[k]-SCANNING_WINDOW_SIZE, 0);
             for (int i = 0; i < window_positions[k]; ++i)
             {
                 order[i] = i;
             }
-            for (int i = window_positions[k]+q; i < m[k]; ++i)
+            for (int i = window_positions[k]+SCANNING_WINDOW_SIZE; i < m[k]; ++i)
             {
-                order[i-q] = i;
+                order[i-SCANNING_WINDOW_SIZE] = i;
             }
             
             compareRows comp;
@@ -1820,8 +1822,8 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
             // Scanning lookahead scores
             orders.push_back(order);
             
-            doubleArray K(m[k]-q, 0); 
-            for (int j = m[k]-q-1; j > 0; --j)
+            doubleArray K(m[k]-SCANNING_WINDOW_SIZE, 0); 
+            for (int j = m[k]-SCANNING_WINDOW_SIZE-1; j > 0; --j)
             {
                 double max = DBL_MIN;
                 for (int i = 0; i < numA; ++i)
@@ -1872,11 +1874,11 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
         qElement = stateQ.front();
         stateQ.pop();
         
-        if (qElement.i == q)
+        if (qElement.i == SCANNING_WINDOW_SIZE)
         {
             tempACMachine[qElement.prev].output.insert(tempACMachine[qElement.prev].output.end(), qElement.scores.begin(), qElement.scores.end());
         }
-        else if (qElement.i < q)
+        else if (qElement.i < SCANNING_WINDOW_SIZE)
         {
             for (int j = 0; j < numA; ++j)
             {
@@ -2025,15 +2027,18 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
                         {
                             PyObject *snps=PyTuple_New(0);
                             addMatchWithKey(ret_dict,py_matrices[y->matrix],(i-m[y->matrix] + 2),strands[y->matrix],y->score,snps,y->score);
-
+                            
+                            Py_DECREF(snps);
+                            assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
+                            
                             continue;
                         }
-                        if (i - q - window_positions[y->matrix] + 1 >= start && i + m[y->matrix] - q - window_positions[y->matrix] < end)
+                        if (i - SCANNING_WINDOW_SIZE - window_positions[y->matrix] + 1 >= start && i + m[y->matrix] - SCANNING_WINDOW_SIZE - window_positions[y->matrix] < end)
                         {
                             double score = y->score;
                             int k = y->matrix;
-                            int limit = m[k] - q;
-                            int ii = i - q - window_positions[k] + 1;
+                            int limit = m[k] - SCANNING_WINDOW_SIZE;
+                            int ii = i - SCANNING_WINDOW_SIZE - window_positions[k] + 1;
                             double tolerance = tol[k];
                             intArray::iterator z = orders[k].begin();   
                             for (int j = 0; j < limit  ;++j)
@@ -2046,7 +2051,10 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
                             if (score >= tolerance)
                             {
                                 PyObject *snps=PyTuple_New(0);
-                                addMatchWithKey(ret_dict,py_matrices[k],(i-q-window_positions[k]+2),strands[k],score,snps,score);
+                                addMatchWithKey(ret_dict,py_matrices[k],(i-SCANNING_WINDOW_SIZE-window_positions[k]+2),strands[k],score,snps,score);
+                                
+                                Py_DECREF(snps);
+                                assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
                             }
                         }
                     }
@@ -2072,8 +2080,8 @@ void getHitsWithSNPs(const charArray &sequence, const intArray &snp_pos, const d
     vector<int>::const_iterator snp_last = snp_pos.begin();
     int snps_in_window = 1;
 
-    int position = max(0, (*snp_last) - mat_len + 1);
-    int end = min((int)sequence.size() - mat_len + 1, (*snp_first)+1);
+    int position;
+    int end;
 
     double score;
     double minscore;
@@ -2084,9 +2092,12 @@ void getHitsWithSNPs(const charArray &sequence, const intArray &snp_pos, const d
     // Iterates over all sequence positions overlapping SNPs
 
     while (snp_last != snp_pos.end()){
-
+    
+        position = max(0, (*snp_last) - mat_len + 1);
+        end = min((int)sequence.size() - mat_len + 1, (*snp_first)+1);
+        
         while (position < end){
-            if (position + mat_len - 1 == *(snp_first+1)){ // A new SNP just entered the scanning window
+            if ((snp_first + 1) != snp_pos.end() && position + mat_len - 1 == *(snp_first+1)){ // A new SNP just entered the scanning window
                 snps_in_window += 1;
                 snp_first += 1;
                 end = min((int)sequence.size() - mat_len + 1, (*snp_first)+1);
@@ -2191,6 +2202,9 @@ void getHitsWithSNPs(const charArray &sequence, const intArray &snp_pos, const d
                     }
 
                     addMatchWithKey(ret_dict, py_matrix, position + 1, strand, maxscore, snps, minscore);
+                    
+                    Py_DECREF(snps);
+                    assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
                 }
             }
 
@@ -2207,9 +2221,6 @@ void getHitsWithSNPs(const charArray &sequence, const intArray &snp_pos, const d
         snp_first += 1;
         snp_last = snp_first;
         snps_in_window = 1;
-
-        position = max(0, (*snp_last) - mat_len + 1);
-        end = min((int)sequence.size() - mat_len + 1, (*snp_first)+1);
     }
 }
 
@@ -3239,25 +3250,28 @@ static PyObject *
       //       printf("hits: %d pos=%d\n",hits.size(),scanner.seqPos());
       //     }
                        for(unsigned int i=0;i<hits.size();i++) {
-                           PyObject *snps=hits[i]->buildPySNPs();
-                           printDebug("refcount(snps of size %d)=%d",PyTuple_Size(snps),getRefCount(snps));
-                           assert(PyTuple_Check(snps));
-                           assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
-                           assert(ret);
-                           addMatchWithKey(ret,hits[i]->mat->py_matrix,hits[i]->pos,hits[i]->strand,hits[i]->score,snps,hits[i]->minScore);
-
+                            PyObject *snps=hits[i]->buildPySNPs();
+                            printDebug("refcount(snps of size %d)=%d",PyTuple_Size(snps),getRefCount(snps));
+                            assert(PyTuple_Check(snps));
+                            assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
+                            assert(ret);
+                            addMatchWithKey(ret,hits[i]->mat->py_matrix,hits[i]->pos,hits[i]->strand,hits[i]->score,snps,hits[i]->minScore);
+                           
+                            Py_DECREF(snps);
+                            assert(PyTuple_Size(snps)==0 || getRefCount(snps)==1);
+                            
 #ifndef NDEBUG
-                           if((hits[i]->score-hits[i]->minScore)>1.0) {
-                               char *str=PyString_AsString(PyObject_GetAttrString(hits[i]->mat->py_matrix,"name"));
+                            if((hits[i]->score-hits[i]->minScore)>1.0) {
+                                char *str=PyString_AsString(PyObject_GetAttrString(hits[i]->mat->py_matrix,"name"));
 
-                               printf("pos=%d %s score_delta=%g\n",hits[i]->pos,str,hits[i]->score-hits[i]->minScore);
-                           }
+                                printf("pos=%d %s score_delta=%g\n",hits[i]->pos,str,hits[i]->score-hits[i]->minScore);
+                            }
 #endif
-                           delete hits[i];
-                           hits[i]=NULL;
-                           if(PyErr_Occurred()!=NULL) {
-                               return NULL;
-                           }
+                            delete hits[i];
+                            hits[i]=NULL;
+                            if(PyErr_Occurred()!=NULL) {
+                                return NULL;
+                            }
                        }
                    }
     
