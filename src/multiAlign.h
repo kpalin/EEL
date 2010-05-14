@@ -5,7 +5,7 @@
 /*
  *
  *$Log$
- *Revision 1.17  2006-12-08 09:49:56  kpalin
+ *Revision 1.17  2006/12/08 09:49:56  kpalin
  *Fixed a seqfault and added a source file from Pasi rastas which got
  *included in _c_matrix.cc
  *
@@ -108,8 +108,7 @@ struct id_triple
       ((int)this->epos==(int)other.epos && this->weight<other.weight) ||
       ((int)this->epos==(int)other.epos && this->weight==other.weight && this->strand<other.strand);
   }
-
-  //Sanna's addition
+  //Sannan lisäys
   bool operator==(const id_triple &other) const { 
     return ((int)this->ID==(int)other.ID && (int)this->pos==(int)other.pos && (int)this->epos==(int)other.epos && this->weight==other.weight && this->strand==other.strand);
   }
@@ -292,6 +291,16 @@ class Inputs {
 public:
   Inputs() { return; }
   Inputs(PyObject* data);
+
+  //Sannan lisäys
+  Inputs(map<string,motifCode> TF_to_id, vector<string> factorNames, map<string,seqCode> SEQ_to_id, vector<string> seqNames, vector< vector<id_triple> > seq) {
+    this->seq=seq;
+    this->TF_to_id=TF_to_id;
+    this->SEQ_to_id=SEQ_to_id;
+    this->seqNames=seqNames;
+    this->factorNames=factorNames;
+  }
+
   int addSite(PyObject* item);
   int sequences() const  { return SEQ_to_id.size(); }
   int factors() const { return TF_to_id.size()*2; }
