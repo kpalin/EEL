@@ -13,6 +13,9 @@ import math
 
 #
 # $Log$
+# Revision 1.31  2008/03/12 12:03:03  kpalin
+# Fixed "documentation"
+#
 # Revision 1.30  2008/02/29 10:08:23  kpalin
 # Cut motif name from the end.
 #
@@ -279,20 +282,14 @@ def formatMultiAlignGFF(alignment,seqData=None,tagLength=50):
     "Formats the multiple alignemnt for GFF file"
     if not alignment:
         return "No alignment\n"
-
+    
     outStrIO=StringIO()
-    # CM= Cis Module, MW = Matrix weight, COL = Column code on module
-    GFFformat="%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\tCM %d\tMW %g\tCOL %d\t%s\n" 
-
-    # the last %s is for inserting parameters for gff2aplot etc.
-    GFFalignFormat='%s\tmalign\t%s\t%d\t%d\t%4.2f\t.\t.\t%sCM %d\n'
-
-
+    
     # Header
     NamesAndLengths=""
     #NamesAndLengths=["%s=%d"%(x,y) for (x,y) in zip(alignment.names,alignment.lengths) ]
     outStrIO.write("### lambda=%f mu=%f nu=%f xi=%f Nucleotides per rotation=%f time=%g %s\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation,alignment.secs_to_align,NamesAndLengths))
-
+    
     for sName in alignment.names:
         try:
             sDesc=seqData.describe(sName).split("\n")
@@ -300,60 +297,64 @@ def formatMultiAlignGFF(alignment,seqData=None,tagLength=50):
         except (KeyError,AttributeError):
             sDesc=""
         outStrIO.write("#%s\t%s\n"%(sName,sDesc))
-
+    
+    # CM= Cis Module, MW = Matrix weight, COL = Column code on module
+    GFFformat="%s\tmalign\t%s\t%d\t%d\t%4.2f\t%s\t.\tCM %d\tMW %g\tCOL %d\t%s\n" 
+    
+    # the last %s is for inserting parameters for gff2aplot etc.
+    GFFalignFormat='%s\tmalign\t%s\t%d\t%d\t%4.2f\t.\t.\t%sCM %d\n'
     # For each module
     for i,goodAlign in zip(range(1,len(alignment.bestAlignments)+1),alignment.bestAlignments):
-        if len(goodAlign)==0:
+	if len(goodAlign)==0:
             continue
         DEBUGprevpos={}
-
+        
         # For each sequence participating in the module
         modData=moduleData(goodAlign)
-
         for j in range(len(modData)):
             seq,begin,end,score=modData[j]
             InsertInfo=""
             if len(modData)==2:
                 targetID=1-abs(j)
                 InsertInfo='\tTarget "%s";\tStart %d;\tEnd %d;\tStrand .;\tFrame .;\t%s'%(alignment.names[modData[targetID][0]],\
-                                                                                          modData[targetID][1],modData[targetID][2],InsertInfo)
-
-
+                                                                                       modData[targetID][1],modData[targetID][2],InsertInfo)
+            
+            
             if alignment.Rsquared>0.1:
                 InsertInfo="%sEscore %g\t"%(InsertInfo,math.exp(alignment.alpha+alignment.beta*score))
-
+            
             if seqData:
                 moduleSeq=seqData[alignment.names[seq]][begin:end]
                 InsertInfo="%sTag5 %s\tTag3 %s\t"%(InsertInfo,moduleSeq[:tagLength],moduleSeq[-tagLength:])
-                
+            
             else:
                 InsertInfo=""
             outStrIO.write(GFFalignFormat%(alignment.names[seq], \
                                            "CisModule",\
                                            begin,end,\
                                            score,InsertInfo,i))
-
-
+        
         # For each column on the module.
         prevScore=0.0
         for as,colCode in zip(goodAlign,range(len(goodAlign))):
             prevScore,score=as.score,as.score-prevScore
             for seq,(begin,end),siteScore,annot in zip(as.seqID,as.beginEnd,as.siteScore,as.annotation):
-                outStrIO.write(GFFformat%(alignment.names[seq], \
-                                          as.motif, \
-                                          begin,end,score,as.strand,\
-                                          i,siteScore,colCode,annot.strip()))
-                try:
-                    assert(DEBUGprevpos.get(seq,(0,0))[1]<begin)
-                    assert(1<=begin-DEBUGprevpos.get(seq,(0,begin-1))[1]<=1000)
-                except AssertionError:
-                    print DEBUGprevpos.get(seq,(0,0))[1],"<",begin
-                    print "0<=",begin,"-",DEBUGprevpos.get(seq,(0,begin-1))[1],"<=",1000
-                    print alignment.names[seq],"COL %d"%(colCode),DEBUGprevpos.get(seq,(0,0))[1],"<",end
-                    print outStrIO.getvalue()
-                    raise
-                DEBUGprevpos[seq]=(begin,end)
-
+                if type(siteScore)==type(1.1):
+                    outStrIO.write(GFFformat%(alignment.names[seq], \
+                                              as.motif, \
+                                              begin,end,score,as.strand,\
+                                              i,siteScore,colCode,annot.strip()))
+                    try:
+                        assert(DEBUGprevpos.get(seq,(0,0))[1]<begin)
+                        assert(1<=begin-DEBUGprevpos.get(seq,(0,begin-1))[1]<=1000)
+                    except AssertionError:
+                        print DEBUGprevpos.get(seq,(0,0))[1],"<",begin
+                        print "0<=",begin,"-",DEBUGprevpos.get(seq,(0,begin-1))[1],"<=",1000
+                        print alignment.names[seq],"COL %d"%(colCode),DEBUGprevpos.get(seq,(0,0))[1],"<",end
+#                        print outStrIO.getvalue()
+                        raise
+                    DEBUGprevpos[seq]=(begin,end)
+    
     return outStrIO.getvalue()
 
 
@@ -469,27 +470,27 @@ def formatalign(alignment,seq=None):
     "Formats the alignment for human use"
     if not alignment:
         return "No alignment\n"
-
+    
     outStrIO=StringIO()
-
+    
     try:
         assert(len(alignment.names)==2)  # Provoking AssertionError
         from editdist import alignSeq
         def alignSeqs(seqs,*rest):
             distXY,X,Y=alignSeq(seqs[0],seqs[1],*rest)
             return (distXY,[X,Y])
-        
+    
     except(ImportError,AssertionError):
         print "Using subb alignment"
-
+    
         def alignSeqs(seqs,*rest):
             "Stubb for alignment. Does nothing really"
             l=max(map(len,seqs))
             return (0,[xseq.ljust(l).replace(" ","-") for xseq in seqs])
-
-
-            
-        
+    
+    
+    print "Tarkistuspiste 1\n";
+    
     def formatAlnSeq(alns,names,starts,motifAln="",linelen=60):
         """Formats the DNA sequence alignment output"""
         outstr="\n".join(["Sequence %d: %s"%(seqI+1,iname) for (seqI,iname) in enumerate(names)])+"\n\n"
@@ -502,66 +503,144 @@ def formatalign(alignment,seq=None):
             outstr+="\n          %s\n\n"%(mline)
             poses=[xpos+len(xline)-xline.count("-") for (xpos,xline) in zip(poses,lines)]
         return outstr
-
+    
+    print "Tarkistuspiste 2\n";
     outStrIO.write("### lambda=%g mu=%g nu=%g xi=%g Nucleotides per rotation=%g\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation))
+    print "Tarkistuspiste 3\n";
     outStrIO.write("### D%s\nNote! First nucleotide at position 1 (one) and binding site at zero!\n"%("".join(["[%s]"%(x) for x in alignment.names])))
-
+    print "Tarkistuspiste 4\n";
+    
     #xname,yname=alignment.x_name,alignment.y_name
     xe,ye=0,0
     if seq:  #Must have all sequences available (Could relax this in future)
-        for xseq in alignment.names:
+       for xseq in alignment.names:
             if not seq.has_key(xseq):
                 seq=None
                 break
-
+    
     if seq:
         outStrIO.write("\n".join(["Sequence %s:\n%s\n"%(xseq,seq.describe(xseq)) for xseq in alignment.names])+"\n\n")
-        
+    
+    print "Tarkistuspiste 5\n";
     # goodAlign= [ (x,y,Score,Motif,(startX,endX),(startY,endY),Strand) ]
     for alnNo,goodAlign in enumerate(alignment.bestAlignments):
+        print "Tarkistuspiste 6\n";
         if len(goodAlign)==0:
             continue
+        print "Tarkistuspiste 7\n";
         if seq:
             starts=[max(spos-10,0) for (spos,epos) in goodAlign[0].beginEnd]
             ends=[min(epos+10,len(seq[alignment.names[i]])) for (i,(spos,epos)) in enumerate(goodAlign[-1].beginEnd)]
-
+            
             seqs=[seq[alignment.names[i]][istart:iend] for (i,(istart,iend)) in enumerate(zip(starts,ends))]
-
+            
             alns=[""]*len(seqs)
             maln=""
             addeds=starts[:]
-
+        
+        print "Tarkistuspiste 8\n";
         outStrIO.write("\n### Alignment No %d ###\n"%(alnNo+1,))
-
+        
+        print "Tarkistuspiste 9\n";
         #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
         for as in goodAlign:
-            coordStr="".join(["[%d]"%(x) for x in as.siteSeqPos])
-            seqCoordStr=" <=> ".join(["(%d,%d)"%(spos,epos) for (spos,epos) in as.beginEnd])
+            coordStr=""
+	    seqCoordStr=""
+            for i,x,(spos,epos) in zip(range(1,len(as.siteSeqPos)+1),as.siteSeqPos,as.beginEnd):
+                if type(x)==type(1):
+                    if(i==1):
+                        coordStr="".join([coordStr,"[%d]"%(x)])
+                        seqCoordStr="".join([seqCoordStr,"(%d,%d)"%(spos,epos)])
+                    else:
+                        coordStr="".join([coordStr,"[%d]"%(x)])
+                        seqCoordStr=" <=> ".join([seqCoordStr,"(%d,%d)"%(spos,epos)])
+                else:
+                    if(i==1):
+                        coordStr="".join([coordStr,"[ ]"])
+                        seqCoordStr="".join([seqCoordStr,"( , )"])
+                    else:
+                        coordStr="".join([coordStr,"[ ]"])
+                        seqCoordStr=" <=> ".join([seqCoordStr,"( , )"])
+
             outStrIO.write("D%s=%.2f %s %s %s\n"%(coordStr,as.score,as.motif,seqCoordStr,as.strand))
             if seq:
                 ToAdd=[xseq[xadded-xstart:beginX-1-xstart].lower() for (xseq,xadded,xstart,(beginX,endX)) in zip(seqs,addeds,starts,as.beginEnd)]
                 siteLen=as.beginEnd[0][1]-as.beginEnd[0][0]+1
                 alnFmt="%%s%%s%%-%ds"%(siteLen)
-
+                
                 #assert(len(xseq[as.beginX-1-xstart:as.endX-xstart])==siteLen)
                 distYX,ToAdd=alignSeqs(ToAdd,1,1)
                 alns=[alnFmt%(xaln,x2add,xseq[beginX-1-xstart:endX-xstart].upper()) for (xaln,x2add,xseq,xstart,(beginX,endX)) in zip(alns,ToAdd,seqs,starts,as.beginEnd)]
-
+                
                 maln=alnFmt%(maln," "*len(ToAdd[0]),as.motif[:siteLen])
                 addeds=[endX for (beginX,endX) in as.beginEnd]
-
+        
+        print "Tarkistuspiste 10\n";
         if seq:
             ToAdd=[seq[xseq][xadded-xstart:xend-xstart].lower() for (xseq,xadded,xstart,xend) in zip(alignment.names,addeds,starts,ends)]
             distYX,ToAdd=alignSeqs(ToAdd)
             alns=["".join(x) for x in zip(alns,ToAdd)]
-
+            
             outStrIO.write("\n"+formatAlnSeq([xaln.replace(" ","-") for xaln in alns],alignment.names,starts,maln))
             #outstr+="%s\n%s\n"%(xaln.replace(" ","-"),yaln.replace(" ","-"))
-
+        print "Tarkistuspiste11\n";
+    
+    
+    print "Tarkistuspiste 12\n";
     outStrIO.write("### Alignment took %.1f CPU seconds.\n"%(alignment.secs_to_align))
-
-
+    print "Tarkistuspiste 13\n";
     return outStrIO.getvalue()
 
-        
+def formatpwbase(alignment):
+    "Formats the seqments of pairwise alignment that multiple alignment was based on for human use"
+    if not alignment:
+        return "No alignment\n"
     
+    outStrIO=StringIO()
+    
+    outStrIO.write("### lambda=%g mu=%g nu=%g xi=%g Nucleotides per rotation=%g\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation))
+    outStrIO.write("### D%s\nNote! First nucleotide at position 1 (one) and binding site at zero!\n"%("".join(["[%s]"%(x) for x in alignment.names])))
+    
+    for groupNo,groupOfAligns in enumerate(alignment.pwBase):
+        # goodAlign= [ (x,y,Score,Motif,(startX,endX),(startY,endY),Strand) ]
+        for alnNo,align in enumerate(groupOfAligns):
+            if len(align)==0:
+                continue
+            
+            outStrIO.write("\n### Alignment No %d of Group %d ###\n"%(alnNo+1,groupNo+1))
+            outStrIO.write("[")
+            outStrIO.write(alignment.names[align[0].seqID[0]])
+            outStrIO.write("][")
+            outStrIO.write(alignment.names[align[0].seqID[1]])
+            outStrIO.write("]\n")
+            
+            #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
+            for as in align:
+                coordStr=""
+                seqCoordStr=""
+                match=0
+                for i,x,(spos,epos) in zip(range(1,len(as.siteSeqPos)+1),as.siteSeqPos,as.beginEnd):
+                    if(i==1):
+                        coordStr="".join([coordStr,"[%d]"%(x)])
+                        seqCoordStr="".join([seqCoordStr,"(%d,%d)"%(spos,epos)])
+                    else:
+                        coordStr="".join([coordStr,"[%d]"%(x)])
+                        seqCoordStr=" <=> ".join([seqCoordStr,"(%d,%d)"%(spos,epos)])
+                
+                for gaNo,goodAlign in enumerate(alignment.bestAlignments):
+                    if(gaNo/alignment.numofalign==groupNo and match==0):
+                        for gas in goodAlign:
+                            for (gspos,gepos) in gas.beginEnd:
+                                for(spos,epos) in as.beginEnd:
+                                    if(spos==gspos and epos==gepos):
+                                        match=match+1
+                            if(match>1):
+                                break
+                            else:
+                                match=0
+                if(match>1):
+                    outStrIO.write("!")
+                outStrIO.write("D%s=%.2f %s %s %s\n"%(coordStr,as.score,as.motif,seqCoordStr,as.strand))
+        outStrIO.write("\n\n")
+    
+    return outStrIO.getvalue()

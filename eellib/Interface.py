@@ -36,6 +36,9 @@ if sys.platform!='win32':
 
 #
 # $Log$
+# Revision 1.46  2008/04/01 05:47:20  kpalin
+# Fixed an indentation.
+#
 # Revision 1.45  2008/02/29 08:53:32  kpalin
 # Should provide output even when the memory save was used
 #
@@ -189,6 +192,14 @@ try:
     from eellib import multiAlign
 except ImportError:
     pass
+
+try:
+    from eellib import shortMultiAlign
+    from eellib import multiFromPairwise
+    from eellib import treeMultiAlign
+except ImportError:
+    pass
+
 from eellib import _c_matrix
 
 import sys,math
@@ -339,6 +350,197 @@ class Interface:
         self.show("All %d files added. Doing the alignment"%(len(filenames)),filenames)
         self.malignment.multiAlign()
 
+    def multiFromPairwise(self,arglist):
+        """Arguments: filename,pwfilename[,gaplimit[,numofalign[,buffer[,lambda[,xi[,mu[,nu,[,nuc_per_rotation]]]]]]
+Computes multiple alignments from places selected from pairwise alignments of the BS from a gff file
+filename   specifies a file in gff format is you want to be aligned
+pwfilename specifies a file in alignment gff format where the pairwise alignments are
+gaplimit   specifies how many sequences can have gaps at the same point (Default 0)
+numofalign        specifies how many alignments you want. (Default 1)
+buffer     Specifies the size of buffer to be added to the found areas before multiple aligning in nukleotides (Default 1000)
+lambda     Bonus factor for hit (Default 2)
+xi         Penalty factor for rotation (Default 1.0)
+mu         Penalty factor for average distance between sites (Default 0.5)
+nu         Penalty factor for distance difference between sites (Default 1.0)
+nuc_per_rotation    Specifies how many nucletides there are per rotation. (Default 10.4)
+If you want to skip a argument just  write '.' for it."""
+#        self.show("Aloitetaan shortMultiAlign")
+        try:
+            [filename, pwfilename, gaplimit, numofalign, nbuffer, Lambda, xi,
+             mu, nu, nuc_per_rotation]=arglist + ['.']*(10-len(arglist))
+            
+            if gaplimit=='.':
+                gaplimit=0
+            if numofalign=='.':
+                numofalign=1
+            if nbuffer=='.':
+                nbuffer=1000
+            if Lambda=='.':
+                Lambda=2.0
+            if xi=='.':
+                xi=1.0
+            if mu=='.':
+                mu=0.5
+            if nu=='.':
+                nu=1.0
+            if nuc_per_rotation=='.':
+                nuc_per_rotation=10.4
+
+
+            data=[x.strip().split() for x in open(filename).readlines() ]
+            while(len(data[-1])==0):
+                del data[-1]
+            
+	    pairwise=[x.strip().split() for x in open(pwfilename).readlines() ]
+            while(len(pairwise[-1])==0):
+                del pairwise[-1]
+
+            self.alignment=multiFromPairwise.MultiFromPairwise(data,pairwise,int(gaplimit),int(numofalign),
+                                                     int(nbuffer), float(Lambda), float(xi),
+                                                     float(mu), float(nu),float(nuc_per_rotation))
+            if not self.alignment:
+                self.show("No multiple alignment for a reason or an other")
+            else:
+                for alnNo,goodAlign in enumerate(self.alignment.bestAlignments):
+                    goodAlign.reverse();
+                self.show("Done")
+                #self.show(str(len(self.alignment.bestAlignments)))
+                self.show("Used time %g sec."%(self.alignment.secs_to_align))
+        
+	except ValueError,e:
+            raise CommandError("Error:",e)
+            print "Error: unallowed arguments passed to 'multiFromPairwise'"
+
+
+    def shortMultiAlign(self,arglist):
+        """Arguments: filename[,gaplimit[,numofalign[,lambda[,xi[,mu[,nu,[,nuc_per_rotation]]]]]]
+Computes multiple alignment of the BS from a gff file
+filename specifies a file in gff format is you want to be aligned
+gaplimit specifies how many sequences can have gaps at the same point (Default 0)
+numofalign        specifies how many alignments you want. (Default 3)
+lambda   Bonus factor for hit (Default 2)
+xi       Penalty factor for rotation (Default 1.0)
+mu       Penalty factor for average distance between sites (Default 0.5)
+nu       Penalty factor for distance difference between sites (Default 1.0)
+nuc_per_rotation    Specifies how many nucletides there are per rotation. (Default 10.4)
+If you want to skip a argument just  write '.' for it."""
+#        self.show("Aloitetaan shortMultiAlign")
+        try:
+            [filename, gaplimit, numofalign, Lambda, xi,
+             mu, nu, nuc_per_rotation]=arglist + ['.']*(8-len(arglist))
+            
+            if gaplimit=='.':
+                gaplimit=0
+            if numofalign=='.':
+                numofalign=3
+            if Lambda=='.':
+                Lambda=2.0
+            if xi=='.':
+                xi=1.0
+            if mu=='.':
+                mu=0.5
+            if nu=='.':
+                nu=1.0
+            if nuc_per_rotation=='.':
+                nuc_per_rotation=10.4
+
+
+            data=[x.strip().split() for x in open(filename).readlines() ]
+            while(len(data[-1])==0):
+                del data[-1]
+
+            self.alignment=shortMultiAlign.ShortMultiAlignment(data,int(gaplimit),int(numofalign),
+                                                     float(Lambda), float(xi),
+                                                     float(mu), float(nu),float(nuc_per_rotation))
+            if not self.alignment:
+                self.show("No multiple alignment for a reason or an other")
+            else:
+                for alnNo,goodAlign in enumerate(self.alignment.bestAlignments):
+                    goodAlign.reverse()
+                self.show("Done")
+                #self.show(str(len(self.alignment.bestAlignments)))
+                self.show("Used time %g sec."%(self.alignment.secs_to_align))
+        
+	except ValueError,e:
+            raise CommandError("Error:",e)
+            print "Error: unallowed arguments passed to 'shortMultipleAlign'"
+
+    def treeMultiAlign(self,arglist):
+        """Arguments: filename,treefilename[,method[,k[,numofalign[,lambda[,xi[,mu[,nu,[,nuc_per_rotation[,pwfiles]]]]]]]]]
+Computes multiple alignment of the BS from a gff file
+filename specifies a file in gff format is you want to be aligned
+treefilename specifies a file in Newick tree format with the phylogenetic tree
+method specifies which method of scoring is used. 1=Sum of pairs, 2=Score generalized from pairwise, 3=Score based on representative sequences. (Default 1)
+k specifies how many local alignments are kept at each level (Default 100)
+numofalign        specifies how many alignments you want. (Default 3)
+lambda   Bonus factor for hit (Default 2)
+xi       Penalty factor for rotation (Default 1.0)
+mu       Penalty factor for average distance between sites (Default 0.5)
+nu       Penalty factor for distance difference between sites (Default 1.0)
+nuc_per_rotation    Specifies how many nucletides there are per rotation. (Default 10.4)
+pwfiles	 If the needed pairwise alignments are calculated beforehand, the path to the directory they are in.
+If you want to skip a argument just  write '.' for it."""
+        try:
+            [filename, treefilename, method, k, numofalign, Lambda, xi,
+             mu, nu, nuc_per_rotation, pwfiles]=arglist + ['.']*(11-len(arglist))
+
+            if k=='.':
+                k=100
+            if numofalign=='.':
+                numofalign=3
+            if Lambda=='.':
+                Lambda=2.0
+            if xi=='.':
+                xi=1.0
+            if mu=='.':
+                mu=0.5
+            if nu=='.':
+                nu=1.0
+            if nuc_per_rotation=='.':
+                nuc_per_rotation=10.4
+            if method=='.':
+                method=1
+            if pwfiles=='.':
+                pwfiles=""
+
+            data=[x.strip().split() for x in open(filename).readlines() ]
+            while(len(data[-1])==0):
+                del data[-1]
+
+#            tree=[x.strip().split() for x in open(treefilename).readlines() ]
+            x=open(treefilename).readline()
+            x.strip()
+            tree=x
+
+            self.alignment=treeMultiAlign.TreeMultiAlignment(data,tree,int(k),int(numofalign),int(method),
+                                                     float(Lambda), float(xi),
+                                                     float(mu), float(nu),float(nuc_per_rotation),pwfiles)
+            if not self.alignment:
+                self.show("No multiple alignment for a reason or an other")
+            else:
+#                for alnNo,goodAlign in enumerate(self.alignment.bestAlignments):
+#                    goodAlign.reverse()
+                self.show("Done")
+                #self.show(str(len(self.alignment.bestAlignments)))
+                self.show("Used time %g sec."%(self.alignment.secs_to_align))
+        
+	except ValueError,e:
+            raise CommandError("Error:",e)
+            print "Error: unallowed arguments passed to 'treeMultipleAlign'"
+
+
+    def nodeAlignments(self,arglist):
+        """Fetch and print alignments from nodes of the tree after treeMultipleAlign"""
+
+        number=int(arglist[0])
+        if len(arglist)>1:
+            numofalign=int(arglist[1])
+        else:
+            numofalign=3
+
+        self.alignment.getNodeAlignments(number,numofalign)
+#        align=self.alignment.getNodeAlignments(number,numofalign)
+#        self.show(Output.formatalign(align,self.seq))
 
 
     def multiAlign(self,arglist):
@@ -390,7 +592,7 @@ If you use '.' as filename the local data are aligned."""
                 #                print "goodAlign=",map(str,self.alignment.nextBest())
         except ValueError,e:
             raise CommandError("Error:",e)
-            #print "Error: unallowed arguments passed to 'multipleAlign'"
+            print "Error: unallowed arguments passed to 'multipleAlign'"
 
         
     def showMultiAlign(self,arglist):
@@ -874,10 +1076,11 @@ If you use '.' as filename the local data are aligned."""
 
     def savealignGFF(self,filename=""):
         "Saves the results in GFF format"
-        try:
+        if 1:
+#	try:
             return Output.savealign(Output.formatMultiAlignGFF(self.alignment,self.seq), filename)
-        except AttributeError:
-            raise CommandError("No alignment to save")
+#        except AttributeError:
+#            raise CommandError("No alignment to save")
 
     def savealignAnchor(self,filename=""):
         "Saves the results in Anchor format"
@@ -899,6 +1102,19 @@ If you use '.' as filename the local data are aligned."""
         "Prints the alignment to standart out"
         if hasattr(self,"alignment"):
             self.show(Output.formatalign(self.alignment,self.seq))
+    
+    def savepwbase(self, filename=''):
+        "Saves the pairwise alignments the multiple alignment was based on"
+        try:
+            return Output.savealign(Output.formatpwbase(self.alignment), filename)
+        except AttributeError:
+            raise CommandError("No alignment to save")
+
+
+    def showpwbaseSTDO(self):
+        "Prints the pairwise alignments the multiple alignment was based on to standart out"
+        if hasattr(self,"alignment"):
+            self.show(Output.formatpwbase(self.alignment))
 
     def about(self):
         "Information about the program"

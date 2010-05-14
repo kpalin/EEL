@@ -131,9 +131,32 @@ modMultiAlign = Extension('eellib.multiAlign',
                           extra_compile_args=alignCompileArgs+common_compile_args,
                           extra_link_args = [])
 
+modShortMultiAlign = Extension('eellib.shortMultiAlign',
+                          library_dirs = alignLibDirs,
+                          libraries = commonLibs+alignLibs,
+                          sources = ['src/shortMultiAlign.cc'],
+                          extra_compile_args=alignCompileArgs+common_compile_args,
+                          extra_link_args = [])
 
-ext_modList= [modMatrix,modAlignedCols,modAlign,modDist]
-ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
+modMultiFromPairwise = Extension('eellib.multiFromPairwise',
+                          library_dirs = alignLibDirs,
+                          libraries = commonLibs+alignLibs,
+                          sources = ['src/multiFromPairwise.cc'],
+                          extra_compile_args=alignCompileArgs+common_compile_args,
+                          extra_link_args = [])
+
+modTreeMultiAlign = Extension('eellib.treeMultiAlign',
+                          library_dirs = alignLibDirs,
+                          libraries = commonLibs+alignLibs,
+                          sources = ['src/treeMultiAlign.cc'],
+                          extra_compile_args=alignCompileArgs+common_compile_args,
+                          extra_link_args = [])
+
+
+#ext_modList= [modMatrix,modAlignedCols,modAlign,modDist]
+#ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modDist]
+#ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modShortMultiAlign,modMultiFromPairwise,modDist]
+ext_modList= [modMatrix,modAlignedCols,modAlign,modMultiAlign,modShortMultiAlign,modMultiFromPairwise,modTreeMultiAlign,modDist]
 
 setup (name = 'EEL',
        version = time.strftime("%y%m%d"),#'2.0pre4',

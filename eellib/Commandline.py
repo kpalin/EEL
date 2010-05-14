@@ -16,6 +16,9 @@ import string
 
 
 # $Log$
+# Revision 1.27  2007/09/10 14:19:21  kpalin
+# Korjattiin ja nopeutettiin KL-etäisyyksien laskentaa
+#
 # Revision 1.26  2007/08/09 05:57:36  kpalin
 # Fixed setBGfreq to accept only 1 parameter
 #
@@ -196,6 +199,8 @@ class Commandline(Interface):
                          'savealign':          (self.savealign,0),
                          'savealignGFF':       (self.savealignGFF,0),
                          'savealignAnchor':       (self.savealignAnchor,0),
+                         'showpwbase':          (self.showpwbase,0),
+                         'savepwbase':          (self.savepwbase,0),
                          'showalign':          (self.showalign,0),
                          'sa':                 (self.showalign,0),
                          'setpseudocount':     (self.setPseudoCnt,1),
@@ -206,6 +211,10 @@ class Commandline(Interface):
                          'suboptimals':               (self.suboptimalAlignment,0),
                          'suboptimalsDownTo':               (self.suboptimalAlignmentsDownTo,1),
                          '__multipleAlignGreedy':      (self.multiAlignGreedy,1),
+                         'shortMultipleAlign':      (self.shortMultiAlign,1),
+                         'multiFromPairwise':      (self.multiFromPairwise,2),
+                         'treeMultipleAlign':      (self.treeMultiAlign,2),
+                         'nodeAlignments':      (self.nodeAlignments,1),
                          'multipleAlign':      (self.multiAlign,0),
                          '__showMultiAlign':     (self.showMultiAlign,0),
                          '__saveMultiAlign':     (self.saveMultiAlign,1),
@@ -780,6 +789,21 @@ e.g. eel_2003_9_16_11_48_align.anc"""
         if filename:
             print"results saved in", filename
 
+    def showpwbase(self, arglist):
+        "Arguments: none\nprints the pairwise alignments the multiple alignment was based on to stdout"
+        self.showpwbaseSTDO()    
+    
+    def savepwbase(self, arglist):
+        "Arguments: filename\nsaves the pairwise alignments the multiple alignment was based on"
+        filename=''
+        if len(arglist):
+            filename=arglist[0]
+        else:
+            filename=self.getBaseSaveName()+'.pwbase'
+        filename = Interface.savepwbase(self,filename)
+        if filename:
+            print"results saved in", filename
+    
     def showalign(self, arglist):
         "Arguments: none\nprints the computed alignment to stdout"
         self.showalignSTDO()    
