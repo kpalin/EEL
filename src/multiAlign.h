@@ -5,6 +5,10 @@
 /*
  *
  *$Log$
+ *Revision 1.17  2006-12-08 09:49:56  kpalin
+ *Fixed a seqfault and added a source file from Pasi rastas which got
+ *included in _c_matrix.cc
+ *
  *Revision 1.16  2006/08/31 10:09:34  kpalin
  *Minimum remembered pairwise alignments and speed improvements for multi align.
  *
@@ -103,6 +107,11 @@ struct id_triple
     return (int)this->epos<(int)other.epos || 
       ((int)this->epos==(int)other.epos && this->weight<other.weight) ||
       ((int)this->epos==(int)other.epos && this->weight==other.weight && this->strand<other.strand);
+  }
+
+  //Sanna's addition
+  bool operator==(const id_triple &other) const { 
+    return ((int)this->ID==(int)other.ID && (int)this->pos==(int)other.pos && (int)this->epos==(int)other.epos && this->weight==other.weight && this->strand==other.strand);
   }
 };
 
