@@ -13,6 +13,9 @@ import math
 
 #
 # $Log$
+# Revision 1.32  2010-05-14 11:10:42  sksipila
+# Added shortMultipleAlign, multiFromPairwise and treeMultipleAlign
+#
 # Revision 1.31  2008/03/12 12:03:03  kpalin
 # Fixed "documentation"
 #
@@ -488,9 +491,6 @@ def formatalign(alignment,seq=None):
             l=max(map(len,seqs))
             return (0,[xseq.ljust(l).replace(" ","-") for xseq in seqs])
     
-    
-    print "Tarkistuspiste 1\n";
-    
     def formatAlnSeq(alns,names,starts,motifAln="",linelen=60):
         """Formats the DNA sequence alignment output"""
         outstr="\n".join(["Sequence %d: %s"%(seqI+1,iname) for (seqI,iname) in enumerate(names)])+"\n\n"
@@ -504,11 +504,8 @@ def formatalign(alignment,seq=None):
             poses=[xpos+len(xline)-xline.count("-") for (xpos,xline) in zip(poses,lines)]
         return outstr
     
-    print "Tarkistuspiste 2\n";
     outStrIO.write("### lambda=%g mu=%g nu=%g xi=%g Nucleotides per rotation=%g\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation))
-    print "Tarkistuspiste 3\n";
     outStrIO.write("### D%s\nNote! First nucleotide at position 1 (one) and binding site at zero!\n"%("".join(["[%s]"%(x) for x in alignment.names])))
-    print "Tarkistuspiste 4\n";
     
     #xname,yname=alignment.x_name,alignment.y_name
     xe,ye=0,0
@@ -521,13 +518,10 @@ def formatalign(alignment,seq=None):
     if seq:
         outStrIO.write("\n".join(["Sequence %s:\n%s\n"%(xseq,seq.describe(xseq)) for xseq in alignment.names])+"\n\n")
     
-    print "Tarkistuspiste 5\n";
     # goodAlign= [ (x,y,Score,Motif,(startX,endX),(startY,endY),Strand) ]
     for alnNo,goodAlign in enumerate(alignment.bestAlignments):
-        print "Tarkistuspiste 6\n";
         if len(goodAlign)==0:
             continue
-        print "Tarkistuspiste 7\n";
         if seq:
             starts=[max(spos-10,0) for (spos,epos) in goodAlign[0].beginEnd]
             ends=[min(epos+10,len(seq[alignment.names[i]])) for (i,(spos,epos)) in enumerate(goodAlign[-1].beginEnd)]
@@ -538,10 +532,8 @@ def formatalign(alignment,seq=None):
             maln=""
             addeds=starts[:]
         
-        print "Tarkistuspiste 8\n";
         outStrIO.write("\n### Alignment No %d ###\n"%(alnNo+1,))
         
-        print "Tarkistuspiste 9\n";
         #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
         for as in goodAlign:
             coordStr=""
@@ -575,7 +567,6 @@ def formatalign(alignment,seq=None):
                 maln=alnFmt%(maln," "*len(ToAdd[0]),as.motif[:siteLen])
                 addeds=[endX for (beginX,endX) in as.beginEnd]
         
-        print "Tarkistuspiste 10\n";
         if seq:
             ToAdd=[seq[xseq][xadded-xstart:xend-xstart].lower() for (xseq,xadded,xstart,xend) in zip(alignment.names,addeds,starts,ends)]
             distYX,ToAdd=alignSeqs(ToAdd)
@@ -583,12 +574,8 @@ def formatalign(alignment,seq=None):
             
             outStrIO.write("\n"+formatAlnSeq([xaln.replace(" ","-") for xaln in alns],alignment.names,starts,maln))
             #outstr+="%s\n%s\n"%(xaln.replace(" ","-"),yaln.replace(" ","-"))
-        print "Tarkistuspiste11\n";
     
-    
-    print "Tarkistuspiste 12\n";
     outStrIO.write("### Alignment took %.1f CPU seconds.\n"%(alignment.secs_to_align))
-    print "Tarkistuspiste 13\n";
     return outStrIO.getvalue()
 
 def formatpwbase(alignment):
