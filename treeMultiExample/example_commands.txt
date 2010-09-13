@@ -1,0 +1,64 @@
+> cd treeMultiExample
+
+Basic, with default parameters:
+> treeMultipleAlign myctesti_alue_5.gff puu5_nimilla.new
+cow,dog,horse,human,mouse,
+s0:(s2:(s3:(l2:(,),l0:(,)),l1:(,)),s1:(l4:(,),l3:(,)))
+Case 1
+Filled 21306 squares of 642524
+Case 1
+Filled 27173 squares of 800088
+Case 2
+Case 3
+Done 
+Used time 1431.02 sec. 
+> sa
+Using subb alignment
+### lambda=2 mu=0.5 nu=1 xi=1 Nucleotides per rotation=10.4
+### D[horse][cow][dog][human][mouse]
+Note! First nucleotide at position 1 (one) and binding site at zero!
+
+### Alignment No 1 ###
+D[0][0][0][0][0]=345.24 SPI-1.pfm (4723,4728) <=> (8688,8693) <=> (3997,4002) <=> (4820,4825) <=> (3472,3477) -
+D[1][1][1][1][1]=412.89 Yin-Yang.pfm (4796,4801) <=> (8762,8767) <=> (4070,4075) <=> (4893,4898) <=> (3545,3550) +
+D[2][2][2][2][2]=612.34 jtcf4.pfm (4885,4893) <=> (8851,8859) <=> (4159,4167) <=> (4982,4990) <=> (3634,3642) -
+.
+.
+.
+### Alignment took 1431.0 CPU seconds.
+
+
+Results from inside the tree, from node 2:
+> nodeAlignments 2
+> sa
+Using subb alignment
+### lambda=2 mu=0.5 nu=1 xi=1 Nucleotides per rotation=10.4
+### D[cow][dog][horse]
+Note! First nucleotide at position 1 (one) and binding site at zero!
+
+### Alignment No 1 ###
+D[0][0][0]=83.68 Dof2.pfm (1745,1750) <=> (5561,5566) <=> (1061,1066) -
+D[1][1][1]=120.40 Yin-Yang.pfm (1797,1802) <=> (5601,5606) <=> (1113,1118) -
+D[2][2][2]=171.25 deltaEF1.pfm (1839,1844) <=> (5643,5648) <=> (1155,1160) +
+.
+.
+.
+### Alignment took 1431.0 CPU seconds.
+
+
+Using ready-calculated pairwise alignments from folder pwalings:
+Notice that the tabs in the pwalignment files must be replaced with |s before they can be used for this!
+> treeMultipleAlign myctesti_alue_5.gff puu5_nimilla.new . . . . . . . . pwaligns/
+cow,dog,horse,human,mouse,
+s0:(s2:(s3:(l2:(,),l0:(,)),l1:(,)),s1:(l4:(,),l3:(,)))
+Case 1
+Opening file pwaligns/human_mouse.align.gff
+Case 1
+Opening file pwaligns/horse_dog.align.gff
+Case 2
+Case 3
+Done 
+Used time 35.39 sec. 
+
+
+More info about the scoring functions can be found in my master's thesis, Monilinjaus fylogeniapuun ohjaamana. It can be found in the campus library (it was accepted in June 2010) or in e-thesis.helsinki.fi.
