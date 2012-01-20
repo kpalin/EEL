@@ -274,9 +274,9 @@ def formatalignCHAOS(alignment):
             continue
         prevScore=0.0
         #        for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
-        for as in goodAlign: # as == Aligned site
-            prevScore,score=as.score,as.score-prevScore
-            outStrIO.write("\t".join(map(str,[xname,yname,as.beginX,as.beginY,as.endX-as.beginX,score]))+"\n")
+        for alns in goodAlign: # alns == Aligned site
+            prevScore,score=alns.score,alns.score-prevScore
+            outStrIO.write("\t".join(map(str,[xname,yname,alns.beginX,alns.beginY,alns.endX-alns.beginX,score]))+"\n")
 
     return outStrIO.getvalue()
 
@@ -339,13 +339,13 @@ def formatMultiAlignGFF(alignment,seqData=None,tagLength=50):
         
         # For each column on the module.
         prevScore=0.0
-        for as,colCode in zip(goodAlign,range(len(goodAlign))):
-            prevScore,score=as.score,as.score-prevScore
-            for seq,(begin,end),siteScore,annot in zip(as.seqID,as.beginEnd,as.siteScore,as.annotation):
+        for alns,colCode in zip(goodAlign,range(len(goodAlign))):
+            prevScore,score=alns.score,alns.score-prevScore
+            for seq,(begin,end),siteScore,annot in zip(alns.seqID,alns.beginEnd,alns.siteScore,alns.annotation):
                 if type(siteScore)==type(1.1):
                     outStrIO.write(GFFformat%(alignment.names[seq], \
-                                              as.motif, \
-                                              begin,end,score,as.strand,\
+                                              alns.motif, \
+                                              begin,end,score,alns.strand,\
                                               i,siteScore,colCode,annot.strip()))
                     try:
                         assert(DEBUGprevpos.get(seq,(0,0))[1]<begin)
@@ -438,23 +438,23 @@ def formatalign2D(alignment,seq=None):
 
         outStrIO.write("\n### Alignment No %d ###\n"%(i,))
         #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
-        for as in goodAlign:
-            outStrIO.write("D[%d][%d]=%.2f %s (%d,%d) <=> (%d,%d) %s\n"%(as.seqX,as.seqY,as.score,as.motif,as.beginX,as.endX,as.beginY,as.endY,as.strand))
+        for alns in goodAlign:
+            outStrIO.write("D[%d][%d]=%.2f %s (%d,%d) <=> (%d,%d) %s\n"%(alns.seqX,alns.seqY,alns.score,alns.motif,alns.beginX,alns.endX,alns.beginY,alns.endY,alns.strand))
             if seq:
-                y2add=yseq[yadded-ystart:as.beginY-1-ystart].lower()
-                x2add=xseq[xadded-xstart:as.beginX-1-xstart].lower()
+                y2add=yseq[yadded-ystart:alns.beginY-1-ystart].lower()
+                x2add=xseq[xadded-xstart:alns.beginX-1-xstart].lower()
                 #alnFmt="%%s%%-%ds%%s"%(max(len(y2add),len(x2add)))
                 #alnFmt="%s%s%s"
-                siteLen=as.endX-as.beginX+1
+                siteLen=alns.endX-alns.beginX+1
                 alnFmt="%%s%%s%%-%ds"%(siteLen)
 
-                assert(len(xseq[as.beginX-1-xstart:as.endX-xstart])==siteLen)
+                assert(len(xseq[alns.beginX-1-xstart:alns.endX-xstart])==siteLen)
                 distYX,y2add,x2add=alignSeq(y2add,x2add,1,1)
-                yaln=alnFmt%(yaln,y2add,yseq[as.beginY-1-ystart:as.endY-ystart].upper())
-                xaln=alnFmt%(xaln,x2add,xseq[as.beginX-1-xstart:as.endX-xstart].upper())
+                yaln=alnFmt%(yaln,y2add,yseq[alns.beginY-1-ystart:alns.endY-ystart].upper())
+                xaln=alnFmt%(xaln,x2add,xseq[alns.beginX-1-xstart:alns.endX-xstart].upper())
 
-                maln=alnFmt%(maln," "*len(y2add),as.motif[-siteLen:])
-                xadded,yadded=as.endX,as.endY
+                maln=alnFmt%(maln," "*len(y2add),alns.motif[-siteLen:])
+                xadded,yadded=alns.endX,alns.endY
 
         if seq:
             distYX,y2add,x2add=alignSeq(yseq[yadded-ystart:yend-ystart].lower(),xseq[xadded-xstart:xend-xstart].lower())
@@ -535,10 +535,10 @@ def formatalign(alignment,seq=None):
         outStrIO.write("\n### Alignment No %d ###\n"%(alnNo+1,))
         
         #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
-        for as in goodAlign:
+        for alns in goodAlign:
             coordStr=""
 	    seqCoordStr=""
-            for i,x,(spos,epos) in zip(range(1,len(as.siteSeqPos)+1),as.siteSeqPos,as.beginEnd):
+            for i,x,(spos,epos) in zip(range(1,len(alns.siteSeqPos)+1),alns.siteSeqPos,alns.beginEnd):
                 if type(x)==type(1):
                     if(i==1):
                         coordStr="".join([coordStr,"[%d]"%(x)])
@@ -554,18 +554,18 @@ def formatalign(alignment,seq=None):
                         coordStr="".join([coordStr,"[ ]"])
                         seqCoordStr=" <=> ".join([seqCoordStr,"( , )"])
 
-            outStrIO.write("D%s=%.2f %s %s %s\n"%(coordStr,as.score,as.motif,seqCoordStr,as.strand))
+            outStrIO.write("D%s=%.2f %s %s %s\n"%(coordStr,alns.score,alns.motif,seqCoordStr,alns.strand))
             if seq:
-                ToAdd=[xseq[xadded-xstart:beginX-1-xstart].lower() for (xseq,xadded,xstart,(beginX,endX)) in zip(seqs,addeds,starts,as.beginEnd)]
-                siteLen=as.beginEnd[0][1]-as.beginEnd[0][0]+1
+                ToAdd=[xseq[xadded-xstart:beginX-1-xstart].lower() for (xseq,xadded,xstart,(beginX,endX)) in zip(seqs,addeds,starts,alns.beginEnd)]
+                siteLen=alns.beginEnd[0][1]-alns.beginEnd[0][0]+1
                 alnFmt="%%s%%s%%-%ds"%(siteLen)
                 
-                #assert(len(xseq[as.beginX-1-xstart:as.endX-xstart])==siteLen)
+                #assert(len(xseq[alns.beginX-1-xstart:alns.endX-xstart])==siteLen)
                 distYX,ToAdd=alignSeqs(ToAdd,1,1)
-                alns=[alnFmt%(xaln,x2add,xseq[beginX-1-xstart:endX-xstart].upper()) for (xaln,x2add,xseq,xstart,(beginX,endX)) in zip(alns,ToAdd,seqs,starts,as.beginEnd)]
+                alns=[alnFmt%(xaln,x2add,xseq[beginX-1-xstart:endX-xstart].upper()) for (xaln,x2add,xseq,xstart,(beginX,endX)) in zip(alns,ToAdd,seqs,starts,alns.beginEnd)]
                 
-                maln=alnFmt%(maln," "*len(ToAdd[0]),as.motif[:siteLen])
-                addeds=[endX for (beginX,endX) in as.beginEnd]
+                maln=alnFmt%(maln," "*len(ToAdd[0]),alns.motif[:siteLen])
+                addeds=[endX for (beginX,endX) in alns.beginEnd]
         
         if seq:
             ToAdd=[seq[xseq][xadded-xstart:xend-xstart].lower() for (xseq,xadded,xstart,xend) in zip(alignment.names,addeds,starts,ends)]
@@ -602,11 +602,11 @@ def formatpwbase(alignment):
             outStrIO.write("]\n")
             
             #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
-            for as in align:
+            for alns in align:
                 coordStr=""
                 seqCoordStr=""
                 match=0
-                for i,x,(spos,epos) in zip(range(1,len(as.siteSeqPos)+1),as.siteSeqPos,as.beginEnd):
+                for i,x,(spos,epos) in zip(range(1,len(alns.siteSeqPos)+1),alns.siteSeqPos,alns.beginEnd):
                     if(i==1):
                         coordStr="".join([coordStr,"[%d]"%(x)])
                         seqCoordStr="".join([seqCoordStr,"(%d,%d)"%(spos,epos)])
@@ -617,8 +617,8 @@ def formatpwbase(alignment):
                 for gaNo,goodAlign in enumerate(alignment.bestAlignments):
                     if(gaNo/alignment.numofalign==groupNo and match==0):
                         for gas in goodAlign:
-                            for (gspos,gepos) in gas.beginEnd:
-                                for(spos,epos) in as.beginEnd:
+                            for (gspos,gepos) in galns.beginEnd:
+                                for(spos,epos) in alns.beginEnd:
                                     if(spos==gspos and epos==gepos):
                                         match=match+1
                             if(match>1):
@@ -627,7 +627,7 @@ def formatpwbase(alignment):
                                 match=0
                 if(match>1):
                     outStrIO.write("!")
-                outStrIO.write("D%s=%.2f %s %s %s\n"%(coordStr,as.score,as.motif,seqCoordStr,as.strand))
+                outStrIO.write("D%s=%.2f %s %s %s\n"%(coordStr,alns.score,alns.motif,seqCoordStr,alns.strand))
         outStrIO.write("\n\n")
     
     return outStrIO.getvalue()
