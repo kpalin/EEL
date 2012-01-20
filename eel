@@ -56,7 +56,6 @@ import sys
 cl=Commandline.Commandline()
 
 if len(sys.argv)==1:
-    print "$Id$"
     try:
         import Tkinter
         from _tkinter import TclError
