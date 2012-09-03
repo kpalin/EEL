@@ -12,7 +12,7 @@ CUTOFF_PVALUE=2
 #
 # $Log$
 # Revision 1.21  2007/09/10 14:19:39  kpalin
-# Korjattiin KL etäisyyksien laskentaa
+# Korjattiin KL etï¿½isyyksien laskentaa
 #
 # Revision 1.20  2007/03/14 08:35:58  kpalin
 # Added universal newline support for reading PFM:s
@@ -522,7 +522,15 @@ def setMarkovBackground(bg):
     Matrix.backGround=bg
 
 def getAllTFBS(sequence,cutoff,matlist,cutoffType):
-    "Get all TFBSs from one sequence."
+    """Get all TFBSs from one sequence.
+    
+    parameters:
+    sequence     Instance of a Sequence class (?)
+    cutoff       Sequence of cutoff values if cutoffType == CUTOFF_ABSOLUTE
+                 Cutoff p-value if cutoffType == CUTOFF_PVALUE
+                 Power of two of score gap between maximum matrix score and minimal match. 
+                         i.e. absolute cutoff is log2(cutoff) + maxScore for each matrix."""
+                         
     if cutoffType==CUTOFF_PVALUE:
         cutoff=[m.thresholdForPvalue(cutoff) for m in matlist]
     elif cutoffType==CUTOFF_RELATIVE:

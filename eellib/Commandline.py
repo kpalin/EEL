@@ -17,7 +17,7 @@ import string
 
 # $Log$
 # Revision 1.27  2007/09/10 14:19:21  kpalin
-# Korjattiin ja nopeutettiin KL-etäisyyksien laskentaa
+# Korjattiin ja nopeutettiin KL-etï¿½isyyksien laskentaa
 #
 # Revision 1.26  2007/08/09 05:57:36  kpalin
 # Fixed setBGfreq to accept only 1 parameter
@@ -115,7 +115,7 @@ import string
 # Revision 1.2  2003/12/29 12:43:17  kpalin
 # Interface class repaired to enable alignment from gzip:ed temporary files.
 #
-# Ilmeisesti jotain uutta. En tiedä mitä.
+# Ilmeisesti jotain uutta. En tiedï¿½ mitï¿½.
 #
 
     
@@ -466,9 +466,9 @@ class Commandline(Interface):
     def getTFBS(self, arglist):
         """Arguments: [bound]
 computes the scores of all matrices and all sequences which are
-better than bound*maxscore. maxscore is the highest reachable
+better than log2(bound) + maxscore. maxscore is the highest reachable
 score of the actual matrix with respect to the background
-The default value for bound is 0.1"""
+The default value for bound is 0.1 i.e. ~3.3 below the maximum score."""
         bound=0.1
         try:
             if(len(arglist)>0):

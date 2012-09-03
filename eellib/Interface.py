@@ -784,7 +784,7 @@ If you use '.' as filename the local data are aligned."""
         Interface.getTFBS(self,cutoff,Matrix.CUTOFF_PVALUE)
  
     def getTFBS(self, bound=0.1 , cutoffType=Matrix.CUTOFF_RELATIVE):
-        "computes the possible TFBS"
+        "Scan for putative TFBS. For each matrix, score threshold is log2(bound) + maximum score."
         if hasattr(self,"tempFileName"):
             os.remove(self.tempFileName)
             del(self.tempFileName)
