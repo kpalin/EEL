@@ -11,130 +11,6 @@ from eellib import alignedCols
 import math
 
 
-#
-# $Log$
-# Revision 1.32  2010-05-14 11:10:42  sksipila
-# Added shortMultipleAlign, multiFromPairwise and treeMultipleAlign
-#
-# Revision 1.31  2008/03/12 12:03:03  kpalin
-# Fixed "documentation"
-#
-# Revision 1.30  2008/02/29 10:08:23  kpalin
-# Cut motif name from the end.
-#
-# Revision 1.29  2008/01/02 08:27:14  kpalin
-# Added sequence names and descriptions to GFF output file.
-#
-# Revision 1.28  2006/11/13 13:03:01  kpalin
-# Added module E-score RMSE
-#
-# Revision 1.27  2006/11/13 12:33:41  kpalin
-# Added 50mer tags to the GFF output giving the location of the
-# module. The tags start from the beginning and the end of the module.
-#
-# Added Escore reporting.
-#
-# Revision 1.26  2006/08/31 10:08:36  kpalin
-# More Debug output and TF distance calculations.
-#
-# Revision 1.25  2006/08/14 09:46:06  kpalin
-# Added more comments.
-#
-# Revision 1.24  2006/02/08 07:44:46  kpalin
-# Fixed faulty asserts.
-#
-# Revision 1.23  2005/11/25 12:09:55  kpalin
-# Human readable format for multiple alignment.
-#
-# Revision 1.22  2005/11/24 13:29:13  kpalin
-# Added some debugging code for GFF alignment output.
-#
-# Revision 1.21  2005/05/19 07:49:35  kpalin
-# Merged Waterman-Eggert style suboptimal alignments and
-# SNP matching.
-#
-# Revision 1.20.2.2  2005/05/10 13:12:14  kpalin
-# Added a 3rd row for the alignment noting the aligned motif.
-#
-# Revision 1.20.2.1  2005/04/12 09:12:10  kpalin
-# Formatalign outputs also the description of the sequences, when
-# available.
-#
-# Revision 1.20  2005/03/03 09:04:59  kpalin
-# Even better output for SNP matching.
-#
-# Revision 1.19  2005/02/24 11:37:43  kpalin
-# Site annotations.
-#
-# Revision 1.18  2005/02/22 11:08:56  kpalin
-# Initial working version for outputting results from
-# SNP scanning matrix matcher.
-#
-# Revision 1.17  2005/01/13 13:16:42  kpalin
-# Moved the requesting of sequences to be aligned to Python side
-# of stuff. Much better.
-#
-# Revision 1.16  2005/01/12 13:34:55  kpalin
-# Added Tkinter/Tix Graphical user interface and command -no-gui to
-# avoid it.
-#
-# Revision 1.15  2005/01/07 13:41:25  kpalin
-# Works with py2exe. (windows executables)
-#
-# Revision 1.14  2004/12/17 12:21:26  kpalin
-# Changed the matrix dictionary key ordering and made the GFF output
-# routines routine.
-#
-# Revision 1.13  2004/12/14 13:08:05  kpalin
-#
-# Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun
-# "My hovercraft is full of EELs" )
-#
-# Revision 1.12  2004/10/21 12:45:43  kpalin
-# Added possibility to gzip also the alignment files.
-#
-# Revision 1.11  2004/07/30 12:08:54  kpalin
-# Changed the GFF formatting to use alnColumn objects. (Needed
-# for multiple alignment)
-#
-# Revision 1.10  2004/03/03 09:26:59  kpalin
-# Few possible bugs corrected.
-#
-# Revision 1.9  2004/02/26 11:28:22  kpalin
-# Changed the output routines to handle the new output from alignment
-# bestAlignments
-#
-# Revision 1.8  2004/02/23 12:23:52  kpalin
-# Updates for per gene orthologous runs. Maybe litle multiple alignment.
-#
-# Revision 1.7  2004/01/23 12:52:00  kpalin
-# Some, no doubt vital, modifications
-#
-# Revision 1.6  2004/01/14 10:05:58  kpalin
-# Generated documentation
-#
-# Revision 1.5  2004/01/09 10:07:00  kpalin
-# Output in Anchor format.
-# GFF format gives score changes, not increasing sequence of scores.
-#
-# probably much more
-#
-# Revision 1.4  2003/12/30 11:20:45  kpalin
-# In interface.py Reverse the previous changes and allow passing of
-# gziped files to c++ align extension
-#
-# Revision 1.3  2003/12/29 12:43:18  kpalin
-# Interface class repaired to enable alignment from gzip:ed temporary files.
-#
-# Ilmeisesti jotain uutta. En tiedä mitä.
-#
-# Revision 1.2  2003/12/12 12:43:54  kpalin
-# Lisättiin loki ja gff2aplot ohjelmalle sopiva tuloste.
-# Nyt saa kivoja 2D postscript kuvia helposti.
-#
-#
-
-
 
 try: # Workaround for python 2.2
     enumerate([2,3,4])
@@ -181,10 +57,6 @@ def savematch(data, filename=''):
 def showmatch(data):
     """data must have the following format:
     dictionary from Matrix to Sequence to Index to Score"""
-##    for Matr in data.keys():
-##        for Seq in data[Matr].keys():
-##            for Pos,Strand in data[Matr][Seq].keys():
-##                print "%s\teel\t%s\t%d\t%d\t%f\t%s\t."%(Seq,Matr.getName(),Pos,Pos+len(Matr)-1,data[Matr][Seq][(Pos,Strand)],Strand)
 
     if type(data)==type(""):
         print data
@@ -396,13 +268,6 @@ def formatalign2D(alignment,seq=None):
             outstr+="%7d : %s\n%7d : %s\n          %s\n\n"%(xpos,xline,ypos,yline,mline)
             xpos+=len(xline)-xline.count("-")
             ypos+=len(yline)-yline.count("-")
-##        n=len(xaln)
-##        xpos,ypos=xstart+1,ystart+1
-##        for i in range(0,n,linelen):
-##            xline,yline=xaln[i:i+linelen],yaln[i:i+linelen]
-##            outstr+="%7d : %s\n%7d : %s\n\n"%(xpos,xline,ypos,yline)
-##            xpos+=len(xline)-xline.count("-")
-##            ypos+=len(yline)-yline.count("-")
         return outstr
 
     outStrIO.write("### lambda=%g mu=%g nu=%g xi=%g Nucleotides per rotation=%g\n"%(alignment.Lambda,alignment.Mu,alignment.Nu,alignment.Xi,alignment.nuc_per_rotation))
@@ -536,24 +401,11 @@ def formatalign(alignment,seq=None):
         
         #for (x,y,score,motif,xcoord,ycoord,strand) in goodAlign:
         for alns in goodAlign:
-            coordStr=""
-	    seqCoordStr=""
-            for i,x,(spos,epos) in zip(range(1,len(alns.siteSeqPos)+1),alns.siteSeqPos,alns.beginEnd):
-                if type(x)==type(1):
-                    if(i==1):
-                        coordStr="".join([coordStr,"[%d]"%(x)])
-                        seqCoordStr="".join([seqCoordStr,"(%d,%d)"%(spos,epos)])
-                    else:
-                        coordStr="".join([coordStr,"[%d]"%(x)])
-                        seqCoordStr=" <=> ".join([seqCoordStr,"(%d,%d)"%(spos,epos)])
-                else:
-                    if(i==1):
-                        coordStr="".join([coordStr,"[ ]"])
-                        seqCoordStr="".join([seqCoordStr,"( , )"])
-                    else:
-                        coordStr="".join([coordStr,"[ ]"])
-                        seqCoordStr=" <=> ".join([seqCoordStr,"( , )"])
-
+            coordStr ="".join("[%d]"%(sPos) for sPos in alns.siteSeqPos)
+            posAnno = zip(alns.beginEnd,alns.annotation)
+            seqCoordStr = " <=> ".join("(%d,%d%s)"%(spos,epos,","+annot.strip() if annot!="" else "") 
+                                       for ((spos,epos),annot) in posAnno)
+ 
             outStrIO.write("D%s=%.2f %s %s %s\n"%(coordStr,alns.score,alns.motif,seqCoordStr,alns.strand))
             if seq:
                 ToAdd=[xseq[xadded-xstart:beginX-1-xstart].lower() for (xseq,xadded,xstart,(beginX,endX)) in zip(seqs,addeds,starts,alns.beginEnd)]
@@ -573,7 +425,6 @@ def formatalign(alignment,seq=None):
             alns=["".join(x) for x in zip(alns,ToAdd)]
             
             outStrIO.write("\n"+formatAlnSeq([xaln.replace(" ","-") for xaln in alns],alignment.names,starts,maln))
-            #outstr+="%s\n%s\n"%(xaln.replace(" ","-"),yaln.replace(" ","-"))
     
     outStrIO.write("### Alignment took %.1f CPU seconds.\n"%(alignment.secs_to_align))
     return outStrIO.getvalue()
