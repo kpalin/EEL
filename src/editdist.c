@@ -133,12 +133,12 @@ spam_alignSeq(self, args)
   int i,j,aln_p;
   unsigned int smaxlen,sminlen,arrayLen,editDist,countEnds=1;
   unsigned int useIUPAC=0;
-  char *smin,*smax,*stmp,nothing,*backTrace;
+  char *smin=NULL,*smax=NULL,*stmp,*backTrace;
   int *curr,*prev,*tmp;
   char *minaln,*maxaln;
   PyObject *ret_val;
 
-  if (!PyArg_ParseTuple(args, "ss|dd",&smin,&smax,&countEnds,&useIUPAC)){
+  if (!PyArg_ParseTuple(args, "ss|II",&smin,&smax,&countEnds,&useIUPAC)){
     Py_INCREF(Py_None);
     return Py_None;
   }
