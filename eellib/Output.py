@@ -393,7 +393,7 @@ def formatalign(alignment,seq=None):
             
             seqs=[seq[alignment.names[i]][istart:iend] for (i,(istart,iend)) in enumerate(zip(starts,ends))]
             
-            alns=[""]*len(seqs)
+            alnSeqs=[""]*len(seqs)
             maln=""
             addeds=starts[:]
         
@@ -414,7 +414,7 @@ def formatalign(alignment,seq=None):
                 
                 #assert(len(xseq[alns.beginX-1-xstart:alns.endX-xstart])==siteLen)
                 distYX,ToAdd=alignSeqs(ToAdd,1,1)
-                alns=[alnFmt%(xaln,x2add,xseq[beginX-1-xstart:endX-xstart].upper()) for (xaln,x2add,xseq,xstart,(beginX,endX)) in zip(alns,ToAdd,seqs,starts,alns.beginEnd)]
+                alnSeqs=[alnFmt%(xaln,x2add,xseq[beginX-1-xstart:endX-xstart].upper()) for (xaln,x2add,xseq,xstart,(beginX,endX)) in zip(alnSeqs,ToAdd,seqs,starts,alns.beginEnd)]
                 
                 maln=alnFmt%(maln," "*len(ToAdd[0]),alns.motif[:siteLen])
                 addeds=[endX for (beginX,endX) in alns.beginEnd]
@@ -422,9 +422,9 @@ def formatalign(alignment,seq=None):
         if seq:
             ToAdd=[seq[xseq][xadded-xstart:xend-xstart].lower() for (xseq,xadded,xstart,xend) in zip(alignment.names,addeds,starts,ends)]
             distYX,ToAdd=alignSeqs(ToAdd)
-            alns=["".join(x) for x in zip(alns,ToAdd)]
+            alnSeqs=["".join(x) for x in zip(alnSeqs,ToAdd)]
             
-            outStrIO.write("\n"+formatAlnSeq([xaln.replace(" ","-") for xaln in alns],alignment.names,starts,maln))
+            outStrIO.write("\n"+formatAlnSeq([xaln.replace(" ","-") for xaln in alnSeqs],alignment.names,starts,maln))
     
     outStrIO.write("### Alignment took %.1f CPU seconds.\n"%(alignment.secs_to_align))
     return outStrIO.getvalue()
