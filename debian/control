@@ -1,0 +1,12 @@
+Source: eel
+Maintainer: Kimmo Palin <kimmo.palin@helsinki.fi>
+Section: python
+Priority: optional
+Build-Depends: python-dev (>= 2.6), debhelper (>= 7.4.3)
+Standards-Version: 3.9.1
+
+Package: eel
+Architecture: any
+Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
+Description: A software tool for locating enhancer elements from genomic 
+
