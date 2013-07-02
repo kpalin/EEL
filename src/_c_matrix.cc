@@ -294,28 +294,6 @@ char bg_getNextChar(matrix_bgObject *self)
 }
 
 
-// char bg_getChar(matrix_bgObject *self,int i)
-// {
-//   char ret=0,*ret_str=NULL;
-//   PyObject *py_ret=NULL;
-
-//   py_ret=PySequence_GetItem(self->bgSample,i);
-//   //py_ret=PySequence_GetSlice(self->bgSample,i,min(i+2,(int)self->sampleLen));
-//   //py_ret=PyString_FromString("A");
-
-//   if(!py_ret) {
-//     cout<<"Null item from sequence position "<<i<<endl;
-//     return 0;
-//   }
-//   ret_str=PyString_AsString(py_ret);
-//   ret=ret_str[0];
-
-//   Py_DECREF(py_ret);
-
-//   return ret;
-
-// }
-
 
 uint32_t addNucleotideToGram(uint32_t gram,char nucleotide, uint32_t shiftMask)
 {
@@ -452,35 +430,34 @@ bg_init(matrix_bgObject *self, PyObject *args, PyObject *kwds)
 				    &self->bgSample,&self->order))
     return -1; 
 
-
+  Py_INCREF(self->bgSample);
   if(PyGramCount_Check(self->bgSample)) {   //Given a tupple of grams
-    int size=PySequence_Length(self->bgSample);
-    double db_qgram=log((double)size)/log(4.0);
+	  int size=PySequence_Length(self->bgSample);
+	  double db_qgram=log((double)size)/log(4.0);
 
-    self->qgram=(int)posround(db_qgram);
-    self->order=self->qgram-1;
-    if(fabs(self->qgram-db_qgram)>0.1) {
-      char errStr[256];
-      sprintf(errStr,"Malformed gram count sequence len=%d dbqgram=%g qgram=%d.",size,db_qgram,self->qgram);
-      PyErr_SetString(PyExc_ValueError,errStr);
-      return -1;
-    }
+	  self->qgram=(int)posround(db_qgram);
+	  self->order=self->qgram-1;
+	  if(fabs(self->qgram-db_qgram)>0.1) {
+		  char errStr[256];
+		  sprintf(errStr,"Malformed gram count sequence len=%d dbqgram=%g qgram=%d.",size,db_qgram,self->qgram);
+		  PyErr_SetString(PyExc_ValueError,errStr);
+		  return -1;
+	  }
 
   } else {  // Given file to read the grams
-    Py_INCREF(self->bgSample);
-    if(self->order>15 || self->order<1) {
-      //printf("Too high or non positive order (%d). Can only handle up to order 15\n",self->order);
-      PyErr_SetString(PyExc_ValueError,"Too high or non positive order. Can only handle up to order 15.");
-      return -1;
-    }
-    self->qgram=self->order+1;
+	  if(self->order>15 || self->order<1) {
+		  //printf("Too high or non positive order (%d). Can only handle up to order 15\n",self->order);
+		  PyErr_SetString(PyExc_ValueError,"Too high or non positive order. Can only handle up to order 15.");
+		  return -1;
+	  }
+	  self->qgram=self->order+1;
 
   }
   self->shiftMask=(1<<(self->qgram*2))-1;
   self->CP=new struct __BGdataCPP;
   if(!self->CP) {
-    PyErr_NoMemory();
-    return -1;
+	  PyErr_NoMemory();
+	  return -1;
   }
 
 
@@ -1076,13 +1053,13 @@ int py_fileLikeSeek(PyObject *py_file, unsigned long pos)
 //################################################################################
 // c++ p-value code generously donated by Pasi Rastas under GPL
 
-#ifdef  _GLIBCXX_DEBUG
-#include <ext/hash_map>
-using __gnu_debug::hash_map;
-#else
+//#ifdef  _GLIBCXX_DEBUG
+//#include <debug/hash_map>
+//using __gnu_debug::hash_map;
+//#else
 #include <ext/hash_map>
 using __gnu_cxx::hash_map;
-#endif
+//#endif
 typedef hash_map< int, double > myHashMap;
 
 //this one uses table
@@ -1277,7 +1254,7 @@ int tresholdFromP3(const intMatrix &mat, const double &p, const doubleArray bgDi
       if (sum > p) {
 	//cout << "tol = " << r << "\n" ;
 	//--r;
-	//cout<<" r = "<<r->first<<","<<r->second<<" ehkä = "<<(r->first+1)<<"\n";
+	//cout<<" r = "<<r->first<<","<<r->second<<" ehkï¿½ = "<<(r->first+1)<<"\n";
 	return (r->first+1+prevNonZero)/2;
       }
       if(r->second>0.0) {
@@ -1671,7 +1648,7 @@ doubleArray expectedDifferences(const doubleMatrix &mat, const doubleArray &bg)
     
     for (int i = 0; i < m; ++i)
     {
-        double max = DBL_MIN;
+        double max = -DBL_MAX;
         for (int j = 0; j < numA; ++j)
         {
             if (max < mat[j][i])
@@ -1759,7 +1736,7 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
     {
         doubleArray C(m[k],0);
         for (int j = m[k] - 1; j > 0; --j) {
-            double max = DBL_MIN;
+            double max = -DBL_MAX;
             for (int i = 0; i < numA; ++i) {
                 if (max < matrices[k][i][j])
                     max = matrices[k][i][j];
@@ -1777,7 +1754,7 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
         double B = 0;
         for (int j = 0; j < window_positions[k]; ++j)
         {
-            double max = DBL_MIN;
+            double max = -DBL_MAX;
             for (int i = 0; i < numA; ++i) {
                 if (max < matrices[k][i][j])
                     max = matrices[k][i][j];
@@ -1825,7 +1802,7 @@ void multipleMatrixAhoCorasickLookaheadFiltration(const charArray &s, const intA
             doubleArray K(m[k]-SCANNING_WINDOW_SIZE, 0); 
             for (int j = m[k]-SCANNING_WINDOW_SIZE-1; j > 0; --j)
             {
-                double max = DBL_MIN;
+                double max = -DBL_MAX;
                 for (int i = 0; i < numA; ++i)
                 {
                     if (max < matrices[k][i][order[j]])
@@ -2114,7 +2091,7 @@ void getHitsWithSNPs(const charArray &sequence, const intArray &snp_pos, const d
                     if (code < 4)
                         score += pssm[code][i];
                     else if (code == 4){
-                        score = DBL_MIN;  // Fail.
+                        score = -DBL_MAX;  // Fail.
                         break;
                     }
                     else {
@@ -2146,6 +2123,8 @@ void getHitsWithSNPs(const charArray &sequence, const intArray &snp_pos, const d
                             if (code < 4)
                                 score += pssm[code][i];
                             else {
+                            	assert(code>=5);
+                            	assert(code < 11); //snptable[6]+5
                                 score += pssm[snptable[code-5][current_snpcode & 1]][i];
         
                                 current_snpcode = current_snpcode >> 1;
