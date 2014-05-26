@@ -15,109 +15,6 @@ import string
 
 
 
-# $Log$
-# Revision 1.27  2007/09/10 14:19:21  kpalin
-# Korjattiin ja nopeutettiin KL-et�isyyksien laskentaa
-#
-# Revision 1.26  2007/08/09 05:57:36  kpalin
-# Fixed setBGfreq to accept only 1 parameter
-#
-# Revision 1.25  2006/11/13 12:34:15  kpalin
-# Added command to search the binding sites with p-value cutoff.
-#
-# Revision 1.24  2006/10/18 07:23:59  kpalin
-# Added suboptimalsDownTo
-#
-# Revision 1.23  2006/08/31 11:19:22  kpalin
-# Align pre-given sequences and get TFBS only if needed.
-#
-# Revision 1.22  2006/08/14 09:48:06  kpalin
-# Added a new __randomize_full command.
-#
-# Revision 1.21  2006/04/05 08:30:07  kpalin
-# Regular expressions for sequence removal and commands for multiple alignment.
-#
-# Revision 1.20  2005/05/19 07:49:35  kpalin
-# Merged Waterman-Eggert style suboptimal alignments and
-# SNP matching.
-#
-# Revision 1.19.2.3  2005/05/09 07:14:57  kpalin
-# Matrix distances with hidden command.
-#
-# Revision 1.19.2.2  2005/04/12 09:09:57  kpalin
-# Now help accepts parameters and ps outputs sequence description along
-# with names.
-#
-# Revision 1.19.2.1  2005/03/31 13:30:54  kpalin
-# Added command 'suboptimal' which is like 'more' but gives
-# real suboptimal results instead of next best from the alignment matrix.
-#
-# Revision 1.19  2005/03/22 13:17:13  kpalin
-# Merged some fixes surfacing from testing the public version.
-#
-# Revision 1.18  2005/03/09 07:40:03  kpalin
-# Fixed order setting in setMarkovBG
-#
-# Revision 1.17  2005/03/08 10:39:16  kpalin
-# Fixed Matrix add/Markov background setting.
-#
-# Revision 1.16  2005/01/13 13:16:42  kpalin
-# Moved the requesting of sequences to be aligned to Python side
-# of stuff. Much better.
-#
-# Revision 1.15  2005/01/13 09:38:30  kpalin
-# Added catch for EOFError in no-gui
-#
-# Revision 1.14  2005/01/12 13:34:55  kpalin
-# Added Tkinter/Tix Graphical user interface and command -no-gui to
-# avoid it.
-#
-# Revision 1.13  2005/01/07 13:41:25  kpalin
-# Works with py2exe. (windows executables)
-#
-# Revision 1.12  2004/12/22 11:14:24  kpalin
-# Some fixes for better distributability
-#
-# Revision 1.11  2004/12/22 08:02:59  kpalin
-# Hopefully more IO efficient TFBS search.
-#
-# Revision 1.10  2004/12/14 13:08:05  kpalin
-#
-# Name change from MABS to EEL (Enhancer Element Locator / Monty Python pun
-# "My hovercraft is full of EELs" )
-#
-# Revision 1.9  2004/07/30 12:21:08  kpalin
-# Commands for multiple alignment and discouragement of using greedy
-# alignment.
-#
-# Revision 1.8  2004/04/08 13:05:38  kpalin
-# Some cleaning and fixes.
-#
-# Revision 1.7  2004/03/03 09:27:25  kpalin
-# Added interface for multiple alignment.
-#
-# Revision 1.6  2004/02/26 11:59:49  kpalin
-# Added gracefull error handling for mabs. Now it doesn't exit after
-# encountering an error but report it and tells to send the error
-# message to me.
-#
-# Revision 1.5  2004/01/28 08:48:32  kpalin
-# Updated docstrings
-#
-# Revision 1.4  2004/01/14 10:05:57  kpalin
-# Generated documentation
-#
-# Revision 1.3  2004/01/13 07:55:01  kpalin
-# Paljon kaikenlaista.
-#
-# Mahdotonta muistaa kaikkea.
-#
-# Revision 1.2  2003/12/29 12:43:17  kpalin
-# Interface class repaired to enable alignment from gzip:ed temporary files.
-#
-# Ilmeisesti jotain uutta. En tied� mit�.
-#
-
     
 
 
@@ -219,7 +116,7 @@ class Commandline(Interface):
                          '__showMultiAlign':     (self.showMultiAlign,0),
                          '__saveMultiAlign':     (self.saveMultiAlign,1),
                          'no-gui':               (self.no_gui,0),
-                         '__computeKLdistances': (self.showKLdist,1),
+                         'computeKLdistances': (self.showKLdist,1),
                          '__computeEscores': (self.showExpectedScores,1),
                          '__head': (self.getHead,1),
                          '__randomize_full': (self.randomize_full,0)
